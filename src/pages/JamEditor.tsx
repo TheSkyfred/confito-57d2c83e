@@ -1,518 +1,450 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { JamType } from '@/types/supabase';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Loader2 } from "lucide-react";
 
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { 
-  ArrowLeft, 
-  Save, 
-  Eye, 
-  Upload, 
-  Trash2,
-  Plus,
-  Minus,
-  AlertCircle,
-  CheckCircle2
-} from 'lucide-react';
+import BasicInfoForm from "@/components/jam-editor/BasicInfoForm";
+import IngredientsForm from "@/components/jam-editor/IngredientsForm";
+import ManufacturingForm from "@/components/jam-editor/ManufacturingForm";
+import PricingForm from "@/components/jam-editor/PricingForm";
+import RecipeForm from "@/components/jam-editor/RecipeForm";
+import VisibilityForm from "@/components/jam-editor/VisibilityForm";
+import JamPreview from "@/components/jam-editor/JamPreview";
 
-import BasicInfoForm from '@/components/jam-editor/BasicInfoForm';
-import IngredientsForm from '@/components/jam-editor/IngredientsForm';
-import ManufacturingForm from '@/components/jam-editor/ManufacturingForm';
-import PricingForm from '@/components/jam-editor/PricingForm';
-import RecipeForm from '@/components/jam-editor/RecipeForm';
-import VisibilityForm from '@/components/jam-editor/VisibilityForm';
-import JamPreview from '@/components/jam-editor/JamPreview';
+// Type definitions
+interface Ingredient {
+  name: string;
+  quantity: string;
+}
 
-// Validation schema for the jam form
-const jamSchema = z.object({
-  name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
-  description: z.string().optional(),
-  category: z.string(),
-  tags: z.array(z.string()).optional(),
-  ingredients: z.array(z.object({
-    name: z.string().min(1, "L'ingrédient doit avoir un nom"),
-    quantity: z.string().optional(),
-    is_allergen: z.boolean().default(false),
-  })),
-  packaging_date: z.date().optional(),
-  weight_grams: z.number().min(1, "Le poids doit être supérieur à 0"),
-  available_quantity: z.number().min(0, "La quantité disponible doit être positive"),
-  preservation_months: z.number().optional(),
-  special_jar: z.boolean().default(false),
-  price_credits: z.number().min(1, "Le prix doit être supérieur à 0"),
-  recipe_steps: z.array(z.object({
-    description: z.string(),
-    duration_minutes: z.number().optional(),
-    image_url: z.string().optional(),
-  })).optional(),
-  is_draft: z.boolean().default(true),
-  is_active: z.boolean().default(true),
-});
+interface RecipeStep {
+  id: string;
+  description: string;
+  duration?: string;
+  image_url?: string;
+}
 
-type JamFormData = z.infer<typeof jamSchema>;
+interface JamFormData {
+  name: string;
+  description: string;
+  type: string;
+  badges: string[];
+  ingredients: Ingredient[];
+  allergens: string[];
+  production_date: string;
+  weight_grams: number;
+  available_quantity: number;
+  shelf_life_months: number;
+  special_edition: boolean;
+  price_credits: number;
+  recipe_steps: RecipeStep[];
+  is_active: boolean;
+  images: File[];
+  main_image_index: number;
+}
 
-const JamEditor = () => {
-  const { id } = useParams<{ id: string }>();
-  const isEditing = Boolean(id);
+const JamEditor: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [mainImage, setMainImage] = useState<File | null>(null);
-  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState("basic-info");
-  const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
-  const [previewData, setPreviewData] = useState<JamFormData | null>(null);
-  
-  // Initialize form
-  const methods = useForm<JamFormData>({
-    resolver: zodResolver(jamSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      category: 'classic',
-      tags: [],
-      ingredients: [{ name: '', quantity: '', is_allergen: false }],
-      packaging_date: new Date(),
-      weight_grams: 250,
-      available_quantity: 1,
-      preservation_months: 12,
-      special_jar: false,
-      price_credits: 10,
-      recipe_steps: [{ description: '', duration_minutes: 0, image_url: '' }],
-      is_draft: true,
-      is_active: true,
-    }
+  const { id } = useParams<{ id: string }>();
+  const isEditMode = !!id;
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("edit");
+  const [expandedSections, setExpandedSections] = useState<string[]>([
+    "basic-info",
+  ]);
+
+  // Initialize form data
+  const [formData, setFormData] = useState<JamFormData>({
+    name: "",
+    description: "",
+    type: "",
+    badges: [],
+    ingredients: [{ name: "", quantity: "" }],
+    allergens: [],
+    production_date: new Date().toISOString().split("T")[0],
+    weight_grams: 250,
+    available_quantity: 1,
+    shelf_life_months: 12,
+    special_edition: false,
+    price_credits: 10,
+    recipe_steps: [],
+    is_active: false,
+    images: [],
+    main_image_index: 0,
   });
 
-  // Load jam data if editing
+  // Redirect if not logged in
   useEffect(() => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    const loadJamData = async () => {
-      if (isEditing && id) {
-        setIsLoading(true);
-        try {
-          const { data, error } = await supabase
-            .from('jams')
-            .select(`
-              *,
-              jam_images(*)
-            `)
-            .eq('id', id)
-            .eq('creator_id', user.id)
-            .single();
-
-          if (error) throw error;
-          if (!data) {
-            toast({
-              title: "Erreur",
-              description: "Cette confiture n'existe pas ou ne vous appartient pas.",
-              variant: "destructive"
-            });
-            navigate('/dashboard');
-            return;
-          }
-
-          // Transform data for form
-          const formData: Partial<JamFormData> = {
-            name: data.name,
-            description: data.description || '',
-            category: data.category || 'classic',
-            ingredients: data.ingredients.map((ingredient: any) => ({
-              name: ingredient.name,
-              quantity: ingredient.quantity || '',
-              is_allergen: data.allergens?.includes(ingredient.name) || false,
-            })),
-            weight_grams: data.weight_grams,
-            available_quantity: data.available_quantity,
-            price_credits: data.price_credits,
-            recipe_steps: data.recipe_steps || [],
-            is_draft: !data.is_active,
-            is_active: data.is_active,
-          };
-
-          // Set main image preview if it exists
-          const primaryImage = data.jam_images?.find((img: any) => img.is_primary);
-          if (primaryImage) {
-            setMainImagePreview(primaryImage.url);
-          }
-
-          methods.reset(formData as JamFormData);
-        } catch (error) {
-          console.error('Error loading jam:', error);
-          toast({
-            title: "Erreur",
-            description: "Impossible de charger les données de la confiture.",
-            variant: "destructive"
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadJamData();
-  }, [id, isEditing, user, navigate, toast, methods]);
-
-  // Handle main image selection
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setMainImage(file);
-      setMainImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Calculate suggested price based on form data
-  const calculateSuggestedPrice = (data: JamFormData) => {
-    let basePrice = Math.floor(data.weight_grams / 50); // 1 credit per 50g
-    
-    // Adjust for rare or special ingredients
-    const rareIngredients = ['truffe', 'safran', 'vanille', 'champagne', 'or'];
-    const hasRareIngredient = data.ingredients.some(ing => 
-      rareIngredients.some(rare => ing.name.toLowerCase().includes(rare))
-    );
-    
-    if (hasRareIngredient) basePrice *= 1.5;
-    
-    // Adjust for special jar
-    if (data.special_jar) basePrice += 5;
-    
-    // Adjust for complexity (based on recipe steps)
-    if (data.recipe_steps && data.recipe_steps.length > 5) {
-      basePrice += 2;
-    }
-    
-    return Math.max(5, Math.round(basePrice)); // Minimum 5 credits
-  };
-
-  // Update suggested price when relevant fields change
-  useEffect(() => {
-    const subscription = methods.watch((data) => {
-      if (data.weight_grams && data.ingredients.length > 0) {
-        setSuggestedPrice(calculateSuggestedPrice(data as JamFormData));
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [methods]);
-
-  // Handle form submission
-  const onSubmit = async (data: JamFormData) => {
     if (!user) {
       toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour créer une confiture.",
-        variant: "destructive"
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour accéder à cette page.",
+        variant: "destructive",
       });
-      navigate('/auth');
-      return;
+      navigate("/auth", { replace: true });
+    } else if (isEditMode) {
+      loadJamData();
+    } else {
+      setLoading(false);
     }
-    
-    setIsLoading(true);
+  }, [user, isEditMode]);
+
+  // Load existing jam data for editing
+  const loadJamData = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: jam, error } = await supabase
+        .from("jams")
+        .select(`*, jam_images(*)`)
+        .eq("id", id)
+        .eq("creator_id", user?.id)
+        .single();
+
+      if (error) throw error;
+      
+      if (!jam) {
+        toast({
+          title: "Confiture non trouvée",
+          description: "Cette confiture n'existe pas ou vous n'avez pas les droits d'accès.",
+          variant: "destructive",
+        });
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      // Convert ingredients from string[] to Ingredient[]
+      const ingredients = jam.ingredients 
+        ? typeof jam.ingredients[0] === 'string' 
+          ? jam.ingredients.map((ing: string) => {
+              const [name, quantity] = ing.split('|');
+              return { name: name || ing, quantity: quantity || '' };
+            })
+          : jam.ingredients 
+        : [{ name: "", quantity: "" }];
+
+      // Format recipe steps
+      const recipeSteps = jam.recipe_steps 
+        ? Array.isArray(jam.recipe_steps) ? jam.recipe_steps : []
+        : [];
+
+      // Convert jam type/category string to match form format
+      const jamType = jam.type || "";
+
+      // Get uploaded images 
+      const images: File[] = [];
+      const jam_images = jam.jam_images || [];
+      
+      setFormData({
+        name: jam.name || "",
+        description: jam.description || "",
+        type: jamType,
+        badges: jam.badges || [],
+        ingredients: ingredients,
+        allergens: jam.allergens || [],
+        production_date: jam.production_date || new Date().toISOString().split("T")[0],
+        weight_grams: jam.weight_grams || 250,
+        available_quantity: jam.available_quantity || 1,
+        shelf_life_months: jam.shelf_life_months || 12,
+        special_edition: jam.special_edition || false,
+        price_credits: jam.price_credits || 10,
+        recipe_steps: recipeSteps,
+        is_active: jam.is_active,
+        images: images,
+        main_image_index: 0,
+      });
+      
+      setLoading(false);
+    } catch (error: any) {
+      console.error("Error loading jam data:", error);
+      toast({
+        title: "Erreur de chargement",
+        description: error.message || "Impossible de charger les données de la confiture",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (publish: boolean = false) => {
+    if (!user) return;
     
     try {
-      // Extract allergens from ingredients
-      const allergens = data.ingredients
-        .filter(ing => ing.is_allergen)
-        .map(ing => ing.name);
+      setSaving(true);
       
-      // Format ingredients for database
-      const ingredients = data.ingredients.map(ing => ({
-        name: ing.name,
-        quantity: ing.quantity
-      }));
-      
-      // Format recipe steps for database
-      const recipe = data.recipe_steps && data.recipe_steps.length > 0 
-        ? JSON.stringify(data.recipe_steps)
-        : null;
+      // Format ingredients for storage
+      const ingredientsForStorage = formData.ingredients.map(
+        ing => `${ing.name}|${ing.quantity}`
+      );
       
       // Prepare jam data
       const jamData = {
-        name: data.name,
-        description: data.description || '',
-        ingredients,
-        allergens,
-        weight_grams: data.weight_grams,
-        available_quantity: data.available_quantity,
-        price_credits: data.price_credits,
-        recipe,
-        is_active: !data.is_draft,
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        badges: formData.badges,
+        ingredients: ingredientsForStorage,
+        allergens: formData.allergens,
+        weight_grams: formData.weight_grams,
+        available_quantity: formData.available_quantity,
+        production_date: formData.production_date,
+        shelf_life_months: formData.shelf_life_months,
+        special_edition: formData.special_edition,
+        price_credits: formData.price_credits,
+        recipe_steps: formData.recipe_steps,
+        is_active: publish,
         creator_id: user.id,
       };
+
+      let jam_id = id;
       
-      let jamId = id;
-      
-      // Insert or update jam data
-      if (isEditing && id) {
-        const { error } = await supabase
-          .from('jams')
+      // Create or update jam in database
+      if (isEditMode) {
+        const { error: updateError } = await supabase
+          .from("jams")
           .update(jamData)
-          .eq('id', id);
+          .eq("id", id);
           
-        if (error) throw error;
+        if (updateError) throw updateError;
       } else {
-        const { data: newJam, error } = await supabase
-          .from('jams')
+        const { data: newJam, error: insertError } = await supabase
+          .from("jams")
           .insert(jamData)
-          .select('id')
-          .single();
+          .select();
           
-        if (error) throw error;
-        jamId = newJam.id;
-      }
-      
-      // Handle image upload if new image is selected
-      if (mainImage && jamId) {
-        // Create a unique file name
-        const fileExt = mainImage.name.split('.').pop();
-        const fileName = `${jamId}-main-${Date.now()}.${fileExt}`;
-        const filePath = `jam-images/${fileName}`;
-        
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase
-          .storage
-          .from('jams')
-          .upload(filePath, mainImage);
-          
-        if (uploadError) throw uploadError;
-        
-        // Get public URL
-        const { data: publicUrlData } = supabase
-          .storage
-          .from('jams')
-          .getPublicUrl(filePath);
-          
-        const imageUrl = publicUrlData.publicUrl;
-        
-        // Update or insert the image record in jam_images table
-        if (isEditing) {
-          // Check if primary image already exists
-          const { data: existingImages } = await supabase
-            .from('jam_images')
-            .select('id')
-            .eq('jam_id', jamId)
-            .eq('is_primary', true);
-            
-          if (existingImages && existingImages.length > 0) {
-            // Update existing primary image
-            await supabase
-              .from('jam_images')
-              .update({ url: imageUrl })
-              .eq('id', existingImages[0].id);
-          } else {
-            // Insert new primary image
-            await supabase
-              .from('jam_images')
-              .insert({
-                jam_id: jamId,
-                url: imageUrl,
-                is_primary: true
-              });
-          }
-        } else {
-          // Insert new primary image for new jam
-          await supabase
-            .from('jam_images')
-            .insert({
-              jam_id: jamId,
-              url: imageUrl,
-              is_primary: true
-            });
+        if (insertError) throw insertError;
+        if (newJam && newJam.length > 0) {
+          jam_id = newJam[0].id;
         }
       }
       
+      // Handle image uploads
+      if (formData.images.length > 0 && jam_id) {
+        // Upload each image
+        for (let i = 0; i < formData.images.length; i++) {
+          const file = formData.images[i];
+          const isMainImage = i === formData.main_image_index;
+          
+          const filePath = `jams/${jam_id}/${Date.now()}_${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from("jam-images")
+            .upload(filePath, file);
+            
+          if (uploadError) throw uploadError;
+          
+          // Get public URL
+          const { data: publicUrl } = supabase.storage
+            .from("jam-images")
+            .getPublicUrl(filePath);
+            
+          // Insert image reference to database
+          const { error: imageInsertError } = await supabase
+            .from("jam_images")
+            .insert({
+              jam_id: jam_id,
+              url: publicUrl.publicUrl,
+              is_main: isMainImage
+            });
+            
+          if (imageInsertError) throw imageInsertError;
+        }
+      }
+
       toast({
-        title: isEditing ? "Confiture mise à jour !" : "Confiture créée !",
-        description: data.is_draft 
-          ? "Votre confiture a été enregistrée comme brouillon." 
-          : "Votre confiture a été publiée avec succès.",
-        variant: "default"
+        title: isEditMode ? "Modifications enregistrées" : "Confiture créée",
+        description: publish 
+          ? "Votre confiture est maintenant publiée" 
+          : "Votre confiture a été enregistrée en brouillon",
       });
       
-      navigate('/dashboard');
-      
-    } catch (error) {
-      console.error('Error saving jam:', error);
+      // Navigate to jam details or dashboard
+      navigate(publish ? `/jam/${jam_id}` : "/dashboard");
+    } catch (error: any) {
+      console.error("Error saving jam:", error);
       toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de l'enregistrement.",
-        variant: "destructive"
+        title: "Erreur d'enregistrement",
+        description: error.message || "Une erreur est survenue lors de l'enregistrement",
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setSaving(false);
     }
   };
-
-  // Handle preview generation
-  const handlePreview = () => {
-    const currentData = methods.getValues();
-    setPreviewData(currentData);
+  
+  // Handle section expansion
+  const toggleSection = (section: string) => {
+    setExpandedSections(prevSections => 
+      prevSections.includes(section) 
+        ? prevSections.filter(s => s !== section) 
+        : [...prevSections, section]
+    );
   };
 
-  if (!user) {
-    navigate('/auth');
-    return null;
+  // Update form data
+  const updateFormData = (key: keyof JamFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  if (loading) {
+    return (
+      <div className="container flex min-h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin mx-auto mb-4" />
+          <p>Chargement en cours...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container py-8">
-      <div className="flex items-center mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mr-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour
-        </Button>
-        <h1 className="font-serif text-3xl font-bold">
-          {isEditing ? "Modifier la confiture" : "Créer une nouvelle confiture"}
-        </h1>
-      </div>
+    <div className="container py-6 md:py-10">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-serif font-bold text-jam-raspberry">
+              {isEditMode ? "Modifier la confiture" : "Créer une confiture"}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {isEditMode 
+                ? "Mettez à jour les informations de votre confiture" 
+                : "Partagez votre délicieuse création avec la communauté"}
+            </p>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="edit">Éditer</TabsTrigger>
+              <TabsTrigger value="preview">Aperçu</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-      <Tabs defaultValue="editor" className="w-full">
-        <TabsList className="mb-6 grid w-full grid-cols-2">
-          <TabsTrigger value="editor">Éditeur</TabsTrigger>
-          <TabsTrigger value="preview" onClick={handlePreview}>Aperçu</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="editor">
-          <FormProvider {...methods}>
-            <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
+        <Separator />
+
+        <TabsContent value="edit" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+            <div className="lg:col-span-4">
               <Accordion
-                type="single"
-                collapsible
-                defaultValue={activeSection}
-                onValueChange={setActiveSection}
+                type="multiple"
+                value={expandedSections}
+                onValueChange={setExpandedSections}
                 className="w-full"
               >
                 <AccordionItem value="basic-info">
                   <AccordionTrigger>Informations de base</AccordionTrigger>
                   <AccordionContent>
                     <BasicInfoForm 
-                      mainImagePreview={mainImagePreview}
-                      handleImageChange={handleImageChange}
+                      formData={formData} 
+                      updateFormData={updateFormData} 
                     />
                   </AccordionContent>
                 </AccordionItem>
-
+                
                 <AccordionItem value="ingredients">
                   <AccordionTrigger>Ingrédients</AccordionTrigger>
                   <AccordionContent>
-                    <IngredientsForm />
+                    <IngredientsForm 
+                      formData={formData} 
+                      updateFormData={updateFormData} 
+                    />
                   </AccordionContent>
                 </AccordionItem>
-
+                
                 <AccordionItem value="manufacturing">
                   <AccordionTrigger>Données de fabrication</AccordionTrigger>
                   <AccordionContent>
-                    <ManufacturingForm />
+                    <ManufacturingForm 
+                      formData={formData} 
+                      updateFormData={updateFormData} 
+                    />
                   </AccordionContent>
                 </AccordionItem>
-
+                
                 <AccordionItem value="pricing">
                   <AccordionTrigger>Prix</AccordionTrigger>
                   <AccordionContent>
-                    <PricingForm suggestedPrice={suggestedPrice} />
+                    <PricingForm 
+                      formData={formData} 
+                      updateFormData={updateFormData} 
+                    />
                   </AccordionContent>
                 </AccordionItem>
-
+                
                 <AccordionItem value="recipe">
                   <AccordionTrigger>Recette (facultatif)</AccordionTrigger>
                   <AccordionContent>
-                    <RecipeForm />
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="visibility">
-                  <AccordionTrigger>Visibilité et publication</AccordionTrigger>
-                  <AccordionContent>
-                    <VisibilityForm />
+                    <RecipeForm 
+                      formData={formData} 
+                      updateFormData={updateFormData} 
+                    />
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-end pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isLoading}
-                  onClick={() => navigate('/dashboard')}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={isLoading}
-                  onClick={() => {
-                    methods.setValue("is_draft", true);
-                    methods.handleSubmit(onSubmit)();
-                  }}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Enregistrer en brouillon
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-jam-raspberry hover:bg-jam-raspberry/90"
-                  disabled={isLoading}
-                  onClick={() => {
-                    methods.setValue("is_draft", false);
-                  }}
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="animate-pulse mr-2">⏳</span>
-                      Traitement...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Publier
-                    </>
-                  )}
-                </Button>
+              
+              <Card className="mt-6 p-4">
+                <VisibilityForm 
+                  saving={saving} 
+                  handleSubmit={handleSubmit}
+                  isEditMode={isEditMode} 
+                />
+              </Card>
+            </div>
+            
+            <div className="lg:col-span-2">
+              <div className="sticky top-20">
+                <Card>
+                  <div className="p-4">
+                    <h3 className="font-medium mb-3">Aperçu</h3>
+                    <JamPreview formData={formData} />
+                  </div>
+                </Card>
               </div>
-            </form>
-          </FormProvider>
+            </div>
+          </div>
         </TabsContent>
         
-        <TabsContent value="preview">
-          {previewData ? (
-            <JamPreview data={previewData} imageUrl={mainImagePreview} />
-          ) : (
-            <div className="text-center py-12">
-              <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-lg">Aucun aperçu disponible. Veuillez remplir le formulaire d'abord.</p>
+        <TabsContent value="preview" className="mt-0">
+          <Card>
+            <div className="p-6">
+              <JamPreview formData={formData} fullPreview />
+              
+              <div className="mt-8 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setActiveTab("edit")}>
+                  Retour à l'édition
+                </Button>
+                <Button 
+                  disabled={saving} 
+                  onClick={() => handleSubmit(false)}
+                >
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enregistrer en brouillon
+                </Button>
+                <Button 
+                  variant="default" 
+                  disabled={saving || !formData.name} 
+                  onClick={() => handleSubmit(true)}
+                >
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Publier
+                </Button>
+              </div>
             </div>
-          )}
+          </Card>
         </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 };
