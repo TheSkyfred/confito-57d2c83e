@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Trash2, Plus, ArrowUp, ArrowDown, Image } from "lucide-react";
 import { Input } from "@/components/ui/input";

@@ -110,4 +110,3 @@ export type OrderType = {
   seller?: ProfileType;
   jam?: JamType;
 };
-

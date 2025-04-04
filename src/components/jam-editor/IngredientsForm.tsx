@@ -1,19 +1,15 @@
 
 import React from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
 import { 
-  FormField, 
-  FormItem, 
   FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
+  FormDescription
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, AlertCircle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 // Common ingredients for autocomplete
 const commonIngredients = [
@@ -31,15 +27,46 @@ const commonAllergens = [
   'Fruits à coque', 'Sulfites', 'Lait', 'Œuf', 'Soja', 'Gluten'
 ];
 
-const IngredientsForm = () => {
-  const { control, watch, setValue } = useFormContext();
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: 'ingredients',
-  });
-  
+interface Ingredient {
+  name: string;
+  quantity: string;
+  is_allergen?: boolean;
+}
+
+interface IngredientsFormProps {
+  formData: {
+    ingredients: Ingredient[];
+    allergens: string[];
+    [key: string]: any;
+  };
+  updateFormData: (key: string, value: any) => void;
+}
+
+const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormData }) => {
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [focusedIngredientIndex, setFocusedIngredientIndex] = React.useState<number | null>(null);
+  
+  // Add a new ingredient
+  const addIngredient = () => {
+    const updatedIngredients = [...formData.ingredients, { name: '', quantity: '', is_allergen: false }];
+    updateFormData('ingredients', updatedIngredients);
+  };
+  
+  // Remove an ingredient by index
+  const removeIngredient = (index: number) => {
+    if (formData.ingredients.length > 1) {
+      const updatedIngredients = [...formData.ingredients];
+      updatedIngredients.splice(index, 1);
+      updateFormData('ingredients', updatedIngredients);
+    }
+  };
+  
+  // Update ingredient data
+  const updateIngredient = (index: number, field: 'name' | 'quantity' | 'is_allergen', value: any) => {
+    const updatedIngredients = [...formData.ingredients];
+    updatedIngredients[index] = { ...updatedIngredients[index], [field]: value };
+    updateFormData('ingredients', updatedIngredients);
+  };
   
   // Filtered suggestions based on input
   const handleIngredientSearch = (value: string, index: number) => {
@@ -58,17 +85,16 @@ const IngredientsForm = () => {
   
   // Select suggestion and clear suggestions
   const selectSuggestion = (suggestion: string, index: number) => {
-    setValue(`ingredients.${index}.name`, suggestion);
+    updateIngredient(index, 'name', suggestion);
     setSuggestions([]);
   };
 
   // Add a common allergen as checked ingredient
   const addAllergen = (allergen: string) => {
-    append({ 
-      name: allergen, 
-      quantity: '', 
-      is_allergen: true 
-    });
+    updateFormData('ingredients', [
+      ...formData.ingredients, 
+      { name: allergen, quantity: '', is_allergen: true }
+    ]);
   };
   
   return (
@@ -104,41 +130,30 @@ const IngredientsForm = () => {
           <Button 
             type="button" 
             size="sm"
-            onClick={() => append({ name: '', quantity: '', is_allergen: false })}
+            onClick={addIngredient}
           >
             <Plus className="h-4 w-4 mr-1" /> Ajouter un ingrédient
           </Button>
         </div>
         
         <div className="space-y-4">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex flex-col sm:flex-row gap-4 items-start p-4 border rounded-md bg-card">
+          {formData.ingredients.map((ingredient, index) => (
+            <div key={index} className="flex flex-col sm:flex-row gap-4 items-start p-4 border rounded-md bg-card">
               <div className="flex-1 space-y-2">
                 <div className="relative">
-                  <FormField
-                    control={control}
-                    name={`ingredients.${index}.name`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className={index !== 0 ? "sr-only" : undefined}>Ingrédient</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="Nom de l'ingrédient" 
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleIngredientSearch(e.target.value, index);
-                            }}
-                            onFocus={() => handleIngredientSearch(field.value, index)}
-                            onBlur={() => {
-                              // Delay hiding suggestions to allow clicking on them
-                              setTimeout(() => setSuggestions([]), 200);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <FormLabel className={index !== 0 ? "sr-only" : undefined}>Ingrédient</FormLabel>
+                  <Input 
+                    value={ingredient.name}
+                    placeholder="Nom de l'ingrédient" 
+                    onChange={(e) => {
+                      updateIngredient(index, 'name', e.target.value);
+                      handleIngredientSearch(e.target.value, index);
+                    }}
+                    onFocus={() => handleIngredientSearch(ingredient.name, index)}
+                    onBlur={() => {
+                      // Delay hiding suggestions to allow clicking on them
+                      setTimeout(() => setSuggestions([]), 200);
+                    }}
                   />
                   
                   {suggestions.length > 0 && focusedIngredientIndex === index && (
@@ -156,39 +171,29 @@ const IngredientsForm = () => {
                   )}
                 </div>
                 
-                <FormField
-                  control={control}
-                  name={`ingredients.${index}.quantity`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className={index !== 0 ? "sr-only" : undefined}>Quantité</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Ex: 250g, 3 pièces" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div>
+                  <FormLabel className={index !== 0 ? "sr-only" : undefined}>Quantité</FormLabel>
+                  <Input 
+                    value={ingredient.quantity} 
+                    placeholder="Ex: 250g, 3 pièces"
+                    onChange={(e) => updateIngredient(index, 'quantity', e.target.value)} 
+                  />
+                </div>
               </div>
               
               <div className="flex items-center space-x-2 mt-2 sm:mt-8">
-                <FormField
-                  control={control}
-                  name={`ingredients.${index}.is_allergen`}
-                  render={({ field }) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <FormLabel className="text-sm cursor-pointer">
-                        Allergène
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex items-center space-x-2 space-y-0">
+                  <Checkbox
+                    checked={ingredient.is_allergen || false}
+                    onCheckedChange={(checked) => 
+                      updateIngredient(index, 'is_allergen', !!checked)
+                    }
+                    id={`allergen-${index}`}
+                  />
+                  <Label htmlFor={`allergen-${index}`} className="text-sm cursor-pointer">
+                    Allergène
+                  </Label>
+                </div>
               </div>
               
               <Button
@@ -196,8 +201,8 @@ const IngredientsForm = () => {
                 variant="ghost"
                 size="sm"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => fields.length > 1 && remove(index)}
-                disabled={fields.length <= 1}
+                onClick={() => removeIngredient(index)}
+                disabled={formData.ingredients.length <= 1}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -205,7 +210,7 @@ const IngredientsForm = () => {
           ))}
         </div>
         
-        {fields.length === 0 && (
+        {formData.ingredients.length === 0 && (
           <div className="text-center py-8 border rounded-md bg-muted/40">
             <p className="text-muted-foreground">
               Aucun ingrédient ajouté. Cliquez sur "Ajouter un ingrédient" pour commencer.

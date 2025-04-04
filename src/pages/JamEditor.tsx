@@ -24,6 +24,7 @@ import JamPreview from "@/components/jam-editor/JamPreview";
 interface Ingredient {
   name: string;
   quantity: string;
+  is_allergen?: boolean;
 }
 
 interface JamFormData {
@@ -131,22 +132,25 @@ const JamEditor: React.FC = () => {
         return;
       }
 
+      // Handle type casting for the database fields
+      const jamWithTypes = jam as unknown as JamType;
+
       // Convert ingredients from string[] to Ingredient[]
-      const ingredients = jam.ingredients 
-        ? typeof jam.ingredients[0] === 'string' 
-          ? jam.ingredients.map((ing: string) => {
+      const ingredients = jamWithTypes.ingredients 
+        ? typeof jamWithTypes.ingredients[0] === 'string' 
+          ? jamWithTypes.ingredients.map((ing: string) => {
               const [name, quantity] = ing.split('|');
               return { name: name || ing, quantity: quantity || '' };
             })
-          : jam.ingredients 
+          : jamWithTypes.ingredients 
         : [{ name: "", quantity: "" }];
 
       // Format recipe steps from recipe field if available
       let recipeSteps: RecipeStep[] = [];
       
-      if (jam.recipe) {
+      if (jamWithTypes.recipe) {
         try {
-          const parsedRecipe = JSON.parse(jam.recipe);
+          const parsedRecipe = JSON.parse(jamWithTypes.recipe);
           if (Array.isArray(parsedRecipe)) {
             recipeSteps = parsedRecipe;
           }
@@ -157,31 +161,31 @@ const JamEditor: React.FC = () => {
       
       // Get image URL from jam_images
       let mainImageUrl = null;
-      if (jam.jam_images && jam.jam_images.length > 0) {
-        const primaryImage = jam.jam_images.find((img: any) => img.is_primary);
+      if (jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
+        const primaryImage = jamWithTypes.jam_images.find((img: any) => img.is_primary);
         if (primaryImage) {
           mainImageUrl = primaryImage.url;
-        } else if (jam.jam_images[0]) {
-          mainImageUrl = jam.jam_images[0].url;
+        } else if (jamWithTypes.jam_images[0]) {
+          mainImageUrl = jamWithTypes.jam_images[0].url;
         }
         setMainImagePreview(mainImageUrl);
       }
       
       setFormData({
-        name: jam.name || "",
-        description: jam.description || "",
-        type: jam.type || "",
-        badges: jam.badges || [],
+        name: jamWithTypes.name || "",
+        description: jamWithTypes.description || "",
+        type: jamWithTypes.type || "",
+        badges: jamWithTypes.badges || [],
         ingredients: ingredients as Ingredient[],
-        allergens: jam.allergens || [],
-        production_date: jam.production_date || new Date().toISOString().split("T")[0],
-        weight_grams: jam.weight_grams || 250,
-        available_quantity: jam.available_quantity || 1,
-        shelf_life_months: jam.shelf_life_months || 12,
-        special_edition: jam.special_edition || false,
-        price_credits: jam.price_credits || 10,
+        allergens: jamWithTypes.allergens || [],
+        production_date: jamWithTypes.production_date || new Date().toISOString().split("T")[0],
+        weight_grams: jamWithTypes.weight_grams || 250,
+        available_quantity: jamWithTypes.available_quantity || 1,
+        shelf_life_months: jamWithTypes.shelf_life_months || 12,
+        special_edition: jamWithTypes.special_edition || false,
+        price_credits: jamWithTypes.price_credits || 10,
         recipe_steps: recipeSteps,
-        is_active: jam.is_active,
+        is_active: jamWithTypes.is_active,
         images: [],
         main_image_index: 0,
       });
