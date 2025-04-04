@@ -1,8 +1,7 @@
-
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Jar } from "lucide-react";
+import { Bottle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -24,7 +23,7 @@ const NotFound = () => {
       <main className="flex-grow flex items-center justify-center bg-muted/30 py-12">
         <div className="container max-w-md text-center">
           <div className="mb-8">
-            <Jar className="h-20 w-20 mx-auto text-jam-raspberry" />
+            <Bottle className="h-20 w-20 mx-auto text-jam-raspberry" />
           </div>
           
           <h1 className="text-4xl font-serif font-bold mb-4 text-jam-dark">Oups ! Page introuvable</h1>

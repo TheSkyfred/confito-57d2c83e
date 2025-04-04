@@ -1,6 +1,5 @@
-
 import { Link } from "react-router-dom"
-import { Jar } from "lucide-react"
+import { Bottle } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -9,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2">
-              <Jar className="h-6 w-6 text-jam-honey" />
+              <Bottle className="h-6 w-6 text-jam-honey" />
               <span className="font-serif text-xl font-bold text-jam-cream">
                 Jam-<span className="text-jam-raspberry">Jar</span> Jamboree
               </span>

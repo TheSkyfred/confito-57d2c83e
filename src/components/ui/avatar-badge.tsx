@@ -28,7 +28,7 @@ const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
-  content?: string | number;
+  content?: React.ReactNode;
 }
 
 function AvatarBadge({

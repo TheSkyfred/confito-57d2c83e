@@ -8,7 +8,7 @@ import {
   Bell, 
   User, 
   Menu, 
-  Jar,
+  Bottle,
   Heart,
   ChevronDown
 } from 'lucide-react'
@@ -33,7 +33,7 @@ export default function Header() {
         {/* Logo et titre */}
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <Jar className="h-6 w-6 text-jam-raspberry" />
+            <Bottle className="h-6 w-6 text-jam-raspberry" />
             <span className="font-serif text-xl font-bold text-jam-dark hidden sm:inline-block">
               Jam-<span className="text-jam-raspberry">Jar</span> Jamboree
             </span>
