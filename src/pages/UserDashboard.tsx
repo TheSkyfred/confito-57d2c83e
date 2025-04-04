@@ -1,20 +1,10 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Star,
-  Heart,
-  Award,
-  PlusCircle,
-  BarChart3,
-  Loader2,
-  CreditCard
-} from 'lucide-react';
+import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { ProfileType } from '@/types/supabase';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -228,10 +218,15 @@ const UserDashboard = () => {
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback>{profile?.username?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <h2 className="text-xl font-medium">{profile?.full_name || profile?.username}</h2>
-                  <p className="text-muted-foreground">@{profile?.username}</p>
-                </div>
+                {profile && (
+                  <>
+                    <p className="font-medium">{profile.full_name || profile.username}</p>
+                    <p className="text-sm text-muted-foreground">{profile.username}</p>
+                    <div className="mt-4 flex items-center">
+                      <CreditBadge amount={profile.credits} size="lg" />
+                    </div>
+                  </>
+                )}
               </div>
               
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">

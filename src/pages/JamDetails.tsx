@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { JamType } from '@/types/supabase';
 
 import {
   ChevronLeft,
@@ -44,12 +45,10 @@ const JamDetails = () => {
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   
-  // Fetch jam details
   const { data: jam, isLoading, error } = useQuery({
     queryKey: ['jam', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jams')
+      const { data, error } = await getTypedSupabaseQuery('jams')
         .select(`
           *,
           jam_images (*),
@@ -61,10 +60,8 @@ const JamDetails = () => {
 
       if (error) throw error;
       
-      // Check if user has favorited this jam
       if (user) {
-        const { data: favorite } = await supabase
-          .from('favorites')
+        const { data: favorite } = await getTypedSupabaseQuery('favorites')
           .select('id')
           .eq('jam_id', id)
           .eq('user_id', user.id)
@@ -118,7 +115,6 @@ const JamDetails = () => {
     }
   };
 
-  // Add to cart
   const addToCart = () => {
     if (!user) {
       toast({
@@ -171,7 +167,6 @@ const JamDetails = () => {
     );
   }
 
-  // Calculate average rating
   const ratings = jam.reviews?.map((review: any) => review.rating) || [];
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
@@ -185,7 +180,6 @@ const JamDetails = () => {
 
   return (
     <div className="container py-8">
-      {/* Navigation */}
       <div className="flex items-center mb-6">
         <Button variant="ghost" size="sm" asChild className="mr-2">
           <Link to="/explore">
@@ -196,7 +190,6 @@ const JamDetails = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Images */}
         <div>
           <Carousel className="w-full">
             <CarouselContent>
@@ -229,7 +222,6 @@ const JamDetails = () => {
           </Carousel>
         </div>
 
-        {/* Details */}
         <div>
           <div className="flex justify-between items-start">
             <div>
@@ -334,7 +326,6 @@ const JamDetails = () => {
         </div>
       </div>
 
-      {/* Tabs for Additional Content */}
       <div className="mt-12">
         <Tabs defaultValue="recipe">
           <TabsList className="w-full sm:w-fit">

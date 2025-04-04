@@ -15,6 +15,7 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
+import { ProfileType, CreditTransactionType } from '@/types/supabase';
 
 import {
   Card,

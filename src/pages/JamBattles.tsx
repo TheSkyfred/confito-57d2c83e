@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,16 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import {
-  Swords,
-  Timer,
-  BarChart3,
-  ThumbsUp,
-  Award,
-  PlusCircle,
-  ShieldQuestion,
-  Loader2,
-} from 'lucide-react';
+import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { JamBattleType, BattleVoteType } from '@/types/supabase';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -76,14 +67,12 @@ const JamBattles = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('active');
   
-  // Fetch battles
   const { data: battles, isLoading, error, refetch } = useQuery({
     queryKey: ['battles', activeTab],
     queryFn: async () => {
       const isActive = activeTab === 'active';
       
-      const { data, error } = await supabase
-        .from('jam_battles')
+      const { data, error } = await getTypedSupabaseQuery('jam_battles')
         .select(`
           *,
           jam_a:jam_a_id (
@@ -106,7 +95,6 @@ const JamBattles = () => {
 
       if (error) throw error;
       
-      // Check if user has voted in any battles
       if (user) {
         const { data: votes } = await supabase
           .from('battle_votes')
@@ -143,7 +131,6 @@ const JamBattles = () => {
     }
     
     try {
-      // Check if user has already voted
       const { data: existingVote } = await supabase
         .from('battle_votes')
         .select('id')
@@ -160,7 +147,6 @@ const JamBattles = () => {
         return;
       }
       
-      // Insert vote
       await supabase
         .from('battle_votes')
         .insert([{ 
@@ -169,7 +155,6 @@ const JamBattles = () => {
           voted_for_jam_id: jamId
         }]);
         
-      // Update battle counters
       const isVoteForA = jamId === battles?.find(b => b.id === battleId)?.jam_a_id;
       await supabase
         .from('jam_battles')
@@ -188,7 +173,6 @@ const JamBattles = () => {
         description: "Votre vote a bien été comptabilisé",
       });
       
-      // Refresh data
       refetch();
       
     } catch (error) {
@@ -295,7 +279,6 @@ const JamBattles = () => {
                   
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Jam A */}
                       <div 
                         className={`relative border rounded-lg p-4 ${
                           battle.already_voted && battle.voted_for === battle.jam_a.id 
@@ -332,7 +315,6 @@ const JamBattles = () => {
                         </div>
                       </div>
                       
-                      {/* Jam B */}
                       <div 
                         className={`relative border rounded-lg p-4 ${
                           battle.already_voted && battle.voted_for === battle.jam_b.id 
@@ -370,7 +352,6 @@ const JamBattles = () => {
                       </div>
                     </div>
                     
-                    {/* Progress bar */}
                     <div className="mt-8">
                       <div className="flex justify-between text-sm mb-2">
                         <div>
@@ -479,7 +460,6 @@ const JamBattles = () => {
                       )}
                     
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Jam A */}
                         <div className={`border rounded-lg p-4 ${
                           winner?.id === battle.jam_a.id ? 'border-jam-honey' : ''
                         }`}>
@@ -502,7 +482,6 @@ const JamBattles = () => {
                           </div>
                         </div>
                         
-                        {/* Jam B */}
                         <div className={`border rounded-lg p-4 ${
                           winner?.id === battle.jam_b.id ? 'border-jam-honey' : ''
                         }`}>
@@ -526,7 +505,6 @@ const JamBattles = () => {
                         </div>
                       </div>
                       
-                      {/* Results */}
                       <div className="mt-8">
                         <div className="flex justify-between text-sm mb-2">
                           <div>

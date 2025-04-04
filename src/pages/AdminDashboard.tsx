@@ -1,22 +1,20 @@
-
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  ShieldAlert,
   Users,
-  BarChart3,
-  Activity,
-  Flag,
+  MessageSquare,
+  FileText,
+  ShieldAlert,
   Award,
-  PlusCircle,
-  Settings,
-  Lock,
+  BarChart3,
+  ChevronDown,
   Search,
-  Filter,
-  Loader2
+  Loader2,
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -60,6 +58,8 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
   
+  const navigate = useNavigate();
+
   // Check if user is admin
   const { data: userProfile, isLoading: loadingProfile } = useQuery({
     queryKey: ['adminProfile', user?.id],
