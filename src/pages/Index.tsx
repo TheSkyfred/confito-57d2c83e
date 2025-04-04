@@ -1,333 +1,237 @@
 
-import React from 'react'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
-import HeroSection from '@/components/HeroSection'
-import JamCard from '@/components/JamCard'
-import SeasonalFruit from '@/components/SeasonalFruit'
-import { Button } from '@/components/ui/button'
-import { Link } from 'react-router-dom'
-import { ChevronRight, Award, TrendingUp, Heart, Users } from 'lucide-react'
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import HeroSection from '@/components/HeroSection';
+import SeasonalFruit from '@/components/SeasonalFruit';
+import JamCard from '@/components/JamCard';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
-// Mock data pour les confitures
-const featuredJams = [
-  {
-    id: "1",
-    name: "Confiture de Fraises Basilic",
-    description: "Une combinaison étonnante et rafraîchissante de fraises juteuses et de basilic frais.",
-    imageUrl: "https://images.unsplash.com/photo-1623227866882-c005c26dfe41?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 5,
-    rating: 4.8,
-    user: {
-      name: "Marie D.",
-      avatarUrl: "https://i.pravatar.cc/150?img=28",
-      badgeCount: 3
-    },
-    tags: ["fraise", "basilic", "été"],
-    isFavorite: false
-  },
-  {
-    id: "2",
-    name: "Gelée de Mûres Sauvages",
-    description: "Récoltées à la main dans nos forêts locales, ces mûres sauvages offrent une gelée au goût intense et naturel.",
-    imageUrl: "https://images.unsplash.com/photo-1600853225238-63d010a87b95?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 7,
-    rating: 4.5,
-    user: {
-      name: "Pierre L.",
-      avatarUrl: "https://i.pravatar.cc/150?img=12",
-      badgeCount: 1
-    },
-    tags: ["mûre", "sans pépins", "récolte sauvage"],
-    isFavorite: true
-  },
-  {
-    id: "3",
-    name: "Confiture d'Abricots à la Lavande",
-    description: "Les abricots du sud de la France rencontrent la lavande de Provence pour une expérience gustative unique.",
-    imageUrl: "https://images.unsplash.com/photo-1621939261909-2b7f8980f200?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 6,
-    rating: 4.7,
-    user: {
-      name: "Sophie M.",
-      avatarUrl: "https://i.pravatar.cc/150?img=23",
-      badgeCount: 5
-    },
-    tags: ["abricot", "lavande", "Provence"],
-    isFavorite: false
-  },
-  {
-    id: "4",
-    name: "Marmelade d'Orange Amère",
-    description: "Une marmelade traditionnelle avec un équilibre parfait entre l'amertume des écorces et la douceur du fruit.",
-    imageUrl: "https://images.unsplash.com/photo-1618591272043-bc91152d3ff0?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 8,
-    rating: 4.9,
-    user: {
-      name: "Thomas G.",
-      avatarUrl: "https://i.pravatar.cc/150?img=15",
-      badgeCount: 2
-    },
-    tags: ["orange", "agrume", "petit déjeuner"],
-    isFavorite: false
-  }
-];
+export default function Index() {
+  // Récupération des confitures en vedette
+  const { data: featuredJams, isLoading } = useQuery({
+    queryKey: ['featured_jams'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('jams')
+        .select(`
+          *,
+          profiles:creator_id (username, avatar_url),
+          jam_images (*),
+          reviews:reviews (rating)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(4);
+        
+      if (error) throw error;
 
-const popularJams = [
-  {
-    id: "5",
-    name: "Confiture de Pêches Blanches",
-    description: "Des pêches blanches juteuses pour une confiture douce et parfumée qui ravira vos papilles.",
-    imageUrl: "https://images.unsplash.com/photo-1601493700750-5b1b2a399d39?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 6,
-    rating: 4.6,
-    user: {
-      name: "Léa F.",
-      avatarUrl: "https://i.pravatar.cc/150?img=5",
-      badgeCount: 4
+      // Transformer les données pour calculer la note moyenne
+      return data.map((jam: any) => {
+        const ratings = jam.reviews.map((r: any) => r.rating);
+        const average_rating = ratings.length > 0 
+          ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+          : null;
+        
+        // Simuler le nombre de badges pour l'utilisateur
+        const badge_count = Math.floor(Math.random() * 5);
+        
+        return {
+          ...jam,
+          average_rating,
+          badge_count
+        };
+      });
     },
-    tags: ["pêche", "été", "dessert"],
-    isFavorite: false
-  },
-  {
-    id: "6",
-    name: "Confiture de Figues au Vin Rouge",
-    description: "Des figues mûres mijotées avec du vin rouge et des épices pour une confiture riche et festive.",
-    imageUrl: "https://images.unsplash.com/photo-1515512713581-188c8fb34ae2?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 9,
-    rating: 4.8,
-    user: {
-      name: "Nicolas P.",
-      avatarUrl: "https://i.pravatar.cc/150?img=18",
-      badgeCount: 3
-    },
-    tags: ["figue", "vin rouge", "épices"],
-    isFavorite: true
-  },
-  {
-    id: "7",
-    name: "Confiture de Rhubarbe Vanillée",
-    description: "L'acidité de la rhubarbe adoucie par la vanille pour un équilibre parfait.",
-    imageUrl: "https://images.unsplash.com/photo-1598120746311-69b0616fce52?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 5,
-    rating: 4.4,
-    user: {
-      name: "Claire B.",
-      avatarUrl: "https://i.pravatar.cc/150?img=35",
-      badgeCount: 1
-    },
-    tags: ["rhubarbe", "vanille", "printemps"],
-    isFavorite: false
-  },
-  {
-    id: "8",
-    name: "Gelée de Pommes à la Cannelle",
-    description: "Une gelée transparente aux pommes avec une touche de cannelle, parfaite sur une tartine ou avec du fromage.",
-    imageUrl: "https://images.unsplash.com/photo-1557925923-cd4648e211a0?ixlib=rb-1.2.1&auto=format&fit=crop&w=700&q=80",
-    price: 4,
-    rating: 4.5,
-    user: {
-      name: "Antoine M.",
-      avatarUrl: "https://i.pravatar.cc/150?img=10",
-      badgeCount: 2
-    },
-    tags: ["pomme", "cannelle", "automne"],
-    isFavorite: false
-  }
-];
-
-const Index = () => {
-  // Ces fonctions seraient normalement connectées à un état global ou une API
-  const handleAddToCart = (id: string) => {
-    console.log(`Ajouter au panier: ${id}`);
+  });
+  
+  const handleAddToCart = () => {
+    toast.success("Confiture ajoutée au panier !");
   };
 
-  const handleToggleFavorite = (id: string) => {
-    console.log(`Toggle favori: ${id}`);
+  const handleToggleFavorite = () => {
+    toast.success("Confiture ajoutée aux favoris !");
   };
+  
+  // Témoignages
+  const testimonials = [
+    {
+      id: 1,
+      text: "J'ai découvert des confitures incroyables que je n'aurais jamais pu trouver en magasin. La qualité et les saveurs sont incomparables !",
+      author: "Sophie L.",
+      role: "Gourmande passionnée",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&auto=format&fit=crop"
+    },
+    {
+      id: 2,
+      text: "Grâce à JamJam, j'ai pu partager mes créations avec d'autres passionnés et recevoir des retours constructifs pour améliorer mes recettes.",
+      author: "Michel P.",
+      role: "Confiturier amateur",
+      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&auto=format&fit=crop"
+    },
+    {
+      id: 3,
+      text: "La communauté est bienveillante et les échanges de confitures m'ont permis de découvrir des combinaisons de saveurs étonnantes.",
+      author: "Camille D.",
+      role: "Chef cuisinière",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&auto=format&fit=crop"
+    }
+  ];
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-
-      <main className="flex-grow">
-        {/* Hero Section */}
-        <HeroSection />
-
-        {/* Section Fonctionnalités */}
-        <section className="py-12 bg-white">
-          <div className="container">
-            <h2 className="text-2xl md:text-3xl font-serif font-bold text-center mb-10">
-              Comment fonctionne <span className="text-jam-raspberry">Jam-Jar Jamboree</span> ?
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-jam-honey/20 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-serif font-bold text-jam-honey">1</span>
-                </div>
-                <h3 className="text-lg font-serif font-medium mb-2">Créez votre compte</h3>
-                <p className="text-muted-foreground">Inscrivez-vous en quelques clics et présentez-vous à la communauté.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-jam-raspberry/20 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-serif font-bold text-jam-raspberry">2</span>
-                </div>
-                <h3 className="text-lg font-serif font-medium mb-2">Ajoutez vos confitures</h3>
-                <p className="text-muted-foreground">Partagez vos créations avec photos, recettes et descriptions.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-jam-leaf/20 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-serif font-bold text-jam-leaf">3</span>
-                </div>
-                <h3 className="text-lg font-serif font-medium mb-2">Échangez des pots</h3>
-                <p className="text-muted-foreground">Utilisez des crédits pour échanger vos confitures avec d'autres membres.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-full bg-jam-dark/20 flex items-center justify-center mb-4">
-                  <span className="text-2xl font-serif font-bold text-jam-dark">4</span>
-                </div>
-                <h3 className="text-lg font-serif font-medium mb-2">Partagez vos avis</h3>
-                <p className="text-muted-foreground">Notez les confitures reçues et participez à la vie de la communauté.</p>
-              </div>
-            </div>
-
-            <div className="mt-10 text-center">
-              <Button asChild variant="outline" className="gap-1">
-                <Link to="/how-it-works">
-                  En savoir plus
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Section Confitures en vedette */}
-        <section className="py-12 bg-muted/30">
-          <div className="container">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
-                <Award className="h-6 w-6 text-jam-honey" />
-                Confitures en vedette
-              </h2>
-              <Button asChild variant="ghost" size="sm" className="gap-1">
-                <Link to="/explore">
-                  Voir toutes
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredJams.map((jam) => (
+    <>
+      <HeroSection />
+      
+      {/* Confitures en vedette */}
+      <div className="container py-16">
+        <div className="text-center mb-10">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
+            Confitures <span className="text-jam-raspberry">en vedette</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Découvrez les confitures les plus appréciées par notre communauté, 
+            préparées avec passion par nos confituriers artisanaux.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {isLoading ? (
+            Array(4).fill(0).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-6 h-80 flex items-center justify-center">
+                  <div className="animate-pulse text-center">
+                    <div className="h-40 w-full bg-slate-200 rounded mb-4"></div>
+                    <div className="h-4 w-3/4 bg-slate-200 rounded mb-2 mx-auto"></div>
+                    <div className="h-4 w-1/2 bg-slate-200 rounded mx-auto"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : featuredJams && featuredJams.length > 0 ? (
+            featuredJams.map((jam: any) => {
+              // Trouver l'image principale ou prendre la première
+              const primaryImage = jam.jam_images.find((img: any) => img.is_primary)?.url || 
+                                 jam.jam_images[0]?.url || 
+                                 'https://images.unsplash.com/photo-1600853225238-63d010a87b95?ixlib=rb-1.2.1&auto=format&fit=crop&w=300&q=80';
+              
+              return (
                 <JamCard
                   key={jam.id}
-                  {...jam}
-                  onAddToCart={() => handleAddToCart(jam.id)}
-                  onToggleFavorite={() => handleToggleFavorite(jam.id)}
+                  id={jam.id}
+                  name={jam.name}
+                  description={jam.description}
+                  imageUrl={primaryImage}
+                  price={jam.price_credits}
+                  rating={jam.average_rating || undefined}
+                  user={{
+                    name: jam.profiles.username,
+                    avatarUrl: jam.profiles.avatar_url || undefined,
+                    badgeCount: jam.badge_count
+                  }}
+                  tags={jam.ingredients.slice(0, 3)}
+                  onAddToCart={() => handleAddToCart()}
+                  onToggleFavorite={() => handleToggleFavorite()}
                 />
-              ))}
-            </div>
+              );
+            })
+          ) : (
+            <p className="col-span-full text-center">Aucune confiture disponible pour le moment.</p>
+          )}
+        </div>
+        
+        <div className="mt-10 text-center">
+          <Button size="lg" asChild>
+            <Link to="/explore">Voir toutes les confitures</Link>
+          </Button>
+        </div>
+      </div>
+      
+      {/* Fruits de saison */}
+      <div className="bg-gradient-to-r from-jam-honey/10 to-jam-raspberry/10 py-16">
+        <div className="container">
+          <div className="text-center mb-8">
+            <h2 className="font-serif text-3xl font-bold mb-4">
+              Fruits de saison : <span className="text-jam-raspberry">c'est le moment !</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Préparez vos confitures avec les meilleurs fruits du moment pour des saveurs incomparables.
+            </p>
           </div>
-        </section>
-
-        {/* Section Fruits de saison et Confitures populaires */}
-        <section className="py-12 bg-white">
-          <div className="container">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Fruits de saison */}
-              <div className="lg:col-span-1">
-                <SeasonalFruit />
-                
-                <div className="mt-8">
-                  <h3 className="text-xl font-serif font-bold flex items-center gap-2 mb-4">
-                    <Users className="h-5 w-5 text-jam-raspberry" />
-                    Rejoignez la communauté
-                  </h3>
-                  
-                  <div className="bg-gradient-to-br from-jam-raspberry/10 to-jam-honey/10 rounded-lg p-6 text-center">
-                    <p className="mb-4 font-medium">Déjà plus de 1200 confituriers passionnés !</p>
-                    <div className="flex -space-x-4 mb-4 justify-center">
-                      {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <img 
-                          key={i}
-                          className="w-10 h-10 border-2 border-white rounded-full"
-                          src={`https://i.pravatar.cc/150?img=${20 + i}`}
-                          alt={`Membre ${i}`} 
-                        />
-                      ))}
-                      <div className="flex items-center justify-center w-10 h-10 text-xs font-medium text-white bg-jam-raspberry rounded-full border-2 border-white">
-                        +99
-                      </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <SeasonalFruit />
+          </div>
+          
+          <div className="text-center">
+            <Button asChild>
+              <Link to="/seasonal-calendar">Voir le calendrier complet</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Témoignages */}
+      <div className="container py-16">
+        <div className="text-center mb-10">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-4">
+            Ce que disent <span className="text-jam-raspberry">nos membres</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Découvrez les expériences partagées par notre communauté de confituriers et gourmands passionnés.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {testimonials.map((testimonial) => (
+            <Card key={testimonial.id} className="relative overflow-hidden">
+              <CardContent className="p-6">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-jam-raspberry to-jam-honey" />
+                <div className="flex flex-col h-full">
+                  <div className="flex-grow">
+                    <p className="text-lg italic mb-6">"{testimonial.text}"</p>
+                  </div>
+                  <Separator className="mb-4" />
+                  <div className="flex items-center gap-4">
+                    <Avatar>
+                      <AvatarImage src={testimonial.avatar} alt={testimonial.author} />
+                      <AvatarFallback>{testimonial.author.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{testimonial.author}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                     </div>
-                    
-                    <Button className="w-full bg-jam-raspberry hover:bg-jam-raspberry/90" asChild>
-                      <Link to="/register">Créer un compte</Link>
-                    </Button>
                   </div>
                 </div>
-              </div>
-              
-              {/* Confitures populaires */}
-              <div className="lg:col-span-2">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
-                    <TrendingUp className="h-6 w-6 text-jam-raspberry" />
-                    Confitures populaires
-                  </h2>
-                  <Button asChild variant="ghost" size="sm" className="gap-1">
-                    <Link to="/popular">
-                      Voir toutes
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {popularJams.map((jam) => (
-                    <JamCard
-                      key={jam.id}
-                      {...jam}
-                      onAddToCart={() => handleAddToCart(jam.id)}
-                      onToggleFavorite={() => handleToggleFavorite(jam.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+      
+      {/* Call to Action */}
+      <div className="bg-gradient-to-br from-jam-raspberry/90 to-jam-dark py-16 text-white">
+        <div className="container text-center">
+          <h2 className="font-serif text-3xl md:text-4xl font-bold mb-6">
+            Prêt à rejoindre la communauté JamJam ?
+          </h2>
+          <p className="text-xl mb-8 max-w-3xl mx-auto">
+            Inscrivez-vous dès maintenant pour échanger vos confitures, 
+            partager vos recettes et découvrir de nouvelles saveurs.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" variant="default" className="bg-white text-jam-raspberry hover:bg-white/90">
+              <Link to="/auth">Créer un compte</Link>
+            </Button>
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+              <Link to="/explore">Explorer les confitures</Link>
+            </Button>
           </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-12 bg-jam-dark text-white">
-          <div className="container">
-            <div className="text-center max-w-3xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-serif font-bold mb-4">
-                Prêt à rejoindre la révolution des confitures ?
-              </h2>
-              <p className="text-lg mb-8 text-jam-cream/80">
-                Inscrivez-vous dès aujourd'hui et recevez 10 crédits gratuits pour commencer à échanger.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-jam-raspberry hover:bg-jam-raspberry/90" asChild>
-                  <Link to="/register">S'inscrire gratuitement</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="border-jam-cream/30 text-jam-cream hover:bg-white/10" asChild>
-                  <Link to="/explore">Explorer les confitures</Link>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <Footer />
-    </div>
-  )
+        </div>
+      </div>
+    </>
+  );
 }
-
-export default Index
