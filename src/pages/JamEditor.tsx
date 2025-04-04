@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { JamType } from "@/types/supabase";
+import { RecipeStep } from "@/components/jam-editor/RecipeForm";
 
 import BasicInfoForm from "@/components/jam-editor/BasicInfoForm";
 import IngredientsForm from "@/components/jam-editor/IngredientsForm";
@@ -23,13 +25,6 @@ import JamPreview from "@/components/jam-editor/JamPreview";
 interface Ingredient {
   name: string;
   quantity: string;
-}
-
-interface RecipeStep {
-  id: string;
-  description: string;
-  duration?: string;
-  image_url?: string;
 }
 
 interface JamFormData {
@@ -63,6 +58,7 @@ const JamEditor: React.FC = () => {
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "basic-info",
   ]);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
 
   // Initialize form data
   const [formData, setFormData] = useState<JamFormData>({
@@ -100,6 +96,18 @@ const JamEditor: React.FC = () => {
     }
   }, [user, isEditMode]);
 
+  // Handle image upload
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setMainImagePreview(imageUrl);
+      
+      updateFormData('images', [file]);
+      updateFormData('main_image_index', 0);
+    }
+  };
+
   // Load existing jam data for editing
   const loadJamData = async () => {
     try {
@@ -134,22 +142,36 @@ const JamEditor: React.FC = () => {
           : jam.ingredients 
         : [{ name: "", quantity: "" }];
 
-      // Format recipe steps
-      const recipeSteps = jam.recipe_steps 
-        ? Array.isArray(jam.recipe_steps) ? jam.recipe_steps : []
-        : [];
-
-      // Convert jam type/category string to match form format
-      const jamType = jam.type || "";
-
-      // Get uploaded images 
-      const images: File[] = [];
-      const jam_images = jam.jam_images || [];
+      // Format recipe steps from recipe field if available
+      let recipeSteps: RecipeStep[] = [];
+      
+      if (jam.recipe) {
+        try {
+          const parsedRecipe = JSON.parse(jam.recipe);
+          if (Array.isArray(parsedRecipe)) {
+            recipeSteps = parsedRecipe;
+          }
+        } catch (e) {
+          console.error("Error parsing recipe steps:", e);
+        }
+      }
+      
+      // Get image URL from jam_images
+      let mainImageUrl = null;
+      if (jam.jam_images && jam.jam_images.length > 0) {
+        const primaryImage = jam.jam_images.find((img: any) => img.is_primary);
+        if (primaryImage) {
+          mainImageUrl = primaryImage.url;
+        } else if (jam.jam_images[0]) {
+          mainImageUrl = jam.jam_images[0].url;
+        }
+        setMainImagePreview(mainImageUrl);
+      }
       
       setFormData({
         name: jam.name || "",
         description: jam.description || "",
-        type: jamType,
+        type: jam.type || "",
         badges: jam.badges || [],
         ingredients: ingredients,
         allergens: jam.allergens || [],
@@ -161,7 +183,7 @@ const JamEditor: React.FC = () => {
         price_credits: jam.price_credits || 10,
         recipe_steps: recipeSteps,
         is_active: jam.is_active,
-        images: images,
+        images: [],
         main_image_index: 0,
       });
       
@@ -189,6 +211,9 @@ const JamEditor: React.FC = () => {
         ing => `${ing.name}|${ing.quantity}`
       );
       
+      // Format recipe steps as JSON string
+      const recipeString = JSON.stringify(formData.recipe_steps);
+      
       // Prepare jam data
       const jamData = {
         name: formData.name,
@@ -203,7 +228,7 @@ const JamEditor: React.FC = () => {
         shelf_life_months: formData.shelf_life_months,
         special_edition: formData.special_edition,
         price_credits: formData.price_credits,
-        recipe_steps: formData.recipe_steps,
+        recipe: recipeString,
         is_active: publish,
         creator_id: user.id,
       };
@@ -256,7 +281,7 @@ const JamEditor: React.FC = () => {
             .insert({
               jam_id: jam_id,
               url: publicUrl.publicUrl,
-              is_main: isMainImage
+              is_primary: isMainImage
             });
             
           if (imageInsertError) throw imageInsertError;
@@ -294,7 +319,7 @@ const JamEditor: React.FC = () => {
   };
 
   // Update form data
-  const updateFormData = (key: keyof JamFormData, value: any) => {
+  const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
@@ -348,7 +373,9 @@ const JamEditor: React.FC = () => {
                   <AccordionContent>
                     <BasicInfoForm 
                       formData={formData} 
-                      updateFormData={updateFormData} 
+                      updateFormData={updateFormData}
+                      mainImagePreview={mainImagePreview}
+                      handleImageChange={handleImageChange}
                     />
                   </AccordionContent>
                 </AccordionItem>
@@ -378,7 +405,8 @@ const JamEditor: React.FC = () => {
                   <AccordionContent>
                     <PricingForm 
                       formData={formData} 
-                      updateFormData={updateFormData} 
+                      updateFormData={updateFormData}
+                      suggestedPrice={null}
                     />
                   </AccordionContent>
                 </AccordionItem>
@@ -419,7 +447,7 @@ const JamEditor: React.FC = () => {
         <TabsContent value="preview" className="mt-0">
           <Card>
             <div className="p-6">
-              <JamPreview formData={formData} fullPreview />
+              <JamPreview formData={formData} fullPreview={true} />
               
               <div className="mt-8 flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setActiveTab("edit")}>

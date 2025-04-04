@@ -22,6 +22,7 @@ import {
   BarChart3,
   Loader2,
 } from "lucide-react";
+import { OrderType } from "@/types/supabase";
 
 interface Jam {
   id: string;
@@ -59,8 +60,8 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [userCredits, setUserCredits] = useState(0);
   const [userJams, setUserJams] = useState<Jam[]>([]);
-  const [purchases, setPurchases] = useState<Order[]>([]);
-  const [sales, setSales] = useState<Order[]>([]);
+  const [purchases, setPurchases] = useState<OrderType[]>([]);
+  const [sales, setSales] = useState<OrderType[]>([]);
   const [favorites, setFavorites] = useState<Jam[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
 
@@ -183,7 +184,7 @@ const UserDashboard = () => {
 
         <div className="flex flex-col items-end justify-center space-y-2">
           <div className="flex items-center gap-2">
-            <CreditBadge value={userCredits} />
+            <CreditBadge amount={user?.credits || 0} size="large" />
             <Button variant="outline" size="sm" asChild>
               <Link to="/credits">
                 <CreditCard className="h-4 w-4 mr-2" />

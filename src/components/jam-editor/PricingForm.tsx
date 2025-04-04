@@ -1,28 +1,25 @@
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
 import { 
-  FormField, 
-  FormItem, 
   FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
+  FormDescription
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { AlertCircle, Lightbulb } from 'lucide-react';
 
-interface PricingFormProps {
-  suggestedPrice: number | null;
+export interface PricingFormProps {
+  formData: {
+    price_credits: number;
+    [key: string]: any;
+  };
+  updateFormData: (key: string, value: any) => void;
+  suggestedPrice?: number | null;
 }
 
-const PricingForm = ({ suggestedPrice }: PricingFormProps) => {
-  const { control, setValue, watch } = useFormContext();
-  const currentPrice = watch('price_credits');
-
+const PricingForm: React.FC<PricingFormProps> = ({ formData, updateFormData, suggestedPrice }) => {
   const handleSliderChange = (values: number[]) => {
-    setValue('price_credits', values[0]);
+    updateFormData('price_credits', values[0]);
   };
 
   return (
@@ -39,7 +36,7 @@ const PricingForm = ({ suggestedPrice }: PricingFormProps) => {
             <button
               type="button"
               className="text-sm text-primary hover:text-primary/80 transition-colors"
-              onClick={() => setValue('price_credits', suggestedPrice)}
+              onClick={() => updateFormData('price_credits', suggestedPrice)}
             >
               Appliquer cette suggestion
             </button>
@@ -47,42 +44,33 @@ const PricingForm = ({ suggestedPrice }: PricingFormProps) => {
         </div>
       )}
 
-      <FormField
-        control={control}
-        name="price_credits"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Prix en crédits *</FormLabel>
-            <FormControl>
-              <div className="space-y-4">
-                <Slider
-                  min={1}
-                  max={100}
-                  step={1}
-                  value={[field.value]}
-                  onValueChange={handleSliderChange}
-                  className="py-4"
-                />
-                <div className="flex items-center gap-4">
-                  <Input 
-                    type="number"
-                    min={1}
-                    className="w-24"
-                    {...field}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                  <span className="text-lg font-medium">crédits</span>
-                </div>
-              </div>
-            </FormControl>
-            <FormDescription>
-              Définissez le prix en crédits pour votre confiture. 
-              Le prix minimum est de 1 crédit.
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div>
+        <FormLabel>Prix en crédits *</FormLabel>
+        <div className="space-y-4">
+          <Slider
+            min={1}
+            max={100}
+            step={1}
+            value={[formData.price_credits]}
+            onValueChange={handleSliderChange}
+            className="py-4"
+          />
+          <div className="flex items-center gap-4">
+            <Input 
+              type="number"
+              min={1}
+              className="w-24"
+              value={formData.price_credits}
+              onChange={(e) => updateFormData('price_credits', Number(e.target.value))}
+            />
+            <span className="text-lg font-medium">crédits</span>
+          </div>
+        </div>
+        <FormDescription>
+          Définissez le prix en crédits pour votre confiture. 
+          Le prix minimum est de 1 crédit.
+        </FormDescription>
+      </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-md p-4">
         <div className="flex items-start gap-3">

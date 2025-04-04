@@ -28,6 +28,8 @@ import {
   Star, 
   FileDown
 } from 'lucide-react';
+import { RecipeStep } from './RecipeForm';
+import { CreditBadge } from '@/components/ui/credit-badge';
 
 // Map category values to readable labels
 const categoryLabels: Record<string, string> = {
@@ -49,25 +51,43 @@ const tagLabels: Record<string, string> = {
   'artisanal': 'Artisanal'
 };
 
-interface JamPreviewProps {
-  data: any;
-  imageUrl: string | null;
+export interface JamPreviewProps {
+  formData: {
+    name: string;
+    description: string;
+    type?: string;
+    badges?: string[];
+    ingredients: Array<{name: string; quantity: string}>;
+    allergens: string[];
+    production_date?: string;
+    weight_grams: number;
+    available_quantity: number;
+    shelf_life_months?: number;
+    special_edition?: boolean;
+    price_credits: number;
+    recipe_steps: RecipeStep[];
+    is_active: boolean;
+    images?: File[];
+    main_image_index?: number;
+    [key: string]: any;
+  };
+  fullPreview?: boolean;
 }
 
-const JamPreview = ({ data, imageUrl }: JamPreviewProps) => {
-  if (!data) return null;
+const JamPreview = ({ formData, fullPreview = false }: JamPreviewProps) => {
+  if (!formData) return null;
   
-  // Extract allergens from ingredients
-  const allergens = data.ingredients
-    .filter((ing: any) => ing.is_allergen)
-    .map((ing: any) => ing.name);
+  // Generate main image preview if there's an uploaded image
+  const imageUrl = formData.images && formData.images.length > 0 && formData.main_image_index !== undefined
+    ? URL.createObjectURL(formData.images[formData.main_image_index])
+    : null;
     
-  // Format expiration date if we have packaging date and preservation months
+  // Format expiration date if we have production date and shelf life months
   let expirationDate = null;
-  if (data.packaging_date && data.preservation_months) {
-    const packagingDate = new Date(data.packaging_date);
-    expirationDate = new Date(packagingDate);
-    expirationDate.setMonth(expirationDate.getMonth() + data.preservation_months);
+  if (formData.production_date && formData.shelf_life_months) {
+    const productionDate = new Date(formData.production_date);
+    expirationDate = new Date(productionDate);
+    expirationDate.setMonth(expirationDate.getMonth() + formData.shelf_life_months);
   }
   
   const generateLabel = () => {
@@ -93,7 +113,7 @@ const JamPreview = ({ data, imageUrl }: JamPreviewProps) => {
             {imageUrl ? (
               <img
                 src={imageUrl}
-                alt={data.name}
+                alt={formData.name}
                 className="w-full h-full object-cover aspect-square"
               />
             ) : (
@@ -105,50 +125,50 @@ const JamPreview = ({ data, imageUrl }: JamPreviewProps) => {
           
           <div className="p-6 md:w-2/3">
             <div className="flex flex-wrap gap-2 mb-2">
-              <Badge variant="outline" className="bg-muted/50">
-                {categoryLabels[data.category] || data.category}
-              </Badge>
+              {formData.type && (
+                <Badge variant="outline" className="bg-muted/50">
+                  {categoryLabels[formData.type] || formData.type}
+                </Badge>
+              )}
               
-              {data.special_jar && (
+              {formData.special_edition && (
                 <Badge className="bg-jam-honey text-jam-dark">Bocal spécial</Badge>
               )}
               
-              {data.tags && data.tags.map((tag: string) => (
+              {formData.badges && formData.badges.map((tag: string) => (
                 <Badge key={tag} className="bg-jam-raspberry">
                   {tagLabels[tag] || tag}
                 </Badge>
               ))}
             </div>
             
-            <h1 className="text-2xl font-serif font-bold mb-2">{data.name}</h1>
+            <h1 className="text-2xl font-serif font-bold mb-2">{formData.name || 'Sans titre'}</h1>
             
-            {data.description && (
-              <p className="text-gray-600 mb-4">{data.description}</p>
+            {formData.description && (
+              <p className="text-gray-600 mb-4">{formData.description}</p>
             )}
             
             <div className="flex flex-wrap items-center gap-x-8 gap-y-2 mt-4">
               <div className="text-sm text-gray-600 flex items-center">
                 <Tag className="h-4 w-4 mr-1" />
-                <span>{data.weight_grams}g</span>
+                <span>{formData.weight_grams}g</span>
               </div>
               
-              {data.packaging_date && (
+              {formData.production_date && (
                 <div className="text-sm text-gray-600 flex items-center">
                   <Clock className="h-4 w-4 mr-1" />
-                  <span>Mise en bocal: {format(new Date(data.packaging_date), 'PP', { locale: fr })}</span>
+                  <span>Mise en bocal: {format(new Date(formData.production_date), 'PP', { locale: fr })}</span>
                 </div>
               )}
               
               <div className="text-sm text-gray-600 flex items-center">
                 <ShoppingCart className="h-4 w-4 mr-1" />
-                <span>{data.available_quantity} pot{data.available_quantity > 1 ? 's' : ''} disponible{data.available_quantity > 1 ? 's' : ''}</span>
+                <span>{formData.available_quantity} pot{formData.available_quantity > 1 ? 's' : ''} disponible{formData.available_quantity > 1 ? 's' : ''}</span>
               </div>
             </div>
             
             <div className="mt-6 flex items-center">
-              <span className="text-2xl font-bold text-jam-raspberry">
-                {data.price_credits} crédit{data.price_credits > 1 ? 's' : ''}
-              </span>
+              <CreditBadge amount={formData.price_credits} size="lg" />
               
               <Button className="ml-auto bg-jam-raspberry hover:bg-jam-raspberry/90">
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -158,136 +178,140 @@ const JamPreview = ({ data, imageUrl }: JamPreviewProps) => {
           </div>
         </div>
         
-        <div className="p-6 border-t">
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="ingredients">
-              <AccordionTrigger>Ingrédients</AccordionTrigger>
-              <AccordionContent>
-                <div className="space-y-4">
-                  <ul className="list-disc pl-5 space-y-2">
-                    {data.ingredients.map((ing: any, i: number) => (
-                      <li key={i} className="text-gray-700">
-                        <span className="font-medium">{ing.name}</span>
-                        {ing.quantity && <span className="text-gray-500 ml-1">({ing.quantity})</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  {allergens.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-3">
-                      <div className="flex items-center">
-                        <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
-                        <span className="text-sm font-medium text-amber-800">Contient des allergènes:</span>
-                      </div>
-                      <p className="text-sm text-amber-700 mt-1">
-                        {allergens.join(', ')}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            
-            {data.recipe_steps && data.recipe_steps.length > 0 && (
-              <AccordionItem value="recipe">
-                <AccordionTrigger>Recette</AccordionTrigger>
+        {fullPreview && (
+          <div className="p-6 border-t">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="ingredients">
+                <AccordionTrigger>Ingrédients</AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-6">
-                    {data.recipe_steps.map((step: any, i: number) => (
-                      <div key={i} className="flex">
-                        <div className="flex-shrink-0 mr-4">
-                          <div className="rounded-full w-8 h-8 bg-jam-raspberry flex items-center justify-center text-white font-bold">
-                            {i + 1}
-                          </div>
+                  <div className="space-y-4">
+                    <ul className="list-disc pl-5 space-y-2">
+                      {formData.ingredients.map((ing, i) => (
+                        <li key={i} className="text-gray-700">
+                          <span className="font-medium">{ing.name}</span>
+                          {ing.quantity && <span className="text-gray-500 ml-1">({ing.quantity})</span>}
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    {formData.allergens?.length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mt-3">
+                        <div className="flex items-center">
+                          <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
+                          <span className="text-sm font-medium text-amber-800">Contient des allergènes:</span>
                         </div>
-                        <div>
-                          <p className="text-gray-700">{step.description}</p>
-                          {step.duration_minutes > 0 && (
-                            <p className="text-sm text-gray-500 mt-1 flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {step.duration_minutes} minute{step.duration_minutes > 1 ? 's' : ''}
-                            </p>
-                          )}
-                          
-                          {step.image_url && (
-                            <img 
-                              src={step.image_url} 
-                              alt={`Étape ${i + 1}`} 
-                              className="mt-2 rounded-md max-w-[200px] max-h-[150px] object-cover"
-                            />
-                          )}
-                        </div>
+                        <p className="text-sm text-amber-700 mt-1">
+                          {formData.allergens.join(', ')}
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            )}
-            
-            <AccordionItem value="info">
-              <AccordionTrigger>Informations</AccordionTrigger>
-              <AccordionContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900">Détails produit</h4>
-                    <dl className="mt-2 space-y-1">
-                      <div className="flex justify-between">
-                        <dt className="text-sm text-gray-500">Poids</dt>
-                        <dd className="text-sm font-medium">{data.weight_grams}g</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-sm text-gray-500">Type</dt>
-                        <dd className="text-sm font-medium">{categoryLabels[data.category] || data.category}</dd>
-                      </div>
-                      <div className="flex justify-between">
-                        <dt className="text-sm text-gray-500">Pot spécial</dt>
-                        <dd className="text-sm font-medium">{data.special_jar ? 'Oui' : 'Non'}</dd>
-                      </div>
-                    </dl>
+              
+              {formData.recipe_steps && formData.recipe_steps.length > 0 && (
+                <AccordionItem value="recipe">
+                  <AccordionTrigger>Recette</AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-6">
+                      {formData.recipe_steps.map((step, i) => (
+                        <div key={i} className="flex">
+                          <div className="flex-shrink-0 mr-4">
+                            <div className="rounded-full w-8 h-8 bg-jam-raspberry flex items-center justify-center text-white font-bold">
+                              {i + 1}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-gray-700">{step.description}</p>
+                            {step.duration && (
+                              <p className="text-sm text-gray-500 mt-1 flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {step.duration}
+                              </p>
+                            )}
+                            
+                            {step.image_url && (
+                              <img 
+                                src={step.image_url} 
+                                alt={`Étape ${i + 1}`} 
+                                className="mt-2 rounded-md max-w-[200px] max-h-[150px] object-cover"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+              
+              <AccordionItem value="info">
+                <AccordionTrigger>Informations</AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Détails produit</h4>
+                      <dl className="mt-2 space-y-1">
+                        <div className="flex justify-between">
+                          <dt className="text-sm text-gray-500">Poids</dt>
+                          <dd className="text-sm font-medium">{formData.weight_grams}g</dd>
+                        </div>
+                        {formData.type && (
+                          <div className="flex justify-between">
+                            <dt className="text-sm text-gray-500">Type</dt>
+                            <dd className="text-sm font-medium">{categoryLabels[formData.type] || formData.type}</dd>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <dt className="text-sm text-gray-500">Pot spécial</dt>
+                          <dd className="text-sm font-medium">{formData.special_edition ? 'Oui' : 'Non'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-gray-900">Conservation</h4>
+                      <dl className="mt-2 space-y-1">
+                        {formData.production_date && (
+                          <div className="flex justify-between">
+                            <dt className="text-sm text-gray-500">Mise en bocal</dt>
+                            <dd className="text-sm font-medium">
+                              {format(new Date(formData.production_date), 'PP', { locale: fr })}
+                            </dd>
+                          </div>
+                        )}
+                        {formData.shelf_life_months && (
+                          <div className="flex justify-between">
+                            <dt className="text-sm text-gray-500">Durée de conservation</dt>
+                            <dd className="text-sm font-medium">{formData.shelf_life_months} mois</dd>
+                          </div>
+                        )}
+                        {expirationDate && (
+                          <div className="flex justify-between">
+                            <dt className="text-sm text-gray-500">À consommer avant</dt>
+                            <dd className="text-sm font-medium">
+                              {format(expirationDate, 'PP', { locale: fr })}
+                            </dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-900">Conservation</h4>
-                    <dl className="mt-2 space-y-1">
-                      {data.packaging_date && (
-                        <div className="flex justify-between">
-                          <dt className="text-sm text-gray-500">Mise en bocal</dt>
-                          <dd className="text-sm font-medium">
-                            {format(new Date(data.packaging_date), 'PP', { locale: fr })}
-                          </dd>
-                        </div>
-                      )}
-                      {data.preservation_months && (
-                        <div className="flex justify-between">
-                          <dt className="text-sm text-gray-500">Durée de conservation</dt>
-                          <dd className="text-sm font-medium">{data.preservation_months} mois</dd>
-                        </div>
-                      )}
-                      {expirationDate && (
-                        <div className="flex justify-between">
-                          <dt className="text-sm text-gray-500">À consommer avant</dt>
-                          <dd className="text-sm font-medium">
-                            {format(expirationDate, 'PP', { locale: fr })}
-                          </dd>
-                        </div>
-                      )}
-                    </dl>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-            
-            <AccordionItem value="label">
-              <AccordionTrigger>Étiquette</AccordionTrigger>
-              <AccordionContent>
-                {generateLabel()}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </div>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="label">
+                <AccordionTrigger>Étiquette</AccordionTrigger>
+                <AccordionContent>
+                  {generateLabel()}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        )}
       </div>
       
-      {data.is_draft && (
+      {!formData.is_active && (
         <div className="bg-muted p-4 rounded-md text-center mb-8">
           <Info className="inline-block h-5 w-5 text-muted-foreground mb-2" />
           <h4 className="font-medium">Aperçu en mode brouillon</h4>

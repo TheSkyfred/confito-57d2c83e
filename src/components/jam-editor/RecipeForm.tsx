@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
-interface RecipeStep {
+export interface RecipeStep {
   id: string;
   description: string;
   duration?: string;
@@ -181,7 +181,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => 
                         id={`step-image-${step.id}`}
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleImageChange(step.id, e)}
+                        onChange={(e) => handleImageChange(step.id, e as React.ChangeEvent<HTMLInputElement>)}
                         className="hidden"
                       />
                       <Button

@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
 import { 
   FormField, 
   FormItem, 
@@ -18,14 +17,20 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Upload, X } from 'lucide-react';
 
-interface BasicInfoFormProps {
-  mainImagePreview: string | null;
-  handleImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+export interface BasicInfoFormProps {
+  formData: {
+    name: string;
+    description: string;
+    type?: string;
+    badges?: string[];
+    [key: string]: any;
+  };
+  updateFormData: (key: string, value: any) => void;
+  mainImagePreview?: string | null;
+  handleImageChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 // Common tags for jams
@@ -48,9 +53,13 @@ const jamCategories = [
   { value: 'mixed', label: 'Mixte (fruits et légumes)' }
 ];
 
-const BasicInfoForm = ({ mainImagePreview, handleImageChange }: BasicInfoFormProps) => {
-  const { control, setValue, watch } = useFormContext();
-  const selectedTags = watch('tags') || [];
+const BasicInfoForm: React.FC<BasicInfoFormProps> = ({ 
+  formData, 
+  updateFormData,
+  mainImagePreview, 
+  handleImageChange 
+}) => {
+  const selectedTags = formData.badges || [];
 
   // Toggle tag selection
   const toggleTag = (tagId: string) => {
@@ -63,33 +72,28 @@ const BasicInfoForm = ({ mainImagePreview, handleImageChange }: BasicInfoFormPro
       currentTags.push(tagId);
     }
     
-    setValue('tags', currentTags);
+    updateFormData('badges', currentTags);
   };
 
   return (
     <div className="space-y-6">
       {/* Jam Name */}
-      <FormField
-        control={control}
-        name="name"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Nom de la confiture *</FormLabel>
-            <FormControl>
-              <Input placeholder="Ex: Confiture de Fraises de Gariguette" {...field} />
-            </FormControl>
-            <FormDescription>
-              Donnez un nom attrayant qui décrit bien votre confiture.
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div>
+        <FormLabel>Nom de la confiture *</FormLabel>
+        <Input 
+          placeholder="Ex: Confiture de Fraises de Gariguette" 
+          value={formData.name} 
+          onChange={(e) => updateFormData('name', e.target.value)}
+        />
+        <FormDescription>
+          Donnez un nom attrayant qui décrit bien votre confiture.
+        </FormDescription>
+      </div>
 
       {/* Main Image */}
-      <FormItem>
-        <FormLabel>Photo principale</FormLabel>
-        <FormControl>
+      {handleImageChange && (
+        <div>
+          <FormLabel>Photo principale</FormLabel>
           <div className="flex flex-col items-center sm:flex-row sm:items-start gap-4">
             <div className="relative w-40 h-40 border rounded-md overflow-hidden bg-muted flex items-center justify-center">
               {mainImagePreview ? (
@@ -125,62 +129,48 @@ const BasicInfoForm = ({ mainImagePreview, handleImageChange }: BasicInfoFormPro
               </FormDescription>
             </div>
           </div>
-        </FormControl>
-      </FormItem>
+        </div>
+      )}
 
       {/* Description */}
-      <FormField
-        control={control}
-        name="description"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Description</FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder="Décrivez votre confiture en quelques lignes..."
-                className="min-h-[100px]"
-                {...field}
-              />
-            </FormControl>
-            <FormDescription>
-              Une description attrayante qui donne envie de goûter votre confiture. Parlez du goût, de la texture, des occasions parfaites pour la déguster...
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div>
+        <FormLabel>Description</FormLabel>
+        <Textarea
+          placeholder="Décrivez votre confiture en quelques lignes..."
+          className="min-h-[100px]"
+          value={formData.description}
+          onChange={(e) => updateFormData('description', e.target.value)}
+        />
+        <FormDescription>
+          Une description attrayante qui donne envie de goûter votre confiture. Parlez du goût, de la texture, des occasions parfaites pour la déguster...
+        </FormDescription>
+      </div>
 
       {/* Category */}
-      <FormField
-        control={control}
-        name="category"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Catégorie *</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une catégorie" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {jamCategories.map(category => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormDescription>
-              Choisissez la catégorie qui correspond le mieux à votre confiture.
-            </FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      <div>
+        <FormLabel>Catégorie *</FormLabel>
+        <Select 
+          value={formData.type} 
+          onValueChange={(value) => updateFormData('type', value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sélectionnez une catégorie" />
+          </SelectTrigger>
+          <SelectContent>
+            {jamCategories.map(category => (
+              <SelectItem key={category.value} value={category.value}>
+                {category.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FormDescription>
+          Choisissez la catégorie qui correspond le mieux à votre confiture.
+        </FormDescription>
+      </div>
 
       {/* Tags */}
-      <FormItem>
+      <div>
         <FormLabel>Badges</FormLabel>
         <div className="flex flex-wrap gap-2">
           {commonTags.map(tag => (
@@ -200,7 +190,7 @@ const BasicInfoForm = ({ mainImagePreview, handleImageChange }: BasicInfoFormPro
         <FormDescription>
           Cliquez sur les badges pour les ajouter ou les retirer.
         </FormDescription>
-      </FormItem>
+      </div>
     </div>
   );
 };

@@ -36,6 +36,12 @@ export type JamType = {
   price_credits: number;
   available_quantity: number;
   recipe: string | null;
+  recipe_steps?: any[];
+  type?: string;
+  badges?: string[];
+  production_date?: string;
+  shelf_life_months?: number;
+  special_edition?: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -87,3 +93,21 @@ export type CreditTransactionType = {
   related_order_id: string | null;
   created_at: string;
 };
+
+export type OrderType = {
+  id: string;
+  buyer_id: string;
+  seller_id: string;
+  jam_id: string;
+  quantity: number;
+  shipping_address: string;
+  total_credits: number;
+  status: "pending" | "cancelled" | "accepted" | "shipped" | "delivered";
+  tracking_number: string | null;
+  created_at: string;
+  updated_at: string;
+  buyer?: ProfileType;
+  seller?: ProfileType;
+  jam?: JamType;
+};
+
