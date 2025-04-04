@@ -84,8 +84,7 @@ const JamBattles = () => {
       const isActive = activeTab === 'active';
       
       // We need to properly specify the jams columns in the join to avoid ambiguity
-      const { data, error } = await supabase
-        .from('jam_battles')
+      const { data, error } = await getTypedSupabaseQuery('jam_battles')
         .select(`
           *,
           jam_a:jams!jam_battles_jam_a_id_fkey (
@@ -112,8 +111,7 @@ const JamBattles = () => {
       const typedData = data as unknown as Battle[];
       
       if (user) {
-        const { data: votes } = await supabase
-          .from('battle_votes')
+        const { data: votes } = await getTypedSupabaseQuery('battle_votes')
           .select('battle_id, voted_for_jam_id')
           .eq('user_id', user.id);
           
@@ -147,8 +145,7 @@ const JamBattles = () => {
     }
     
     try {
-      const { data: existingVote } = await supabase
-        .from('battle_votes')
+      const { data: existingVote } = await getTypedSupabaseQuery('battle_votes')
         .select('id')
         .eq('battle_id', battleId)
         .eq('user_id', user.id)
@@ -164,8 +161,7 @@ const JamBattles = () => {
       }
       
       // Insert the vote
-      await supabase
-        .from('battle_votes')
+      await getTypedSupabaseQuery('battle_votes')
         .insert([{ 
           battle_id: battleId, 
           user_id: user.id,
@@ -175,16 +171,21 @@ const JamBattles = () => {
       // Update vote counts
       // First find which jam it is, A or B
       const battleToUpdate = battles?.find(b => b.id === battleId);
-      const isVoteForA = jamId === battleToUpdate?.jam_a_id;
+      if (!battleToUpdate) return;
+      
+      const isVoteForA = jamId === battleToUpdate.jam_a_id;
 
-      // Then perform the update with the appropriate increment
-      await supabase
-        .from('jam_battles')
-        .update({
-          votes_for_a: isVoteForA ? supabase.rpc('increment', { x: 1 }) : undefined,
-          votes_for_b: !isVoteForA ? supabase.rpc('increment', { x: 1 }) : undefined
-        })
-        .eq('id', battleId);
+      // Then perform the update with the appropriate field incremented
+      // This is the fixed section to resolve the type errors:
+      if (isVoteForA) {
+        await getTypedSupabaseQuery('jam_battles')
+          .update({ votes_for_a: battleToUpdate.votes_for_a + 1 })
+          .eq('id', battleId);
+      } else {
+        await getTypedSupabaseQuery('jam_battles')
+          .update({ votes_for_b: battleToUpdate.votes_for_b + 1 })
+          .eq('id', battleId);
+      }
       
       toast({
         title: "Vote enregistré !",
