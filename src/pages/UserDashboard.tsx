@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,6 +6,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { ProfileType } from '@/types/supabase';
+import {
+  LayoutDashboard,
+  CreditCard,
+  ShoppingCart,
+  Star,
+  Award,
+  PlusCircle,
+  Heart,
+  BarChart3
+} from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -36,14 +47,13 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user) return null;
       
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await getTypedSupabaseQuery('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
-      return data;
+      return data as ProfileType;
     },
     enabled: !!user,
   });
@@ -54,8 +64,7 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('jams')
+      const { data, error } = await getTypedSupabaseQuery('jams')
         .select(`
           *,
           jam_images (url, is_primary),
@@ -90,8 +99,7 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('orders')
+      const { data, error } = await getTypedSupabaseQuery('orders')
         .select(`
           *,
           jam:jam_id (
@@ -116,8 +124,7 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('favorites')
+      const { data, error } = await getTypedSupabaseQuery('favorites')
         .select(`
           jam_id,
           created_at,
@@ -143,8 +150,7 @@ const UserDashboard = () => {
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('user_badges')
+      const { data, error } = await getTypedSupabaseQuery('user_badges')
         .select(`
           awarded_at,
           badge:badge_id (
@@ -230,7 +236,7 @@ const UserDashboard = () => {
               </div>
               
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <CreditBadge amount={profile?.credits || 0} size="large" />
+                <CreditBadge amount={profile?.credits || 0} size="lg" />
                 
                 <div className="flex gap-2">
                   <Button variant="outline" asChild>

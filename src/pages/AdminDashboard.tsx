@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,7 +15,12 @@ import {
   Search,
   Loader2,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  PlusCircle,
+  Settings,
+  Flag,
+  Activity
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -52,6 +58,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from '@/hooks/use-toast';
+import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { ProfileType } from '@/types/supabase';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -66,14 +74,13 @@ const AdminDashboard = () => {
     queryFn: async () => {
       if (!user) return null;
       
-      const { data, error } = await supabase
-        .from('profiles')
+      const { data, error } = await getTypedSupabaseQuery('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
-      return data;
+      return data as ProfileType;
     },
     enabled: !!user,
   });
@@ -87,9 +94,9 @@ const AdminDashboard = () => {
       // In a real app, this would be an aggregation query
       // For demo purposes, we fetch the counts separately
       const [usersResponse, jamsResponse, ordersResponse] = await Promise.all([
-        supabase.from('profiles').select('count'),
-        supabase.from('jams').select('count'),
-        supabase.from('orders').select('count')
+        getTypedSupabaseQuery('profiles').select('count'),
+        getTypedSupabaseQuery('jams').select('count'),
+        getTypedSupabaseQuery('orders').select('count')
       ]);
       
       return {
@@ -98,31 +105,29 @@ const AdminDashboard = () => {
         orderCount: ordersResponse.count || 0
       };
     },
-    enabled: isAdmin,
+    enabled: !!isAdmin,
   });
   
   // Fetch users for the Users tab
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ['adminUsers', searchTerm, userRoleFilter],
     queryFn: async () => {
-      let query = supabase
-        .from('profiles')
-        .select('*');
+      let query = getTypedSupabaseQuery('profiles').select('*');
       
       if (searchTerm) {
         query = query.or(`username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`);
       }
       
       if (userRoleFilter !== 'all') {
-        query = query.eq('role', userRoleFilter);
+        query = query.eq('role', userRoleFilter as 'user' | 'moderator' | 'admin');
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return data as ProfileType[];
     },
-    enabled: isAdmin,
+    enabled: !!isAdmin,
   });
   
   // Fetch reports for the Reports tab (this would be a real table in a production app)
@@ -163,10 +168,9 @@ const AdminDashboard = () => {
     }
   ];
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: 'user' | 'moderator' | 'admin') => {
     try {
-      const { error } = await supabase
-        .from('profiles')
+      const { error } = await getTypedSupabaseQuery('profiles')
         .update({ role: newRole })
         .eq('id', userId);
         
@@ -348,7 +352,7 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {users?.map((user: any) => (
+                  {users?.map((user: ProfileType) => (
                     <Card key={user.id}>
                       <CardContent className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4">
                         <div className="flex items-center gap-3">

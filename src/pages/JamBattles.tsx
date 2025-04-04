@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +8,16 @@ import { format, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamBattleType, BattleVoteType } from '@/types/supabase';
+import {
+  Swords,
+  Timer,
+  BarChart3,
+  Loader2,
+  ShieldQuestion,
+  ThumbsUp,
+  Award,
+  PlusCircle
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -72,17 +83,19 @@ const JamBattles = () => {
     queryFn: async () => {
       const isActive = activeTab === 'active';
       
-      const { data, error } = await getTypedSupabaseQuery('jam_battles')
+      // We need to properly specify the jams columns in the join to avoid ambiguity
+      const { data, error } = await supabase
+        .from('jam_battles')
         .select(`
           *,
-          jam_a:jam_a_id (
+          jam_a:jams!jam_battles_jam_a_id_fkey (
             id,
             name,
             creator_id,
             jam_images (url),
             profiles:creator_id (username)
           ),
-          jam_b:jam_b_id (
+          jam_b:jams!jam_battles_jam_b_id_fkey (
             id,
             name,
             creator_id,
@@ -95,6 +108,9 @@ const JamBattles = () => {
 
       if (error) throw error;
       
+      // Type assertion to help TypeScript understand the structure
+      const typedData = data as unknown as Battle[];
+      
       if (user) {
         const { data: votes } = await supabase
           .from('battle_votes')
@@ -102,7 +118,7 @@ const JamBattles = () => {
           .eq('user_id', user.id);
           
         if (votes) {
-          return data.map((battle: Battle) => {
+          return typedData.map((battle: Battle) => {
             const vote = votes.find(v => v.battle_id === battle.id);
             if (vote) {
               return {
@@ -116,7 +132,7 @@ const JamBattles = () => {
         }
       }
       
-      return data;
+      return typedData;
     },
   });
 
@@ -147,6 +163,7 @@ const JamBattles = () => {
         return;
       }
       
+      // Insert the vote
       await supabase
         .from('battle_votes')
         .insert([{ 
@@ -155,16 +172,17 @@ const JamBattles = () => {
           voted_for_jam_id: jamId
         }]);
         
-      const isVoteForA = jamId === battles?.find(b => b.id === battleId)?.jam_a_id;
+      // Update vote counts
+      // First find which jam it is, A or B
+      const battleToUpdate = battles?.find(b => b.id === battleId);
+      const isVoteForA = jamId === battleToUpdate?.jam_a_id;
+
+      // Then perform the update with the appropriate increment
       await supabase
         .from('jam_battles')
         .update({
-          votes_for_a: isVoteForA 
-            ? supabase.rpc('increment', { x: 1 }) 
-            : supabase.rpc('increment', { x: 0 }),
-          votes_for_b: isVoteForA 
-            ? supabase.rpc('increment', { x: 0 }) 
-            : supabase.rpc('increment', { x: 1 })
+          votes_for_a: isVoteForA ? supabase.rpc('increment', { x: 1 }) : undefined,
+          votes_for_b: !isVoteForA ? supabase.rpc('increment', { x: 1 }) : undefined
         })
         .eq('id', battleId);
       
