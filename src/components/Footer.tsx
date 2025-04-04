@@ -39,8 +39,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/makers" className="text-sm hover:text-jam-honey transition-colors">
-                  Confituriers
+                <Link to="/rankings" className="text-sm hover:text-jam-honey transition-colors">
+                  Classements
                 </Link>
               </li>
             </ul>
@@ -50,18 +50,18 @@ export default function Footer() {
             <h4 className="font-serif text-lg mb-3">Communauté</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/how-it-works" className="text-sm hover:text-jam-honey transition-colors">
-                  Comment ça marche
+                <Link to="/auth" className="text-sm hover:text-jam-honey transition-colors">
+                  Se connecter / S'inscrire
+                </Link>
+              </li>
+              <li>
+                <Link to="/dashboard" className="text-sm hover:text-jam-honey transition-colors">
+                  Tableau de bord
                 </Link>
               </li>
               <li>
                 <Link to="/credits" className="text-sm hover:text-jam-honey transition-colors">
                   Système de crédits
-                </Link>
-              </li>
-              <li>
-                <Link to="/guidelines" className="text-sm hover:text-jam-honey transition-colors">
-                  Charte de la communauté
                 </Link>
               </li>
               <li>
