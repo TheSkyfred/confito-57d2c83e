@@ -4,10 +4,38 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronDown, Sliders, SlidersHorizontal } from 'lucide-react';
 import { JamType } from '@/types/supabase';
+import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 
 import JamCard from '@/components/JamCard';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Types
 type FilterState = {
@@ -43,7 +71,7 @@ const Explore = () => {
   const { data: jams, isLoading, error } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      let query = supabase.from('jams')
+      let query = getTypedSupabaseQuery('jams')
         .select(`
           *,
           jam_images (*),
@@ -94,7 +122,7 @@ const Explore = () => {
       if (error) throw error;
       
       // Calculer les notes moyennes et filtrer par note minimale
-      return data.map(jam => {
+      return data.map((jam: any) => {
         const ratings = jam.reviews?.map((review: any) => review.rating) || [];
         const avgRating = ratings.length > 0 
           ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
@@ -103,8 +131,8 @@ const Explore = () => {
         return {
           ...jam,
           avgRating
-        };
-      }).filter(jam => jam.avgRating >= (filters.filters.minRating || 0));
+        } as JamType;
+      }).filter((jam: JamType) => (jam.avgRating || 0) >= (filters.filters.minRating || 0));
     },
   });
 

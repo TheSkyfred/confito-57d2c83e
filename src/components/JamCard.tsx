@@ -9,9 +9,14 @@ export interface JamCardProps {
 }
 
 const JamCard: React.FC<JamCardProps> = ({ jam }) => {
+  if (!jam) {
+    return <div className="p-4 border border-muted rounded-lg">Loading...</div>;
+  }
+  
   // Find primary image, or use the first one, or fallback to placeholder
-  const primaryImage = jam.jam_images?.find(img => img.is_primary)?.url || 
-                      (jam.jam_images && jam.jam_images.length > 0 ? jam.jam_images[0].url : '/placeholder.svg');
+  const primaryImage = jam.jam_images && jam.jam_images.length > 0 
+    ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0].url) 
+    : '/placeholder.svg';
   
   // Calculate average rating
   const avgRating = jam.avgRating || 0;

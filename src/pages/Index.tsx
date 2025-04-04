@@ -1,4 +1,3 @@
-
 import React from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
@@ -8,9 +7,51 @@ import SeasonalFruit from '@/components/SeasonalFruit'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { ChevronRight, Award, TrendingUp, Heart, Users } from 'lucide-react'
+import { JamType } from '@/types/supabase'
 
-// Mock data pour les confitures
-const featuredJams = [
+const createMockJam = (data: any): JamType => ({
+  id: data.id,
+  name: data.name,
+  description: data.description,
+  creator_id: data.user?.name || "unknown",
+  ingredients: data.tags || [],
+  allergens: null,
+  weight_grams: 250,
+  sugar_content: null,
+  price_credits: data.price,
+  available_quantity: 10,
+  recipe: null,
+  is_active: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  jam_images: [
+    {
+      id: `img-${data.id}`,
+      jam_id: data.id,
+      url: data.imageUrl || '/placeholder.svg',
+      is_primary: true,
+      created_at: new Date().toISOString()
+    }
+  ],
+  avgRating: data.rating,
+  profiles: {
+    id: "user-1",
+    username: data.user?.name || "unknown",
+    full_name: data.user?.name || null,
+    avatar_url: data.user?.avatarUrl || null,
+    bio: null,
+    address: null,
+    phone: null,
+    website: null,
+    credits: 100,
+    role: "user",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  reviews: []
+});
+
+const featuredJamData = [
   {
     id: "1",
     name: "Confiture de Fraises Basilic",
@@ -73,7 +114,7 @@ const featuredJams = [
   }
 ];
 
-const popularJams = [
+const popularJamData = [
   {
     id: "5",
     name: "Confiture de Pêches Blanches",
@@ -136,8 +177,10 @@ const popularJams = [
   }
 ];
 
+const featuredJams = featuredJamData.map(createMockJam);
+const popularJams = popularJamData.map(createMockJam);
+
 const Index = () => {
-  // Ces fonctions seraient normalement connectées à un état global ou une API
   const handleAddToCart = (id: string) => {
     console.log(`Ajouter au panier: ${id}`);
   };
@@ -151,10 +194,8 @@ const Index = () => {
       <Header />
 
       <main className="flex-grow">
-        {/* Hero Section */}
         <HeroSection />
 
-        {/* Section Fonctionnalités */}
         <section className="py-12 bg-white">
           <div className="container">
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-center mb-10">
@@ -206,7 +247,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Section Confitures en vedette */}
         <section className="py-12 bg-muted/30">
           <div className="container">
             <div className="flex justify-between items-center mb-6">
@@ -224,22 +264,17 @@ const Index = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredJams.map((jam) => (
-                <JamCard
-                  key={jam.id}
-                  {...jam}
-                  onAddToCart={() => handleAddToCart(jam.id)}
-                  onToggleFavorite={() => handleToggleFavorite(jam.id)}
-                />
+                <Link to={`/jam/${jam.id}`} key={jam.id}>
+                  <JamCard jam={jam} />
+                </Link>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Section Fruits de saison et Confitures populaires */}
         <section className="py-12 bg-white">
           <div className="container">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Fruits de saison */}
               <div className="lg:col-span-1">
                 <SeasonalFruit />
                 
@@ -272,7 +307,6 @@ const Index = () => {
                 </div>
               </div>
               
-              {/* Confitures populaires */}
               <div className="lg:col-span-2">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
@@ -289,12 +323,9 @@ const Index = () => {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {popularJams.map((jam) => (
-                    <JamCard
-                      key={jam.id}
-                      {...jam}
-                      onAddToCart={() => handleAddToCart(jam.id)}
-                      onToggleFavorite={() => handleToggleFavorite(jam.id)}
-                    />
+                    <Link to={`/jam/${jam.id}`} key={jam.id}>
+                      <JamCard jam={jam} />
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -302,7 +333,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CTA Section */}
         <section className="py-12 bg-jam-dark text-white">
           <div className="container">
             <div className="text-center max-w-3xl mx-auto">
