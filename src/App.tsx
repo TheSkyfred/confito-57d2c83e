@@ -20,6 +20,7 @@ import UserDashboard from "./pages/UserDashboard";
 import UserProfile from "./pages/UserProfile";
 import Credits from "./pages/Credits";
 import AdminDashboard from "./pages/AdminDashboard";
+import JamEditor from "./pages/JamEditor";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,8 @@ const App = () => (
                 <Route path="/profile/:id" element={<UserProfile />} />
                 <Route path="/credits" element={<Credits />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/jam/create" element={<JamEditor />} />
+                <Route path="/jam/edit/:id" element={<JamEditor />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
