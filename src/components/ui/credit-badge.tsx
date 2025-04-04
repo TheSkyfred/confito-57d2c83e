@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils"
-import { Bottle } from "lucide-react"
+import { Coffee } from "lucide-react"
 
 interface CreditBadgeProps {
   amount: number
@@ -23,7 +23,7 @@ export function CreditBadge({ amount, size = "md", className }: CreditBadgeProps
         className
       )}
     >
-      <Bottle className={cn("text-jam-honey", {
+      <Coffee className={cn("text-jam-honey", {
         "h-3 w-3": size === "sm",
         "h-4 w-4": size === "md",
         "h-5 w-5": size === "lg",

@@ -28,14 +28,14 @@ const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
-  content?: React.ReactNode;
+  badgeContent?: React.ReactNode;
 }
 
 function AvatarBadge({
   className,
   variant,
   size,
-  content,
+  badgeContent,
   ...props
 }: BadgeProps) {
   return (
@@ -43,7 +43,7 @@ function AvatarBadge({
       className={cn(badgeVariants({ variant, size }), className)}
       {...props}
     >
-      {content}
+      {badgeContent}
     </div>
   )
 }

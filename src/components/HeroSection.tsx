@@ -1,6 +1,7 @@
+
 import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
-import { Bottle } from "lucide-react"
+import { Coffee } from "lucide-react"
 
 export default function HeroSection() {
   return (
@@ -16,7 +17,7 @@ export default function HeroSection() {
         <div className="flex flex-col md:flex-row items-center md:gap-8 lg:gap-16">
           <div className="flex-1 text-center md:text-left mb-8 md:mb-0">
             <div className="inline-flex items-center gap-1.5 bg-jam-raspberry/10 text-jam-raspberry rounded-full px-3 py-1 text-sm font-medium mb-4">
-              <Bottle className="h-4 w-4" />
+              <Coffee className="h-4 w-4" />
               Communauté de passionnés
             </div>
             
