@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { addMonths, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -9,6 +8,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
+import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,

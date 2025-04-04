@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -173,7 +172,7 @@ const JamEditor: React.FC = () => {
         description: jam.description || "",
         type: jam.type || "",
         badges: jam.badges || [],
-        ingredients: ingredients,
+        ingredients: ingredients as Ingredient[],
         allergens: jam.allergens || [],
         production_date: jam.production_date || new Date().toISOString().split("T")[0],
         weight_grams: jam.weight_grams || 250,
