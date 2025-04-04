@@ -73,7 +73,7 @@ export default function JamCard({
               <AvatarFallback>{user.name[0]}</AvatarFallback>
             </Avatar>
             {user.badgeCount && user.badgeCount > 0 && (
-              <AvatarBadge size="sm" content={user.badgeCount > 9 ? '9+' : user.badgeCount} />
+              <AvatarBadge size="sm" content={user.badgeCount > 9 ? '9+' : String(user.badgeCount)} />
             )}
           </div>
           <span className="text-xs text-muted-foreground">{user.name}</span>
