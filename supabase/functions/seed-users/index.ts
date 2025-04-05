@@ -44,7 +44,6 @@ function generateFakeUsers(count: number) {
         address: `${Math.floor(Math.random() * 100) + 1} rue des Confitures, ${city}`,
         credits: credits,
       },
-      app_metadata: {},
     });
   }
   
@@ -58,7 +57,7 @@ serve(async (req) => {
   }
   
   try {
-    // Récupérer la clé d'administration et l'URL de Supabase depuis les variables d'environnement
+    // Récupérer les variables d'environnement pour Supabase
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
@@ -67,38 +66,37 @@ serve(async (req) => {
     }
     
     // Créer un client Supabase avec les permissions admin
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { count } = await req.json();
-    const usersToCreate = generateFakeUsers(count || 20); // Par défaut, créer 20 utilisateurs
+    // Récupérer les données de la requête
+    const requestData = await req.json();
+    const count = requestData.count || 20; // Par défaut, créer 20 utilisateurs
+    
+    const usersToCreate = generateFakeUsers(count);
     const createdUsers = [];
     
     console.log(`Création de ${usersToCreate.length} utilisateurs fictifs...`);
     
-    // Créer chaque utilisateur (ce qui déclenchera automatiquement la création du profil via le trigger)
+    // Créer chaque utilisateur
     for (const userData of usersToCreate) {
       try {
-        // Créer l'utilisateur
+        // Créer l'utilisateur avec email confirmé
         const { data: user, error: createError } = await supabase.auth.admin.createUser({
           email: userData.email,
           password: userData.password,
           user_metadata: userData.user_metadata,
-          email_confirm: true, // Confirmer l'email automatiquement
+          email_confirm: true,
         });
         
-        if (createError) throw createError;
+        if (createError) {
+          console.error(`Erreur lors de la création de l'utilisateur ${userData.email}:`, createError);
+          continue;
+        }
         
-        console.log(`Utilisateur créé : ${userData.email} (${user.user.id})`);
+        console.log(`Utilisateur créé: ${userData.email} (${user.user.id})`);
         
-        // Les profils sont créés automatiquement via le trigger handle_new_user
-        // Cependant, nous voulons mettre à jour certains champs avec nos données additionnelles
+        // Mettre à jour le profil avec des données additionnelles
         if (user && user.user) {
-          // Mettre à jour le profil avec des données additionnelles
           const { error: updateError } = await supabase
             .from('profiles')
             .update({
