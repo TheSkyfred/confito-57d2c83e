@@ -10,7 +10,8 @@ export interface JamCardProps {
 
 const JamCard: React.FC<JamCardProps> = ({ jam }) => {
   if (!jam) {
-    return <div className="p-4 border border-muted rounded-lg">Loading...</div>;
+    console.error("JamCard reçoit une prop jam nulle ou non définie");
+    return <div className="p-4 border border-muted rounded-lg">Confiture non disponible</div>;
   }
   
   // Debug

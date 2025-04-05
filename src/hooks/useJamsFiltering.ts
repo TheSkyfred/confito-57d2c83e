@@ -36,7 +36,8 @@ export const useJamsFiltering = () => {
     queryFn: async () => {
       console.log("Début de la requête Supabase pour les confitures");
       try {
-        let query = getTypedSupabaseQuery('jams')
+        // Using direct query to avoid typing issues
+        let query = supabase.from('jams')
           .select(`
             *,
             jam_images (*),
@@ -99,7 +100,9 @@ export const useJamsFiltering = () => {
           throw error;
         }
         
-        if (!data) {
+        console.log("Résultat de la requête:", data);
+        
+        if (!data || data.length === 0) {
           console.log("Aucune donnée retournée par Supabase");
           return [];
         }
@@ -124,6 +127,7 @@ export const useJamsFiltering = () => {
         );
         
         console.log(`${filteredJams.length} confitures après filtrage par note`);
+        console.log("Données renvoyées:", filteredJams);
         return filteredJams;
       } catch (error) {
         console.error("Erreur lors de la récupération des confitures:", error);
@@ -135,8 +139,8 @@ export const useJamsFiltering = () => {
         throw error;
       }
     },
-    retry: 2,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 3,
+    staleTime: 1000 * 60, // 1 minute
   });
 
   const updateSearchTerm = (term: string) => {

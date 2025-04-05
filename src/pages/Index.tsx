@@ -19,6 +19,7 @@ const Index = () => {
     const fetchJams = async () => {
       try {
         setLoading(true);
+        console.log("Début de la requête Supabase pour les confitures sur la page Index");
         
         // Fetch featured jams - newest jams
         const { data: featuredData, error: featuredError } = await supabase
@@ -33,7 +34,12 @@ const Index = () => {
           .order('created_at', { ascending: false })
           .limit(4);
           
-        if (featuredError) throw featuredError;
+        if (featuredError) {
+          console.error("Erreur lors du chargement des confitures en vedette:", featuredError);
+          throw featuredError;
+        }
+        
+        console.log("Featured jams data:", featuredData);
         
         // Fetch popular jams - highest rated
         const { data: popularData, error: popularError } = await supabase
@@ -48,7 +54,12 @@ const Index = () => {
           .order('price_credits', { ascending: true }) // As a proxy for popularity
           .limit(4);
           
-        if (popularError) throw popularError;
+        if (popularError) {
+          console.error("Erreur lors du chargement des confitures populaires:", popularError);
+          throw popularError;
+        }
+        
+        console.log("Popular jams data:", popularData);
 
         // Process jam data to calculate average ratings
         const processJams = (jams: any[]): JamType[] => {
@@ -65,8 +76,14 @@ const Index = () => {
           });
         };
         
-        setFeaturedJams(processJams(featuredData));
-        setPopularJams(processJams(popularData));
+        const processedFeatured = processJams(featuredData || []);
+        const processedPopular = processJams(popularData || []);
+        
+        console.log("Processed featured jams:", processedFeatured);
+        console.log("Processed popular jams:", processedPopular);
+        
+        setFeaturedJams(processedFeatured);
+        setPopularJams(processedPopular);
       } catch (error) {
         console.error('Error fetching jams:', error);
         toast({
@@ -209,7 +226,7 @@ const Index = () => {
                   <div className="h-3 bg-muted rounded w-1/2"></div>
                 </div>
               ))
-            ) : featuredJams.length > 0 ? (
+            ) : featuredJams && featuredJams.length > 0 ? (
               featuredJams.map((jam) => (
                 <Link to={`/jam/${jam.id}`} key={jam.id}>
                   <JamCard jam={jam} />
@@ -285,7 +302,7 @@ const Index = () => {
                       <div className="h-3 bg-muted rounded w-1/2"></div>
                     </div>
                   ))
-                ) : popularJams.length > 0 ? (
+                ) : popularJams && popularJams.length > 0 ? (
                   popularJams.map((jam) => (
                     <Link to={`/jam/${jam.id}`} key={jam.id}>
                       <JamCard jam={jam} />

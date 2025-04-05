@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,9 +16,11 @@ type JamsGridProps = {
 
 const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilters }) => {
   // Debug pour voir ce qui est réellement retourné
-  console.log("JamsGrid - jams:", jams);
-  console.log("JamsGrid - isLoading:", isLoading);
-  console.log("JamsGrid - error:", error);
+  useEffect(() => {
+    console.log("JamsGrid - jams:", jams);
+    console.log("JamsGrid - isLoading:", isLoading);
+    console.log("JamsGrid - error:", error);
+  }, [jams, isLoading, error]);
 
   if (isLoading) {
     return (
@@ -56,7 +58,9 @@ const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilter
     );
   }
 
+  // Vérification des données
   if (!jams) {
+    console.log("JamsGrid: jams est undefined");
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">Aucune donnée n'a été retournée.</p>
@@ -68,16 +72,21 @@ const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilter
   }
 
   if (jams.length === 0) {
+    console.log("JamsGrid: jams est un tableau vide");
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">Aucune confiture ne correspond à vos critères.</p>
         <Button onClick={resetFilters} variant="outline" className="mt-4">
           Réinitialiser les filtres
         </Button>
+        <Button onClick={() => window.location.reload()} variant="outline" className="mt-2 ml-2">
+          Rafraîchir la page
+        </Button>
       </div>
     );
   }
 
+  console.log(`JamsGrid: Affichage de ${jams.length} confitures`);
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {jams.map((jam: JamType) => (

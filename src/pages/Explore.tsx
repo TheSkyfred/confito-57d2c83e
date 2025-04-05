@@ -23,7 +23,7 @@ const Explore = () => {
     resetFilters
   } = useJamsFiltering();
 
-  // Afficher les erreurs dans la console pour le débogage
+  // Afficher les erreurs et créer une notification pour l'utilisateur
   useEffect(() => {
     if (error) {
       console.error("Erreur dans Explore.tsx:", error);
@@ -35,10 +35,11 @@ const Explore = () => {
     }
   }, [error]);
 
-  // Log pour débogage
+  // Logging détaillé pour débogage
   useEffect(() => {
     console.log("Explore - État de chargement:", isLoading);
     console.log("Explore - Confitures chargées:", jams);
+    console.log("Explore - Nombre de confitures:", jams ? jams.length : 0);
     console.log("Explore - Erreur:", error);
   }, [isLoading, jams, error]);
 
