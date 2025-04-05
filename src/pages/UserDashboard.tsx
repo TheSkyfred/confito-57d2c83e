@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +41,12 @@ const UserDashboard = () => {
           if (error) {
             setError(error.message);
           } else {
-            setUserProfile(profile);
+            // Convert to ProfileType format if needed
+            const formattedProfile: ProfileType = {
+              ...profile,
+              id: profile.id || profile.user_id
+            };
+            setUserProfile(formattedProfile);
           }
         } catch (err: any) {
           setError(err.message);

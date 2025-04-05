@@ -32,11 +32,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Fix: Use user_id instead of id for the profile query
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .single();
       
       if (error) {
@@ -64,7 +63,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           const profileData = await fetchUserProfile(session.user.id);
           if (profileData) {
-            setProfile(profileData);
+            // Convert to ProfileType format if needed
+            const formattedProfile: ProfileType = {
+              ...profileData,
+              id: profileData.id || profileData.user_id
+            };
+            setProfile(formattedProfile);
           }
         }
       } catch (error) {
@@ -88,7 +92,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const profileData = await fetchUserProfile(session.user.id);
         if (profileData) {
-          setProfile(profileData);
+          // Convert to ProfileType format if needed
+          const formattedProfile: ProfileType = {
+            ...profileData,
+            id: profileData.id || profileData.user_id
+          };
+          setProfile(formattedProfile);
         }
       } else {
         setUser(null);

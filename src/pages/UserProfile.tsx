@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,18 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import {
-  User,
-  Edit,
-  MapPin,
-  Globe,
-  Mail,
-  Phone,
-  Award,
-  Star,
-  Settings,
-  Loader2
-} from 'lucide-react';
+import { formatProfileData } from '@/utils/profileHelpers';
+import { ProfileType } from '@/types/supabase';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -58,7 +47,9 @@ const UserProfile = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Format the profile data
+      return formatProfileData(data);
     },
     enabled: !!profileId,
   });

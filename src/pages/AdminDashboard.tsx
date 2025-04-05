@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -80,7 +79,14 @@ const AdminDashboard = () => {
         .single();
 
       if (error) throw error;
-      return data as ProfileType;
+      
+      // Convert to ProfileType format if needed
+      const formattedProfile: ProfileType = {
+        ...data,
+        id: data.id || data.user_id
+      };
+      
+      return formattedProfile;
     },
     enabled: !!user,
   });
@@ -125,7 +131,14 @@ const AdminDashboard = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as ProfileType[];
+      
+      // Convert to ProfileType format if needed
+      const formattedProfiles: ProfileType[] = data.map((profile: any) => ({
+        ...profile,
+        id: profile.id || profile.user_id
+      }));
+      
+      return formattedProfiles;
     },
     enabled: !!isAdmin,
   });

@@ -3,6 +3,7 @@
 
 export type ProfileType = {
   id: string;
+  user_id?: string; // Add optional user_id field to handle both structures
   username: string;
   full_name: string | null;
   avatar_url: string | null;

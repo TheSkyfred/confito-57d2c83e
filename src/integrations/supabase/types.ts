@@ -71,7 +71,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "battle_votes_voted_for_jam_id_fkey"
@@ -120,7 +120,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -156,7 +156,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -295,7 +295,7 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -333,7 +333,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -383,7 +383,7 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "orders_jam_id_fkey"
@@ -397,7 +397,7 @@ export type Database = {
             columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -409,10 +409,10 @@ export type Database = {
           created_at: string
           credits: number
           full_name: string | null
+          id: string
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
-          user_id: string
           username: string
           website: string | null
         }
@@ -423,10 +423,10 @@ export type Database = {
           created_at?: string
           credits?: number
           full_name?: string | null
+          id: string
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
-          user_id: string
           username: string
           website?: string | null
         }
@@ -437,10 +437,10 @@ export type Database = {
           created_at?: string
           credits?: number
           full_name?: string | null
+          id?: string
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
-          user_id?: string
           username?: string
           website?: string | null
         }
@@ -487,7 +487,7 @@ export type Database = {
             columns: ["reviewer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -589,7 +589,7 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
