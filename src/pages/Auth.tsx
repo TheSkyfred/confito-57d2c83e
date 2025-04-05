@@ -170,7 +170,7 @@ const Auth = () => {
     <div className="container max-w-md mx-auto py-10">
       <div className="flex flex-col items-center mb-6">
         <Coffee className="h-12 w-12 text-jam-raspberry mb-2" />
-        <h1 className="font-serif text-2xl font-bold">Jam-Jar Jamboree</h1>
+        <h1 className="font-serif text-2xl font-bold">Confito</h1>
         <p className="text-muted-foreground text-sm">La communauté des passionnés de confitures</p>
       </div>
 

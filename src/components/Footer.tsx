@@ -11,7 +11,7 @@ export default function Footer() {
             <div className="flex items-center gap-2">
               <Coffee className="h-6 w-6 text-jam-honey" />
               <span className="font-serif text-xl font-bold text-jam-cream">
-                Jam-<span className="text-jam-raspberry">Jar</span> Jamboree
+                Con<span className="text-jam-raspberry">fito</span>
               </span>
             </div>
             <p className="mt-4 text-sm">
@@ -100,7 +100,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-white/10 mt-8 pt-6 text-center text-xs text-jam-cream/70">
-          <p>© {new Date().getFullYear()} Jam-Jar Jamboree. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} Confito. Tous droits réservés.</p>
         </div>
       </div>
     </footer>
