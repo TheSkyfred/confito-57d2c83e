@@ -4,14 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { getTypedSupabaseQuery, getJamById } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
 import { formatProfileData } from '@/utils/profileHelpers';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useJamDetails = (jamId: string | undefined) => {
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   
-  const { data: jam, isLoading, error } = useQuery({
+  const { 
+    data: jam, 
+    isLoading, 
+    error,
+    refetch
+  } = useQuery({
     queryKey: ['jam', jamId],
     queryFn: async () => {
       if (!jamId) {
@@ -74,9 +79,22 @@ export const useJamDetails = (jamId: string | undefined) => {
       return jam as JamType;
     },
     enabled: !!jamId,
-    retry: 2,
-    staleTime: 60000, // 1 minute
+    retry: 3,
+    staleTime: 30000, // 30 seconds
   });
+
+  // Ajout d'un effet pour retenter si nécessaire
+  useEffect(() => {
+    if (error) {
+      console.error("Erreur détectée dans useJamDetails, tentative de relance dans 2 secondes:", error);
+      const timer = setTimeout(() => {
+        console.log("Relance de la requête...");
+        refetch();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, refetch]);
 
   // Safely extract ratings with proper type handling
   const ratings = (jam?.reviews?.map(review => review.rating) || []) as number[];
@@ -85,9 +103,9 @@ export const useJamDetails = (jamId: string | undefined) => {
     : 0;
 
   // Safely handle images
-  const primaryImage = jam?.jam_images.find((img: any) => img.is_primary)?.url || 
-                      (jam?.jam_images.length ? jam.jam_images[0].url : null);
-  const secondaryImages = jam?.jam_images.filter((img: any) => 
+  const primaryImage = jam?.jam_images?.find((img: any) => img.is_primary)?.url || 
+                      (jam?.jam_images?.length ? jam.jam_images[0].url : null);
+  const secondaryImages = jam?.jam_images?.filter((img: any) => 
     img.url !== primaryImage
   ) || [];
 
@@ -101,6 +119,7 @@ export const useJamDetails = (jamId: string | undefined) => {
     ratings,
     primaryImage,
     secondaryImages,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    refetch
   };
 };

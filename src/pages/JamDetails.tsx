@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, AlertCircle } from 'lucide-react';
+import { ChevronLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -23,11 +23,23 @@ import { useJamDetails } from '@/hooks/useJamDetails';
 import { JamFavoriteShare } from '@/components/jam-details/JamFavoriteShare';
 import { useFavoriteHandler } from '@/components/jam-details/JamFavoriteHandler';
 import { JamActions } from '@/components/jam-details/JamActions';
+import { checkSupabaseConnection } from '@/utils/supabaseHelpers';
 
 const JamDetails = () => {
   const { jamId } = useParams<{ jamId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  
+  // Vérifier la connexion à Supabase au chargement
+  useEffect(() => {
+    const verifyConnection = async () => {
+      console.log("JamDetails - Vérification de la connexion Supabase");
+      const result = await checkSupabaseConnection();
+      console.log("Résultat de la vérification:", result);
+    };
+    
+    verifyConnection();
+  }, []);
   
   useEffect(() => {
     console.log("JamDetails - ID de confiture reçu:", jamId);
@@ -43,7 +55,8 @@ const JamDetails = () => {
     ratings,
     primaryImage,
     secondaryImages,
-    isAuthenticated
+    isAuthenticated,
+    refetch
   } = useJamDetails(jamId);
 
   const { toggleFavorite } = useFavoriteHandler({
@@ -73,6 +86,15 @@ const JamDetails = () => {
     console.log("JamDetails - Erreur ou confiture non trouvée:", error);
     return (
       <div className="container py-8">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="sm" asChild className="mr-2">
+            <Link to="/explore">
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Retour aux confitures
+            </Link>
+          </Button>
+        </div>
+        
         <div className="text-center py-10">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
           <h2 className="mt-4 text-2xl font-bold">Confiture introuvable</h2>
@@ -80,6 +102,10 @@ const JamDetails = () => {
             Cette confiture n'existe pas ou a été retirée.
           </p>
           <div className="flex flex-col gap-4 items-center mt-6">
+            <Button onClick={() => refetch()} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Réessayer
+            </Button>
             <Button asChild>
               <Link to="/explore">Découvrir d'autres confitures</Link>
             </Button>

@@ -31,6 +31,7 @@ export const getJamById = async (jamId: string) => {
   try {
     console.log(`Tentative de récupération de la confiture avec ID: ${jamId}`);
     
+    // Modification de la requête pour être plus complète et debugger
     const { data, error } = await supabase
       .from('jams')
       .select(`
@@ -41,6 +42,8 @@ export const getJamById = async (jamId: string) => {
       `)
       .eq('id', jamId)
       .maybeSingle();
+    
+    console.log('Résultat de la requête Supabase:', { data, error });
     
     if (error) {
       console.error(`Erreur lors de la récupération de la confiture ${jamId}:`, error);
