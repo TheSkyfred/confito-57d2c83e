@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +34,7 @@ export const useJamsFiltering = () => {
   const { data: jams, isLoading, error } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
+      console.log("Début de la requête Supabase pour les confitures");
       try {
         let query = getTypedSupabaseQuery('jams')
           .select(`
@@ -45,13 +45,17 @@ export const useJamsFiltering = () => {
           `)
           .eq('is_active', true);
         
+        console.log("Requête initiale construite");
+        
         // Appliquer les filtres
         if (filters.searchTerm) {
+          console.log("Filtrage par terme de recherche:", filters.searchTerm);
           query = query.ilike('name', `%${filters.searchTerm}%`);
         }
         
         // Filtrer par fruit si sélectionné
         if (filters.filters.fruit && filters.filters.fruit.length > 0) {
+          console.log("Filtrage par fruits:", filters.filters.fruit);
           for (const fruit of filters.filters.fruit) {
             query = query.contains('ingredients', [fruit]);
           }
@@ -59,15 +63,18 @@ export const useJamsFiltering = () => {
         
         // Filtrer par allergènes (exclure ceux qui contiennent les allergènes sélectionnés)
         if (filters.filters.allergens && filters.filters.allergens.length > 0) {
+          console.log("Filtrage par allergènes:", filters.filters.allergens);
           query = query.not('allergens', 'cs', `{${filters.filters.allergens.join(',')}}`);
         }
         
         // Filtre par prix max
         if (filters.filters.maxPrice !== undefined && filters.filters.maxPrice < 50) {
+          console.log("Filtrage par prix max:", filters.filters.maxPrice);
           query = query.lte('price_credits', filters.filters.maxPrice);
         }
         
         // Appliquer le tri
+        console.log("Application du tri:", filters.sortBy);
         switch (filters.sortBy) {
           case 'price_asc':
             query = query.order('price_credits', { ascending: true });
@@ -84,19 +91,23 @@ export const useJamsFiltering = () => {
             query = query.order('created_at', { ascending: false });
         }
         
+        console.log("Exécution de la requête Supabase");
         const { data, error } = await query;
         
-        if (error) throw error;
+        if (error) {
+          console.error("Erreur Supabase:", error);
+          throw error;
+        }
         
-        if (!data || data.length === 0) {
-          console.log("No jams found with current filters");
+        if (!data) {
+          console.log("Aucune donnée retournée par Supabase");
           return [];
         }
         
-        console.log(`Found ${data.length} jams matching criteria`);
+        console.log(`${data.length} confitures trouvées`);
         
         // Calculer les notes moyennes et filtrer par note minimale
-        return data.map((jam: any) => {
+        const processedJams = data.map((jam: any) => {
           const ratings = jam.reviews?.map((review: any) => review.rating) || [];
           const avgRating = ratings.length > 0 
             ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
@@ -106,17 +117,26 @@ export const useJamsFiltering = () => {
             ...jam,
             avgRating
           } as JamType;
-        }).filter((jam: JamType) => (jam.avgRating || 0) >= (filters.filters.minRating || 0));
+        });
+        
+        const filteredJams = processedJams.filter((jam: JamType) => 
+          (jam.avgRating || 0) >= (filters.filters.minRating || 0)
+        );
+        
+        console.log(`${filteredJams.length} confitures après filtrage par note`);
+        return filteredJams;
       } catch (error) {
-        console.error("Error fetching jams:", error);
+        console.error("Erreur lors de la récupération des confitures:", error);
         toast({
           title: "Erreur",
           description: "Impossible de récupérer les confitures",
           variant: "destructive"
         });
-        return [];
+        throw error;
       }
     },
+    retry: 2,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const updateSearchTerm = (term: string) => {

@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import SearchBar from '@/components/explore/SearchBar';
 import ActiveFilters from '@/components/explore/ActiveFilters';
 import JamsGrid from '@/components/explore/JamsGrid';
 import { useJamsFiltering } from '@/hooks/useJamsFiltering';
+import { toast } from '@/hooks/use-toast';
 
 const Explore = () => {
   const {
@@ -21,6 +22,25 @@ const Explore = () => {
     updateMaxPrice,
     resetFilters
   } = useJamsFiltering();
+
+  // Afficher les erreurs dans la console pour le débogage
+  useEffect(() => {
+    if (error) {
+      console.error("Erreur dans Explore.tsx:", error);
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les confitures. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    }
+  }, [error]);
+
+  // Log pour débogage
+  useEffect(() => {
+    console.log("Explore - État de chargement:", isLoading);
+    console.log("Explore - Confitures chargées:", jams);
+    console.log("Explore - Erreur:", error);
+  }, [isLoading, jams, error]);
 
   return (
     <div className="container py-8">
