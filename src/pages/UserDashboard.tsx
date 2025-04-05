@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileType, OrderType } from '@/types/supabase';
+import { formatProfileData } from '@/utils/profileHelpers';
 import { CreditBadge } from '@/components/ui/credit-badge';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from '@/components/ui/button';
@@ -41,12 +41,8 @@ const UserDashboard = () => {
           if (error) {
             setError(error.message);
           } else {
-            // Convert to ProfileType format if needed
-            const formattedProfile: ProfileType = {
-              ...profile,
-              id: profile.id || profile.user_id
-            };
-            setUserProfile(formattedProfile);
+            // Format the profile data with our helper
+            setUserProfile(formatProfileData(profile));
           }
         } catch (err: any) {
           setError(err.message);

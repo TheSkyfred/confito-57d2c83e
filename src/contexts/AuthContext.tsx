@@ -1,8 +1,8 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileType } from '@/types/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { formatProfileData } from '@/utils/profileHelpers';
 
 type AuthContextType = {
   user: any | null;
@@ -63,11 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           const profileData = await fetchUserProfile(session.user.id);
           if (profileData) {
-            // Convert to ProfileType format if needed
-            const formattedProfile: ProfileType = {
-              ...profileData,
-              id: profileData.id || profileData.user_id
-            };
+            // Format the profile data with our helper
+            const formattedProfile = formatProfileData(profileData);
             setProfile(formattedProfile);
           }
         }
@@ -92,11 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const profileData = await fetchUserProfile(session.user.id);
         if (profileData) {
-          // Convert to ProfileType format if needed
-          const formattedProfile: ProfileType = {
-            ...profileData,
-            id: profileData.id || profileData.user_id
-          };
+          // Format the profile data with our helper
+          const formattedProfile = formatProfileData(profileData);
           setProfile(formattedProfile);
         }
       } else {

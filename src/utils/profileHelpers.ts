@@ -7,6 +7,7 @@ import { ProfileType } from '@/types/supabase';
 export const formatProfileData = (profileData: any): ProfileType => {
   if (!profileData) return null as unknown as ProfileType;
   
+  // If profile has user_id but no id, use user_id as id
   return {
     ...profileData,
     id: profileData.id || profileData.user_id

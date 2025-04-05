@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { formatProfileData } from '@/utils/profileHelpers';
 import { ProfileType } from '@/types/supabase';
+import { Edit, MapPin, Globe, Mail, Phone, User, Star, Award } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
