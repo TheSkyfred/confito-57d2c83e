@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
-import { JamType } from '@/types/supabase';
+import { JamType, ReviewType } from '@/types/supabase';
 import { formatProfileData } from '@/utils/profileHelpers';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -55,6 +55,24 @@ const JamDetails = () => {
           
         if (favorite) {
           setFavorited(true);
+        }
+      }
+
+      // Process data before returning it
+      if (data) {
+        // Format creator profile data
+        if (data.profiles) {
+          data.profiles = formatProfileData(data.profiles);
+        }
+
+        // Format reviewer profile data in reviews
+        if (data.reviews && Array.isArray(data.reviews)) {
+          data.reviews = data.reviews.map(review => {
+            if (review.reviewer) {
+              review.reviewer = formatProfileData(review.reviewer);
+            }
+            return review;
+          });
         }
       }
       
@@ -125,7 +143,7 @@ const JamDetails = () => {
     return <JamDetailsError />;
   }
 
-  const ratings = jam.reviews?.map((review: any) => review.rating) || [];
+  const ratings = jam.reviews?.map((review: ReviewType) => review.rating) || [];
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
     : 0;
@@ -159,7 +177,7 @@ const JamDetails = () => {
         <div>
           <JamHeader
             name={jam.name}
-            profile={formatProfileData(jam.profiles)}
+            profile={jam.profiles}
             favorited={favorited}
             toggleFavorite={toggleFavorite}
           />
