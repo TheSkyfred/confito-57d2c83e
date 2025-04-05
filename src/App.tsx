@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+
 import Index from '@/pages/Index';
 import Auth from '@/pages/Auth';
 import Explore from '@/pages/Explore';
@@ -27,22 +30,28 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/explore" element={<Explore />} />
-            <Route path="/jam/:jamId" element={<JamDetails />} />
-            <Route path="/jam-editor" element={<JamEditor />} />
-            <Route path="/jam-battles" element={<JamBattles />} />
-            <Route path="/user/:userId" element={<UserProfile />} />
-            <Route path="/dashboard" element={<UserDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/credits" element={<Credits />} />
-            <Route path="/seasonal-calendar" element={<SeasonalCalendar />} />
-            <Route path="/rankings" element={<Rankings />} />
-            <Route path="/admin/seeder" element={<AdminSeeder />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/explore" element={<Explore />} />
+                <Route path="/jam/:jamId" element={<JamDetails />} />
+                <Route path="/jam-editor" element={<JamEditor />} />
+                <Route path="/jam-battles" element={<JamBattles />} />
+                <Route path="/user/:userId" element={<UserProfile />} />
+                <Route path="/dashboard" element={<UserDashboard />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/credits" element={<Credits />} />
+                <Route path="/seasonal-calendar" element={<SeasonalCalendar />} />
+                <Route path="/rankings" element={<Rankings />} />
+                <Route path="/admin/seeder" element={<AdminSeeder />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
         </Router>
       </AuthProvider>
     </QueryClientProvider>
