@@ -22,10 +22,13 @@ const AdminSeeder = () => {
       setResult(null);
 
       const { data, error } = await supabase.functions.invoke('seed-users', {
-        body: { count },
+        body: JSON.stringify({ count }),
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur lors du seeding :', error);
+        throw error;
+      }
 
       setResult(data);
       toast({
