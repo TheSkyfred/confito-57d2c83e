@@ -11,7 +11,7 @@ export const getTypedSupabaseQuery = <T extends keyof Database['public']['Tables
 export const checkSupabaseConnection = async () => {
   try {
     console.log("Tentative de connexion à Supabase...");
-    console.log("URL Supabase:", supabase.supabaseUrl);
+    console.log("Vérification de la connexion avec une requête simple");
     
     // Test simple pour vérifier si la connexion fonctionne
     const { data, error } = await supabase.from('jams').select('id').limit(1);
