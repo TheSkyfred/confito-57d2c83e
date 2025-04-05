@@ -37,14 +37,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        return;
+        return null;
       }
 
       if (data) {
         setProfile(data);
+        return data;
       }
+      return null;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      return null;
     }
   };
 
