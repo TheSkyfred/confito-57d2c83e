@@ -7,16 +7,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Cette fonction génère des utilisateurs fictifs
+// Cette fonction génère des utilisateurs fictifs avec plus de données pour les profils
 function generateFakeUsers(count: number) {
   const users = [];
-  const firstNames = ["Jean", "Marie", "Pierre", "Sophie", "Thomas", "Émilie", "Lucas", "Julie", "Antoine", "Chloé"];
-  const lastNames = ["Martin", "Dubois", "Bernard", "Thomas", "Petit", "Robert", "Richard", "Durand", "Moreau", "Simon"];
+  const firstNames = ["Jean", "Marie", "Pierre", "Sophie", "Thomas", "Émilie", "Lucas", "Julie", "Antoine", "Chloé", 
+                     "Nicolas", "Laura", "Alexandre", "Camille", "Maxime", "Léa", "Hugo", "Manon", "Louis", "Sarah"];
+  const lastNames = ["Martin", "Dubois", "Bernard", "Thomas", "Petit", "Robert", "Richard", "Durand", "Moreau", "Simon",
+                     "Laurent", "Michel", "Lefebvre", "Leroy", "Roux", "David", "Bertrand", "Morel", "Fournier", "Girard"];
+  const cities = ["Paris", "Lyon", "Marseille", "Bordeaux", "Lille", "Toulouse", "Nantes", "Strasbourg", "Montpellier", "Nice"];
+  const bios = [
+    "Passionné de confitures artisanales depuis toujours.",
+    "Je collectionne et teste des confitures du monde entier.",
+    "Créateur de confitures aux saveurs exotiques.",
+    "Fan de fruits de saison et confitures maison.",
+    "À la recherche des meilleures confitures locales.",
+    "J'aime expérimenter des recettes de grand-mère revisitées.",
+    "Confitures bio et éco-responsables sont ma priorité.",
+  ];
   
   for (let i = 0; i < count; i++) {
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
     const username = `${firstName.toLowerCase()}${Math.floor(Math.random() * 1000)}`;
+    const city = cities[Math.floor(Math.random() * cities.length)];
+    const bio = bios[Math.floor(Math.random() * bios.length)];
+    const credits = Math.floor(Math.random() * 500) + 50; // Entre 50 et 550 crédits
     
     users.push({
       email: `${username}@example.com`,
@@ -24,6 +39,10 @@ function generateFakeUsers(count: number) {
       user_metadata: {
         full_name: `${firstName} ${lastName}`,
         username: username,
+        avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        bio: bio,
+        address: `${Math.floor(Math.random() * 100) + 1} rue des Confitures, ${city}`,
+        credits: credits,
       },
       app_metadata: {},
     });
@@ -56,12 +75,12 @@ serve(async (req) => {
     });
     
     const { count } = await req.json();
-    const usersToCreate = generateFakeUsers(count || 5);
+    const usersToCreate = generateFakeUsers(count || 20); // Par défaut, créer 20 utilisateurs
     const createdUsers = [];
     
     console.log(`Création de ${usersToCreate.length} utilisateurs fictifs...`);
     
-    // Créer chaque utilisateur et l'ajouter à profiles
+    // Créer chaque utilisateur (ce qui déclenchera automatiquement la création du profil via le trigger)
     for (const userData of usersToCreate) {
       try {
         // Créer l'utilisateur
@@ -77,13 +96,35 @@ serve(async (req) => {
         console.log(`Utilisateur créé : ${userData.email} (${user.user.id})`);
         
         // Les profils sont créés automatiquement via le trigger handle_new_user
-        // Si ce n'est pas le cas, on peut les créer manuellement ici
+        // Cependant, nous voulons mettre à jour certains champs avec nos données additionnelles
+        if (user && user.user) {
+          // Mettre à jour le profil avec des données additionnelles
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              bio: userData.user_metadata.bio,
+              address: userData.user_metadata.address,
+              credits: userData.user_metadata.credits,
+              avatar_url: userData.user_metadata.avatar_url
+            })
+            .eq('id', user.user.id);
+          
+          if (updateError) {
+            console.error(`Erreur lors de la mise à jour du profil pour ${userData.email}:`, updateError);
+          } else {
+            console.log(`Profil mis à jour pour ${userData.email}`);
+          }
+        }
         
         createdUsers.push({
           id: user.user.id,
           email: userData.email,
           username: userData.user_metadata.username,
           full_name: userData.user_metadata.full_name,
+          bio: userData.user_metadata.bio,
+          address: userData.user_metadata.address,
+          credits: userData.user_metadata.credits,
+          avatar_url: userData.user_metadata.avatar_url
         });
       } catch (error) {
         console.error(`Erreur lors de la création de l'utilisateur ${userData.email}:`, error);
@@ -91,7 +132,7 @@ serve(async (req) => {
     }
     
     return new Response(
-      JSON.stringify({ success: true, users: createdUsers }),
+      JSON.stringify({ success: true, users: createdUsers, count: createdUsers.length }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

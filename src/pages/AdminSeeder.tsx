@@ -9,7 +9,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const AdminSeeder = () => {
-  const [count, setCount] = useState<number>(5);
+  const [count, setCount] = useState<number>(20);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ const AdminSeeder = () => {
         title: 'Utilisateurs créés avec succès',
         description: `${data.users.length} utilisateurs ont été ajoutés à la base de données.`,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors du seeding :', err);
       setError(err.message || 'Une erreur est survenue lors de la création des utilisateurs');
       toast({
@@ -53,7 +53,7 @@ const AdminSeeder = () => {
         <CardHeader>
           <CardTitle>Générer des utilisateurs aléatoires</CardTitle>
           <CardDescription>
-            Cet outil crée des utilisateurs fictifs dans auth.users et profiles
+            Cet outil crée des utilisateurs fictifs dans auth.users et profiles avec des données enrichies
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,7 +66,7 @@ const AdminSeeder = () => {
                 id="count"
                 type="number"
                 min="1"
-                max="20"
+                max="50"
                 value={count}
                 onChange={(e) => setCount(parseInt(e.target.value, 10))}
               />
@@ -80,7 +80,7 @@ const AdminSeeder = () => {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    En cours...
+                    Création en cours...
                   </>
                 ) : (
                   'Générer les utilisateurs'
@@ -127,6 +127,8 @@ const AdminSeeder = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom d'utilisateur</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom complet</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Crédits</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bio</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -136,6 +138,8 @@ const AdminSeeder = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.full_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.credits}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{user.bio}</td>
                     </tr>
                   ))}
                 </tbody>
