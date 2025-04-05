@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamType, ReviewType } from '@/types/supabase';
-import { formatProfileData } from '@/utils/profileHelpers';
+import { formatProfileData, formatProfilesData } from '@/utils/profileHelpers';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -76,7 +76,7 @@ const JamDetails = () => {
         }
       }
       
-      return data;
+      return data as JamType;
     },
     enabled: !!jamId,
   });
@@ -143,7 +143,8 @@ const JamDetails = () => {
     return <JamDetailsError />;
   }
 
-  const ratings = jam.reviews?.map((review: ReviewType) => review.rating) || [];
+  // Use type assertion to ensure ratings is treated as a number array
+  const ratings = (jam.reviews?.map(review => review.rating) || []) as number[];
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
     : 0;

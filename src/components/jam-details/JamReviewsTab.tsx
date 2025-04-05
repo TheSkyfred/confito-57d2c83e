@@ -6,7 +6,6 @@ import { MessageSquare, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ReviewType } from '@/types/supabase';
-import { formatProfileData } from '@/utils/profileHelpers';
 
 type JamReviewsTabProps = {
   reviews: ReviewType[];
@@ -43,19 +42,20 @@ export const JamReviewsTab = ({ reviews, avgRating, isAuthenticated }: JamReview
         <div className="space-y-6">
           {reviews.map((review) => {
             // Safely access reviewer properties with optional chaining
-            const reviewer = review.reviewer ? formatProfileData(review.reviewer) : null;
-            const reviewerInitial = reviewer?.username?.[0]?.toUpperCase() || '?';
+            const reviewerUsername = review.reviewer?.username || 'Utilisateur';
+            const reviewerAvatar = review.reviewer?.avatar_url || '';
+            const reviewerInitial = reviewerUsername[0]?.toUpperCase() || '?';
             
             return (
               <div key={review.id} className="border rounded-lg p-4">
                 <div className="flex justify-between">
                   <div className="flex items-center">
                     <Avatar className="h-10 w-10 mr-3">
-                      <AvatarImage src={reviewer?.avatar_url || ''} />
+                      <AvatarImage src={reviewerAvatar} />
                       <AvatarFallback>{reviewerInitial}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{reviewer?.username || 'Utilisateur'}</p>
+                      <p className="font-medium">{reviewerUsername}</p>
                       <div className="flex items-center">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
