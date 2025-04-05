@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
+import { ChevronLeft, AlertCircle, RefreshCw, WifiOff, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -60,6 +60,7 @@ const JamDetails = () => {
   
   useEffect(() => {
     console.log("[JamDetails] ID de confiture reçu:", jamId);
+    console.log("[JamDetails] URL complète:", window.location.href);
   }, [jamId]);
   
   // Récupération des données avec le hook amélioré
@@ -175,12 +176,31 @@ const JamDetails = () => {
             <Button variant="outline" onClick={() => navigate(-1)}>
               Retour à la page précédente
             </Button>
+            
+            {/* Bouton pour afficher les détails techniques (uniquement en développement) */}
+            {process.env.NODE_ENV !== 'production' && (
+              <Button variant="outline" onClick={() => console.log("État complet:", {
+                  jamId,
+                  error,
+                  connectionStatus,
+                  user: user?.id
+                })}
+                className="flex items-center gap-2"
+              >
+                <Bug className="h-4 w-4" />
+                Debug infos
+              </Button>
+            )}
           </div>
           {error && process.env.NODE_ENV !== 'production' && (
             <div className="mt-6 p-4 bg-muted rounded-md">
               <p className="text-sm font-mono overflow-auto text-left">
                 {error.toString()}
               </p>
+              <div className="mt-4">
+                <p className="text-sm font-semibold">ID de confiture: {jamId}</p>
+                <p className="text-sm">Statut de connexion: {connectionStatus}</p>
+              </div>
             </div>
           )}
         </div>

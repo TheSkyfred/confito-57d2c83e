@@ -6,6 +6,7 @@ import { JamType } from '@/types/supabase';
 import { formatProfileData } from '@/utils/profileHelpers';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 export const useJamDetails = (jamId: string | undefined) => {
   const { user } = useAuth();
@@ -21,7 +22,7 @@ export const useJamDetails = (jamId: string | undefined) => {
     queryKey: ['jam', jamId, retryCount],
     queryFn: async () => {
       if (!jamId) {
-        console.error("ID de confiture non défini");
+        console.error("[useJamDetails] ID de confiture non défini");
         throw new Error("ID de confiture manquant");
       }
       
@@ -34,61 +35,74 @@ export const useJamDetails = (jamId: string | undefined) => {
         await new Promise(resolve => setTimeout(resolve, retryCount * 500));
       }
       
-      const { jam, error } = await getJamById(jamId);
-      
-      if (error) {
-        console.error("[useJamDetails] Erreur lors de la récupération de la confiture:", error);
+      try {
+        const { jam, error } = await getJamById(jamId);
+        
+        if (error) {
+          console.error("[useJamDetails] Erreur lors de la récupération de la confiture:", error);
+          
+          // Notification d'erreur à l'utilisateur
+          toast({
+            title: "Erreur de chargement",
+            description: "Problème lors de la récupération des données",
+            variant: "destructive",
+          });
+          
+          throw error;
+        }
+        
+        if (!jam) {
+          console.log("[useJamDetails] Aucune confiture trouvée pour cet ID");
+          throw new Error("Confiture introuvable");
+        }
+        
+        console.log("[useJamDetails] Confiture récupérée avec succès:", jam);
+        
+        // Vérifier si la confiture est dans les favoris de l'utilisateur
+        if (user) {
+          try {
+            console.log("[useJamDetails] Vérification des favoris pour l'utilisateur:", user.id);
+            const { data: favorite } = await getTypedSupabaseQuery('favorites')
+              .select('id')
+              .eq('jam_id', jamId)
+              .eq('user_id', user.id)
+              .maybeSingle();
+              
+            if (favorite) {
+              console.log("[useJamDetails] Confiture trouvée dans les favoris");
+              setFavorited(true);
+            }
+          } catch (favError) {
+            console.error("[useJamDetails] Erreur lors de la vérification des favoris:", favError);
+          }
+        }
+
+        // Process data before returning it
+        if (jam) {
+          // Format creator profile data
+          if (jam.profiles) {
+            jam.profiles = formatProfileData(jam.profiles);
+          }
+
+          // Format reviewer profile data in reviews
+          if (jam.reviews && Array.isArray(jam.reviews)) {
+            jam.reviews = jam.reviews.map(review => {
+              if (review.reviewer) {
+                review.reviewer = formatProfileData(review.reviewer);
+              }
+              return review;
+            });
+          }
+        }
+        
+        return jam as JamType;
+      } catch (error) {
+        console.error("[useJamDetails] Exception non gérée:", error);
         throw error;
       }
-      
-      if (!jam) {
-        console.log("[useJamDetails] Aucune confiture trouvée pour cet ID");
-        throw new Error("Confiture introuvable");
-      }
-      
-      console.log("[useJamDetails] Confiture récupérée avec succès:", jam);
-      
-      // Vérifier si la confiture est dans les favoris de l'utilisateur
-      if (user) {
-        try {
-          console.log("[useJamDetails] Vérification des favoris pour l'utilisateur:", user.id);
-          const { data: favorite } = await getTypedSupabaseQuery('favorites')
-            .select('id')
-            .eq('jam_id', jamId)
-            .eq('user_id', user.id)
-            .maybeSingle();
-            
-          if (favorite) {
-            console.log("[useJamDetails] Confiture trouvée dans les favoris");
-            setFavorited(true);
-          }
-        } catch (favError) {
-          console.error("[useJamDetails] Erreur lors de la vérification des favoris:", favError);
-        }
-      }
-
-      // Process data before returning it
-      if (jam) {
-        // Format creator profile data
-        if (jam.profiles) {
-          jam.profiles = formatProfileData(jam.profiles);
-        }
-
-        // Format reviewer profile data in reviews
-        if (jam.reviews && Array.isArray(jam.reviews)) {
-          jam.reviews = jam.reviews.map(review => {
-            if (review.reviewer) {
-              review.reviewer = formatProfileData(review.reviewer);
-            }
-            return review;
-          });
-        }
-      }
-      
-      return jam as JamType;
     },
     enabled: !!jamId,
-    retry: 5,
+    retry: retryCount < 3 ? 2 : 0, // Réduire les tentatives automatiques après plusieurs échecs manuels
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
     staleTime: 30000, // 30 seconds
   });
@@ -97,6 +111,10 @@ export const useJamDetails = (jamId: string | undefined) => {
   const retryFetch = () => {
     console.log("[useJamDetails] Relance manuelle de la requête");
     setRetryCount(prev => prev + 1);
+    toast({
+      title: "Nouvelle tentative",
+      description: "Tentative de récupération des données...",
+    });
   };
 
   return {

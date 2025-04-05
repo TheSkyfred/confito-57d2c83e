@@ -32,18 +32,25 @@ export const checkSupabaseConnection = async () => {
 // Récupérer une confiture par son ID
 export const getJamById = async (jamId: string) => {
   try {
+    if (!jamId) {
+      console.error("[getJamById] ID de confiture manquant");
+      return { jam: null, error: "ID de confiture manquant" };
+    }
+    
     console.log(`[getJamById] Début de récupération de la confiture avec ID: ${jamId}`);
     console.log(`[getJamById] Type de l'ID: ${typeof jamId}, Valeur: "${jamId}"`);
     
-    // Vérifier d'abord la connexion
-    const connectionCheck = await checkSupabaseConnection();
-    if (!connectionCheck.success) {
-      console.error("[getJamById] Erreur de connexion Supabase:", connectionCheck.error);
-      return { jam: null, error: "Erreur de connexion à la base de données" };
-    }
+    // Vérification approfondie de Supabase
+    const supabaseInfo = {
+      anon_key_length: supabase.supabaseKey ? supabase.supabaseKey.length : 'non défini',
+      auth_status: supabase.auth ? 'disponible' : 'non disponible'
+    };
+    console.log("[getJamById] Info Supabase:", supabaseInfo);
     
     // Récupération directe par ID avec logging détaillé
     console.log(`[getJamById] Lancement de la requête pour ID: ${jamId}`);
+    
+    // Première tentative: requête complète avec relations
     const { data, error, status } = await supabase
       .from('jams')
       .select(`
@@ -57,15 +64,54 @@ export const getJamById = async (jamId: string) => {
     
     console.log(`[getJamById] Statut HTTP: ${status}`);
     console.log('[getJamById] Données brutes reçues:', data);
-    console.log('[getJamById] Erreur éventuelle:', error);
     
     if (error) {
+      console.error(`[getJamById] Erreur lors de la récupération de la confiture ${jamId}:`, error);
+      
       if (error.code === 'PGRST116') {
-        console.log(`[getJamById] Aucune confiture trouvée avec l'ID ${jamId}`);
-        return { jam: null, error: null };
+        console.log(`[getJamById] Aucune confiture trouvée avec l'ID ${jamId}. Tentative de requête simplifiée...`);
+        
+        // Deuxième tentative: requête simplifiée sans relations
+        const simpleRequest = await supabase
+          .from('jams')
+          .select('id, name')
+          .eq('id', jamId)
+          .maybeSingle();
+          
+        console.log('[getJamById] Résultat de la requête simplifiée:', simpleRequest);
+        
+        if (simpleRequest.error) {
+          console.error('[getJamById] Échec également avec la requête simplifiée:', simpleRequest.error);
+          return { jam: null, error: simpleRequest.error };
+        }
+        
+        if (!simpleRequest.data) {
+          console.log(`[getJamById] Confiture ${jamId} définitivement introuvable`);
+          return { jam: null, error: null };
+        }
+        
+        // Si on a trouvé un enregistrement simple, essayons de récupérer les relations séparément
+        console.log('[getJamById] Confiture trouvée en version simple, tentative de récupération des relations...');
+        const jamData = simpleRequest.data;
+        
+        // Récupérer les images
+        const { data: imagesData } = await supabase
+          .from('jam_images')
+          .select('*')
+          .eq('jam_id', jamId);
+          
+        // Assembler un objet minimal
+        const minimalJam = {
+          ...jamData,
+          jam_images: imagesData || [],
+          reviews: [],
+          profiles: null
+        };
+        
+        console.log('[getJamById] Confiture reconstruite avec données minimales:', minimalJam);
+        return { jam: minimalJam, error: null };
       }
       
-      console.error(`[getJamById] Erreur lors de la récupération de la confiture ${jamId}:`, error);
       return { jam: null, error };
     }
     
