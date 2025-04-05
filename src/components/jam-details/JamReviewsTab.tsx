@@ -6,6 +6,7 @@ import { MessageSquare, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ReviewType } from '@/types/supabase';
+import { formatProfileData } from '@/utils/profileHelpers';
 
 type JamReviewsTabProps = {
   reviews: ReviewType[];
@@ -40,39 +41,45 @@ export const JamReviewsTab = ({ reviews, avgRating, isAuthenticated }: JamReview
         </div>
       ) : (
         <div className="space-y-6">
-          {reviews.map((review) => (
-            <div key={review.id} className="border rounded-lg p-4">
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <Avatar className="h-10 w-10 mr-3">
-                    <AvatarImage src={review.reviewer?.avatar_url} />
-                    <AvatarFallback>{review.reviewer?.username?.[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{review.reviewer?.username}</p>
-                    <div className="flex items-center">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className="h-4 w-4"
-                          fill={i < review.rating ? "#FFA000" : "none"}
-                          stroke={i < review.rating ? "#FFA000" : "currentColor"}
-                        />
-                      ))}
+          {reviews.map((review) => {
+            // Safely access reviewer properties with optional chaining
+            const reviewer = review.reviewer ? formatProfileData(review.reviewer) : null;
+            const reviewerInitial = reviewer?.username?.[0]?.toUpperCase() || '?';
+            
+            return (
+              <div key={review.id} className="border rounded-lg p-4">
+                <div className="flex justify-between">
+                  <div className="flex items-center">
+                    <Avatar className="h-10 w-10 mr-3">
+                      <AvatarImage src={reviewer?.avatar_url || ''} />
+                      <AvatarFallback>{reviewerInitial}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{reviewer?.username || 'Utilisateur'}</p>
+                      <div className="flex items-center">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className="h-4 w-4"
+                            fill={i < review.rating ? "#FFA000" : "none"}
+                            stroke={i < review.rating ? "#FFA000" : "currentColor"}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(review.created_at), 'dd MMM yyyy', { locale: fr })}
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(review.created_at), 'dd MMM yyyy', { locale: fr })}
-                </div>
+                {review.comment && (
+                  <div className="mt-3">
+                    <p>{review.comment}</p>
+                  </div>
+                )}
               </div>
-              {review.comment && (
-                <div className="mt-3">
-                  <p>{review.comment}</p>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
