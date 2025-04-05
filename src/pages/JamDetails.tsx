@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -41,21 +42,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 
 const JamDetails = () => {
-  const { id } = useParams<{ id: string }>();
+  const { jamId } = useParams<{ jamId: string }>();
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   
   const { data: jam, isLoading, error } = useQuery({
-    queryKey: ['jam', id],
+    queryKey: ['jam', jamId],
     queryFn: async () => {
       const { data, error } = await getTypedSupabaseQuery('jams')
         .select(`
           *,
           jam_images (*),
           reviews (*, reviewer:reviewer_id(username, avatar_url)),
-          profiles:creator_id (id, username, full_name, avatar_url)
+          profiles:creator_id (user_id, username, full_name, avatar_url)
         `)
-        .eq('id', id)
+        .eq('id', jamId)
         .single();
 
       if (error) throw error;
@@ -63,7 +64,7 @@ const JamDetails = () => {
       if (user) {
         const { data: favorite } = await getTypedSupabaseQuery('favorites')
           .select('id')
-          .eq('jam_id', id)
+          .eq('jam_id', jamId)
           .eq('user_id', user.id)
           .maybeSingle();
           
@@ -74,7 +75,7 @@ const JamDetails = () => {
       
       return data;
     },
-    enabled: !!id,
+    enabled: !!jamId,
   });
 
   const toggleFavorite = async () => {
@@ -92,12 +93,12 @@ const JamDetails = () => {
         await supabase
           .from('favorites')
           .delete()
-          .eq('jam_id', id)
+          .eq('jam_id', jamId)
           .eq('user_id', user.id);
       } else {
         await supabase
           .from('favorites')
-          .insert([{ jam_id: id, user_id: user.id }]);
+          .insert([{ jam_id: jamId, user_id: user.id }]);
       }
       
       setFavorited(!favorited);
@@ -227,7 +228,7 @@ const JamDetails = () => {
             <div>
               <h1 className="font-serif text-3xl font-bold">{jam.name}</h1>
               <div className="flex items-center mt-2">
-                <Link to={`/profile/${jam.profiles.id}`} className="flex items-center">
+                <Link to={`/user/${jam.profiles.user_id}`} className="flex items-center">
                   <Avatar className="h-6 w-6 mr-2">
                     <AvatarImage src={jam.profiles.avatar_url} />
                     <AvatarFallback>{jam.profiles.username?.[0].toUpperCase()}</AvatarFallback>
