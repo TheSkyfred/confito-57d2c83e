@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, AlertCircle, RefreshCw, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -30,21 +30,39 @@ const JamDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
+  // Variables pour stocker l'état de la connexion
+  const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'success' | 'error'>('checking');
+  const [connectionError, setConnectionError] = React.useState<any>(null);
+  
   // Vérifier la connexion à Supabase au chargement
   useEffect(() => {
     const verifyConnection = async () => {
-      console.log("JamDetails - Vérification de la connexion Supabase");
+      setConnectionStatus('checking');
+      console.log("[JamDetails] Vérification de la connexion Supabase");
       const result = await checkSupabaseConnection();
-      console.log("Résultat de la vérification:", result);
+      console.log("[JamDetails] Résultat de la vérification:", result);
+      
+      if (result.success) {
+        setConnectionStatus('success');
+      } else {
+        setConnectionStatus('error');
+        setConnectionError(result.error);
+        toast({
+          title: "Problème de connexion",
+          description: "Impossible de se connecter à la base de données.",
+          variant: "destructive",
+        });
+      }
     };
     
     verifyConnection();
   }, []);
   
   useEffect(() => {
-    console.log("JamDetails - ID de confiture reçu:", jamId);
+    console.log("[JamDetails] ID de confiture reçu:", jamId);
   }, [jamId]);
   
+  // Récupération des données avec le hook amélioré
   const {
     jam,
     isLoading,
@@ -56,9 +74,11 @@ const JamDetails = () => {
     primaryImage,
     secondaryImages,
     isAuthenticated,
-    refetch
+    refetch,
+    retryFetch
   } = useJamDetails(jamId);
 
+  // Gestion des favoris
   const { toggleFavorite } = useFavoriteHandler({
     jamId: jamId || '',
     userId: user?.id,
@@ -66,9 +86,10 @@ const JamDetails = () => {
     setFavorited
   });
   
+  // Notification d'erreur
   useEffect(() => {
     if (error) {
-      console.error("Erreur détectée dans JamDetails:", error);
+      console.error("[JamDetails] Erreur détectée:", error);
       toast({
         title: "Erreur de chargement",
         description: "Impossible de charger les détails de cette confiture.",
@@ -77,13 +98,55 @@ const JamDetails = () => {
     }
   }, [error]);
 
+  // Affichage pendant le chargement
   if (isLoading) {
-    console.log("JamDetails - Chargement en cours...");
+    console.log("[JamDetails] Chargement en cours...");
     return <JamDetailsSkeleton />;
   }
 
+  // Affichage en cas de problème de connexion
+  if (connectionStatus === 'error') {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" size="sm" asChild className="mr-2">
+            <Link to="/explore">
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Retour aux confitures
+            </Link>
+          </Button>
+        </div>
+        
+        <div className="text-center py-10">
+          <WifiOff className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="mt-4 text-2xl font-bold">Problème de connexion</h2>
+          <p className="mt-2 text-muted-foreground">
+            Impossible de se connecter à la base de données.
+          </p>
+          <div className="flex flex-col gap-4 items-center mt-6">
+            <Button onClick={() => window.location.reload()} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Rafraîchir la page
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/explore">Explorer les confitures</Link>
+            </Button>
+          </div>
+          {connectionError && (
+            <div className="mt-6 p-4 bg-muted rounded-md">
+              <p className="text-sm font-mono overflow-auto text-left">
+                {JSON.stringify(connectionError, null, 2)}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Affichage en cas d'erreur ou confiture non trouvée
   if (error || !jam) {
-    console.log("JamDetails - Erreur ou confiture non trouvée:", error);
+    console.log("[JamDetails] Erreur ou confiture non trouvée:", error);
     return (
       <div className="container py-8">
         <div className="flex items-center mb-6">
@@ -102,7 +165,7 @@ const JamDetails = () => {
             Cette confiture n'existe pas ou a été retirée.
           </p>
           <div className="flex flex-col gap-4 items-center mt-6">
-            <Button onClick={() => refetch()} className="flex items-center gap-2">
+            <Button onClick={() => retryFetch()} className="flex items-center gap-2">
               <RefreshCw className="h-4 w-4" />
               Réessayer
             </Button>
@@ -113,17 +176,26 @@ const JamDetails = () => {
               Retour à la page précédente
             </Button>
           </div>
+          {error && process.env.NODE_ENV !== 'production' && (
+            <div className="mt-6 p-4 bg-muted rounded-md">
+              <p className="text-sm font-mono overflow-auto text-left">
+                {error.toString()}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
+  // Vérification des données de profil
   if (!jam.profiles) {
-    console.error("JamDetails - Données de profil manquantes pour la confiture:", jam);
+    console.error("[JamDetails] Données de profil manquantes pour la confiture:", jam);
     return <JamDetailsError />;
   }
 
-  console.log("JamDetails - Rendu de la page avec données:", jam);
+  // Succès : affichage normal de la page
+  console.log("[JamDetails] Rendu de la page avec données:", jam);
   
   return (
     <div className="container py-8">

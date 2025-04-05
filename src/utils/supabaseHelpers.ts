@@ -10,6 +10,9 @@ export const getTypedSupabaseQuery = <T extends keyof Database['public']['Tables
 // Vérifier si le client Supabase est correctement initialisé
 export const checkSupabaseConnection = async () => {
   try {
+    console.log("Tentative de connexion à Supabase...");
+    console.log("URL Supabase:", supabase.supabaseUrl);
+    
     // Test simple pour vérifier si la connexion fonctionne
     const { data, error } = await supabase.from('jams').select('id').limit(1);
     
@@ -29,10 +32,19 @@ export const checkSupabaseConnection = async () => {
 // Récupérer une confiture par son ID
 export const getJamById = async (jamId: string) => {
   try {
-    console.log(`Tentative de récupération de la confiture avec ID: ${jamId}`);
+    console.log(`[getJamById] Début de récupération de la confiture avec ID: ${jamId}`);
+    console.log(`[getJamById] Type de l'ID: ${typeof jamId}, Valeur: "${jamId}"`);
     
-    // Modification de la requête pour être plus complète et debugger
-    const { data, error } = await supabase
+    // Vérifier d'abord la connexion
+    const connectionCheck = await checkSupabaseConnection();
+    if (!connectionCheck.success) {
+      console.error("[getJamById] Erreur de connexion Supabase:", connectionCheck.error);
+      return { jam: null, error: "Erreur de connexion à la base de données" };
+    }
+    
+    // Récupération directe par ID avec logging détaillé
+    console.log(`[getJamById] Lancement de la requête pour ID: ${jamId}`);
+    const { data, error, status } = await supabase
       .from('jams')
       .select(`
         *,
@@ -41,24 +53,31 @@ export const getJamById = async (jamId: string) => {
         profiles:creator_id (id, username, full_name, avatar_url)
       `)
       .eq('id', jamId)
-      .maybeSingle();
+      .single();
     
-    console.log('Résultat de la requête Supabase:', { data, error });
+    console.log(`[getJamById] Statut HTTP: ${status}`);
+    console.log('[getJamById] Données brutes reçues:', data);
+    console.log('[getJamById] Erreur éventuelle:', error);
     
     if (error) {
-      console.error(`Erreur lors de la récupération de la confiture ${jamId}:`, error);
+      if (error.code === 'PGRST116') {
+        console.log(`[getJamById] Aucune confiture trouvée avec l'ID ${jamId}`);
+        return { jam: null, error: null };
+      }
+      
+      console.error(`[getJamById] Erreur lors de la récupération de la confiture ${jamId}:`, error);
       return { jam: null, error };
     }
     
     if (!data) {
-      console.log(`Aucune confiture trouvée avec l'ID ${jamId}`);
+      console.log(`[getJamById] Aucune confiture trouvée avec l'ID ${jamId}`);
       return { jam: null, error: null };
     }
     
-    console.log(`Confiture ${jamId} trouvée:`, data);
+    console.log(`[getJamById] Confiture ${jamId} trouvée avec succès:`, data);
     return { jam: data, error: null };
   } catch (e) {
-    console.error(`Exception lors de la récupération de la confiture ${jamId}:`, e);
+    console.error(`[getJamById] Exception lors de la récupération de la confiture ${jamId}:`, e);
     return { jam: null, error: e };
   }
 };

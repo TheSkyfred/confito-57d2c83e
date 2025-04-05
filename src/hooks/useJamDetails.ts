@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export const useJamDetails = (jamId: string | undefined) => {
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const { 
     data: jam, 
@@ -17,32 +18,40 @@ export const useJamDetails = (jamId: string | undefined) => {
     error,
     refetch
   } = useQuery({
-    queryKey: ['jam', jamId],
+    queryKey: ['jam', jamId, retryCount],
     queryFn: async () => {
       if (!jamId) {
         console.error("ID de confiture non défini");
         throw new Error("ID de confiture manquant");
       }
       
-      console.log("useJamDetails - Début de la récupération pour ID:", jamId);
+      console.log("[useJamDetails] Début de la récupération pour ID:", jamId);
+      console.log("[useJamDetails] Tentative #" + (retryCount + 1));
+      
+      // Attendre un peu si c'est une nouvelle tentative
+      if (retryCount > 0) {
+        console.log(`[useJamDetails] Délai de ${retryCount * 500}ms avant la requête...`);
+        await new Promise(resolve => setTimeout(resolve, retryCount * 500));
+      }
+      
       const { jam, error } = await getJamById(jamId);
       
       if (error) {
-        console.error("Erreur lors de la récupération de la confiture:", error);
+        console.error("[useJamDetails] Erreur lors de la récupération de la confiture:", error);
         throw error;
       }
       
       if (!jam) {
-        console.log("Aucune confiture trouvée pour cet ID");
+        console.log("[useJamDetails] Aucune confiture trouvée pour cet ID");
         throw new Error("Confiture introuvable");
       }
       
-      console.log("Confiture récupérée avec succès:", jam);
+      console.log("[useJamDetails] Confiture récupérée avec succès:", jam);
       
       // Vérifier si la confiture est dans les favoris de l'utilisateur
       if (user) {
         try {
-          console.log("Vérification des favoris pour l'utilisateur:", user.id);
+          console.log("[useJamDetails] Vérification des favoris pour l'utilisateur:", user.id);
           const { data: favorite } = await getTypedSupabaseQuery('favorites')
             .select('id')
             .eq('jam_id', jamId)
@@ -50,11 +59,11 @@ export const useJamDetails = (jamId: string | undefined) => {
             .maybeSingle();
             
           if (favorite) {
-            console.log("Confiture trouvée dans les favoris");
+            console.log("[useJamDetails] Confiture trouvée dans les favoris");
             setFavorited(true);
           }
         } catch (favError) {
-          console.error("Erreur lors de la vérification des favoris:", favError);
+          console.error("[useJamDetails] Erreur lors de la vérification des favoris:", favError);
         }
       }
 
@@ -79,35 +88,16 @@ export const useJamDetails = (jamId: string | undefined) => {
       return jam as JamType;
     },
     enabled: !!jamId,
-    retry: 3,
+    retry: 5,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
     staleTime: 30000, // 30 seconds
   });
 
-  // Ajout d'un effet pour retenter si nécessaire
-  useEffect(() => {
-    if (error) {
-      console.error("Erreur détectée dans useJamDetails, tentative de relance dans 2 secondes:", error);
-      const timer = setTimeout(() => {
-        console.log("Relance de la requête...");
-        refetch();
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [error, refetch]);
-
-  // Safely extract ratings with proper type handling
-  const ratings = (jam?.reviews?.map(review => review.rating) || []) as number[];
-  const avgRating = ratings.length > 0 
-    ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
-    : 0;
-
-  // Safely handle images
-  const primaryImage = jam?.jam_images?.find((img: any) => img.is_primary)?.url || 
-                      (jam?.jam_images?.length ? jam.jam_images[0].url : null);
-  const secondaryImages = jam?.jam_images?.filter((img: any) => 
-    img.url !== primaryImage
-  ) || [];
+  // Fonction pour forcer une nouvelle tentative avec un compteur incrémenté
+  const retryFetch = () => {
+    console.log("[useJamDetails] Relance manuelle de la requête");
+    setRetryCount(prev => prev + 1);
+  };
 
   return {
     jam,
@@ -115,11 +105,17 @@ export const useJamDetails = (jamId: string | undefined) => {
     error,
     favorited,
     setFavorited,
-    avgRating,
-    ratings,
-    primaryImage,
-    secondaryImages,
+    avgRating: (jam?.reviews?.map(review => review.rating) || []).reduce((sum, r) => sum + r, 0) / 
+               (jam?.reviews?.length || 1) || 0,
+    ratings: (jam?.reviews?.map(review => review.rating) || []) as number[],
+    primaryImage: jam?.jam_images?.find((img: any) => img.is_primary)?.url || 
+                 (jam?.jam_images?.length ? jam.jam_images[0].url : null),
+    secondaryImages: jam?.jam_images?.filter((img: any) => 
+      img.url !== (jam?.jam_images?.find((img: any) => img.is_primary)?.url || 
+                 (jam?.jam_images?.length ? jam.jam_images[0].url : null))
+    ) || [],
     isAuthenticated: !!user,
-    refetch
+    refetch,
+    retryFetch
   };
 };
