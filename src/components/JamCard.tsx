@@ -18,7 +18,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
     ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0].url) 
     : '/placeholder.svg';
   
-  // Calculate average rating
+  // Calculate average rating - ensure we handle undefined/null values
   const avgRating = jam.avgRating || 0;
   
   return (
@@ -26,22 +26,26 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
       <div className="aspect-square overflow-hidden">
         <img 
           src={primaryImage} 
-          alt={jam.name} 
+          alt={jam.name || 'Confiture'} 
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
+          onError={(e) => {
+            e.currentTarget.src = '/placeholder.svg';
+            e.currentTarget.onerror = null;
+          }}
         />
       </div>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium line-clamp-2">{jam.name}</h3>
+          <h3 className="font-medium line-clamp-2">{jam.name || 'Sans nom'}</h3>
           <div className="flex items-center space-x-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
             <span className="text-sm font-medium">
-              {avgRating ? avgRating.toFixed(1) : 'N/A'}
+              {avgRating > 0 ? avgRating.toFixed(1) : 'N/A'}
             </span>
           </div>
         </div>
         <div className="text-sm text-muted-foreground line-clamp-2 mb-2">
-          {jam.description}
+          {jam.description || 'Aucune description disponible'}
         </div>
         <div className="flex items-end justify-between">
           <div className="flex flex-wrap gap-1">
