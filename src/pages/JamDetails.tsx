@@ -1,8 +1,8 @@
 
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -11,6 +11,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
 
 import { JamImageCarousel } from '@/components/jam-details/JamImageCarousel';
 import { JamHeader } from '@/components/jam-details/JamHeader';
@@ -26,6 +27,11 @@ import { JamActions } from '@/components/jam-details/JamActions';
 const JamDetails = () => {
   const { jamId } = useParams<{ jamId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    console.log("JamDetails - ID de confiture reçu:", jamId);
+  }, [jamId]);
   
   const {
     jam,
@@ -46,15 +52,53 @@ const JamDetails = () => {
     favorited,
     setFavorited
   });
+  
+  useEffect(() => {
+    if (error) {
+      console.error("Erreur détectée dans JamDetails:", error);
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les détails de cette confiture.",
+        variant: "destructive",
+      });
+    }
+  }, [error]);
 
   if (isLoading) {
+    console.log("JamDetails - Chargement en cours...");
     return <JamDetailsSkeleton />;
   }
 
-  if (error || !jam || !jam.profiles) {
+  if (error || !jam) {
+    console.log("JamDetails - Erreur ou confiture non trouvée:", error);
+    return (
+      <div className="container py-8">
+        <div className="text-center py-10">
+          <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+          <h2 className="mt-4 text-2xl font-bold">Confiture introuvable</h2>
+          <p className="mt-2 text-muted-foreground">
+            Cette confiture n'existe pas ou a été retirée.
+          </p>
+          <div className="flex flex-col gap-4 items-center mt-6">
+            <Button asChild>
+              <Link to="/explore">Découvrir d'autres confitures</Link>
+            </Button>
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Retour à la page précédente
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!jam.profiles) {
+    console.error("JamDetails - Données de profil manquantes pour la confiture:", jam);
     return <JamDetailsError />;
   }
 
+  console.log("JamDetails - Rendu de la page avec données:", jam);
+  
   return (
     <div className="container py-8">
       <div className="flex items-center mb-6">

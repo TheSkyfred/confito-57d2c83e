@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { getTypedSupabaseQuery, getJamById } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
 import { formatProfileData } from '@/utils/profileHelpers';
 import { useState } from 'react';
@@ -14,40 +14,55 @@ export const useJamDetails = (jamId: string | undefined) => {
   const { data: jam, isLoading, error } = useQuery({
     queryKey: ['jam', jamId],
     queryFn: async () => {
-      const { data, error } = await getTypedSupabaseQuery('jams')
-        .select(`
-          *,
-          jam_images (*),
-          reviews (*, reviewer:reviewer_id(id, username, full_name, avatar_url)),
-          profiles:creator_id (id, username, full_name, avatar_url)
-        `)
-        .eq('id', jamId)
-        .single();
-
-      if (error) throw error;
+      if (!jamId) {
+        console.error("ID de confiture non défini");
+        throw new Error("ID de confiture manquant");
+      }
       
+      console.log("useJamDetails - Début de la récupération pour ID:", jamId);
+      const { jam, error } = await getJamById(jamId);
+      
+      if (error) {
+        console.error("Erreur lors de la récupération de la confiture:", error);
+        throw error;
+      }
+      
+      if (!jam) {
+        console.log("Aucune confiture trouvée pour cet ID");
+        throw new Error("Confiture introuvable");
+      }
+      
+      console.log("Confiture récupérée avec succès:", jam);
+      
+      // Vérifier si la confiture est dans les favoris de l'utilisateur
       if (user) {
-        const { data: favorite } = await getTypedSupabaseQuery('favorites')
-          .select('id')
-          .eq('jam_id', jamId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        if (favorite) {
-          setFavorited(true);
+        try {
+          console.log("Vérification des favoris pour l'utilisateur:", user.id);
+          const { data: favorite } = await getTypedSupabaseQuery('favorites')
+            .select('id')
+            .eq('jam_id', jamId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+            
+          if (favorite) {
+            console.log("Confiture trouvée dans les favoris");
+            setFavorited(true);
+          }
+        } catch (favError) {
+          console.error("Erreur lors de la vérification des favoris:", favError);
         }
       }
 
       // Process data before returning it
-      if (data) {
+      if (jam) {
         // Format creator profile data
-        if (data.profiles) {
-          data.profiles = formatProfileData(data.profiles);
+        if (jam.profiles) {
+          jam.profiles = formatProfileData(jam.profiles);
         }
 
         // Format reviewer profile data in reviews
-        if (data.reviews && Array.isArray(data.reviews)) {
-          data.reviews = data.reviews.map(review => {
+        if (jam.reviews && Array.isArray(jam.reviews)) {
+          jam.reviews = jam.reviews.map(review => {
             if (review.reviewer) {
               review.reviewer = formatProfileData(review.reviewer);
             }
@@ -56,9 +71,11 @@ export const useJamDetails = (jamId: string | undefined) => {
         }
       }
       
-      return data as JamType;
+      return jam as JamType;
     },
     enabled: !!jamId,
+    retry: 2,
+    staleTime: 60000, // 1 minute
   });
 
   // Safely extract ratings with proper type handling

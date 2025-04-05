@@ -25,3 +25,37 @@ export const checkSupabaseConnection = async () => {
     return { success: false, error: e };
   }
 };
+
+// Récupérer une confiture par son ID
+export const getJamById = async (jamId: string) => {
+  try {
+    console.log(`Tentative de récupération de la confiture avec ID: ${jamId}`);
+    
+    const { data, error } = await supabase
+      .from('jams')
+      .select(`
+        *,
+        jam_images (*),
+        reviews (*, reviewer:reviewer_id(id, username, full_name, avatar_url)),
+        profiles:creator_id (id, username, full_name, avatar_url)
+      `)
+      .eq('id', jamId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`Erreur lors de la récupération de la confiture ${jamId}:`, error);
+      return { jam: null, error };
+    }
+    
+    if (!data) {
+      console.log(`Aucune confiture trouvée avec l'ID ${jamId}`);
+      return { jam: null, error: null };
+    }
+    
+    console.log(`Confiture ${jamId} trouvée:`, data);
+    return { jam: data, error: null };
+  } catch (e) {
+    console.error(`Exception lors de la récupération de la confiture ${jamId}:`, e);
+    return { jam: null, error: e };
+  }
+};
