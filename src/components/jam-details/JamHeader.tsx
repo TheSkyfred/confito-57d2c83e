@@ -14,18 +14,30 @@ type JamHeaderProps = {
 };
 
 export const JamHeader = ({ name, profile, favorited, toggleFavorite }: JamHeaderProps) => {
+  // Ensure we have profile data and it has an id
+  if (!profile || !profile.id) {
+    console.error("Missing profile data in JamHeader");
+  }
+
+  // Safely access profile properties
+  const username = profile?.username || 'Utilisateur';
+  const fullName = profile?.full_name || username;
+  const avatarUrl = profile?.avatar_url || '';
+  const profileId = profile?.id || '';
+  const initial = username[0]?.toUpperCase() || '?';
+
   return (
     <div className="flex justify-between items-start">
       <div>
         <h1 className="font-serif text-3xl font-bold">{name}</h1>
         <div className="flex items-center mt-2">
-          <Link to={`/user/${profile.id}`} className="flex items-center">
+          <Link to={`/user/${profileId}`} className="flex items-center">
             <Avatar className="h-6 w-6 mr-2">
-              <AvatarImage src={profile.avatar_url} />
-              <AvatarFallback>{profile.username?.[0].toUpperCase()}</AvatarFallback>
+              <AvatarImage src={avatarUrl} />
+              <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
             <span className="text-sm text-muted-foreground">
-              Par {profile.full_name || profile.username}
+              Par {fullName}
             </span>
           </Link>
         </div>

@@ -41,10 +41,13 @@ export const JamReviewsTab = ({ reviews, avgRating, isAuthenticated }: JamReview
       ) : (
         <div className="space-y-6">
           {reviews.map((review) => {
-            // Safely access reviewer properties with optional chaining
+            // Safely access reviewer properties with null/undefined checks
             const reviewerUsername = review.reviewer?.username || 'Utilisateur';
+            // Ensure all reviewer fields have fallbacks
             const reviewerAvatar = review.reviewer?.avatar_url || '';
-            const reviewerInitial = reviewerUsername[0]?.toUpperCase() || '?';
+            const reviewerInitial = (reviewerUsername && reviewerUsername[0]) 
+              ? reviewerUsername[0].toUpperCase() 
+              : '?';
             
             return (
               <div key={review.id} className="border rounded-lg p-4">

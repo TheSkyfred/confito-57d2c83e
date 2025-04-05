@@ -38,7 +38,7 @@ const JamDetails = () => {
         .select(`
           *,
           jam_images (*),
-          reviews (*, reviewer:reviewer_id(username, avatar_url)),
+          reviews (*, reviewer:reviewer_id(id, username, full_name, avatar_url)),
           profiles:creator_id (id, username, full_name, avatar_url)
         `)
         .eq('id', jamId)
@@ -139,16 +139,17 @@ const JamDetails = () => {
     return <JamDetailsSkeleton />;
   }
 
-  if (error || !jam) {
+  if (error || !jam || !jam.profiles) {
     return <JamDetailsError />;
   }
 
-  // Use type assertion to ensure ratings is treated as a number array
+  // Safely extract ratings with proper type handling
   const ratings = (jam.reviews?.map(review => review.rating) || []) as number[];
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
     : 0;
 
+  // Safely handle images
   const primaryImage = jam.jam_images.find((img: any) => img.is_primary)?.url || 
                       (jam.jam_images.length > 0 ? jam.jam_images[0].url : null);
   const secondaryImages = jam.jam_images.filter((img: any) => 
