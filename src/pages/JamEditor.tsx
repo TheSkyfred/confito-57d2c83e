@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -357,124 +358,124 @@ const JamEditor: React.FC = () => {
               <TabsTrigger value="edit">Éditer</TabsTrigger>
               <TabsTrigger value="preview">Aperçu</TabsTrigger>
             </TabsList>
+            
+            <TabsContent value="edit" className="mt-0">
+              <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+                <div className="lg:col-span-4">
+                  <Accordion
+                    type="multiple"
+                    value={expandedSections}
+                    onValueChange={setExpandedSections}
+                    className="w-full"
+                  >
+                    <AccordionItem value="basic-info">
+                      <AccordionTrigger>Informations de base</AccordionTrigger>
+                      <AccordionContent>
+                        <BasicInfoForm 
+                          formData={formData} 
+                          updateFormData={updateFormData}
+                          mainImagePreview={mainImagePreview}
+                          handleImageChange={handleImageChange}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="ingredients">
+                      <AccordionTrigger>Ingrédients</AccordionTrigger>
+                      <AccordionContent>
+                        <IngredientsForm 
+                          formData={formData} 
+                          updateFormData={updateFormData} 
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="manufacturing">
+                      <AccordionTrigger>Données de fabrication</AccordionTrigger>
+                      <AccordionContent>
+                        <ManufacturingForm 
+                          formData={formData} 
+                          updateFormData={updateFormData} 
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="pricing">
+                      <AccordionTrigger>Prix</AccordionTrigger>
+                      <AccordionContent>
+                        <PricingForm 
+                          formData={formData} 
+                          updateFormData={updateFormData}
+                          suggestedPrice={null}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="recipe">
+                      <AccordionTrigger>Recette (facultatif)</AccordionTrigger>
+                      <AccordionContent>
+                        <RecipeForm 
+                          formData={formData} 
+                          updateFormData={updateFormData} 
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                  
+                  <Card className="mt-6 p-4">
+                    <VisibilityForm 
+                      saving={saving} 
+                      handleSubmit={handleSubmit}
+                      isEditMode={isEditMode} 
+                    />
+                  </Card>
+                </div>
+                
+                <div className="lg:col-span-2">
+                  <div className="sticky top-20">
+                    <Card>
+                      <div className="p-4">
+                        <h3 className="font-medium mb-3">Aperçu</h3>
+                        <JamPreview formData={formData} />
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="preview" className="mt-0">
+              <Card>
+                <div className="p-6">
+                  <JamPreview formData={formData} fullPreview={true} />
+                  
+                  <div className="mt-8 flex justify-end gap-3">
+                    <Button variant="outline" onClick={() => setActiveTab("edit")}>
+                      Retour à l'édition
+                    </Button>
+                    <Button 
+                      disabled={saving} 
+                      onClick={() => handleSubmit(false)}
+                    >
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Enregistrer en brouillon
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      disabled={saving || !formData.name} 
+                      onClick={() => handleSubmit(true)}
+                    >
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Publier
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
 
         <Separator />
-
-        <TabsContent value="edit" className="mt-0">
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-            <div className="lg:col-span-4">
-              <Accordion
-                type="multiple"
-                value={expandedSections}
-                onValueChange={setExpandedSections}
-                className="w-full"
-              >
-                <AccordionItem value="basic-info">
-                  <AccordionTrigger>Informations de base</AccordionTrigger>
-                  <AccordionContent>
-                    <BasicInfoForm 
-                      formData={formData} 
-                      updateFormData={updateFormData}
-                      mainImagePreview={mainImagePreview}
-                      handleImageChange={handleImageChange}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="ingredients">
-                  <AccordionTrigger>Ingrédients</AccordionTrigger>
-                  <AccordionContent>
-                    <IngredientsForm 
-                      formData={formData} 
-                      updateFormData={updateFormData} 
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="manufacturing">
-                  <AccordionTrigger>Données de fabrication</AccordionTrigger>
-                  <AccordionContent>
-                    <ManufacturingForm 
-                      formData={formData} 
-                      updateFormData={updateFormData} 
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="pricing">
-                  <AccordionTrigger>Prix</AccordionTrigger>
-                  <AccordionContent>
-                    <PricingForm 
-                      formData={formData} 
-                      updateFormData={updateFormData}
-                      suggestedPrice={null}
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-                
-                <AccordionItem value="recipe">
-                  <AccordionTrigger>Recette (facultatif)</AccordionTrigger>
-                  <AccordionContent>
-                    <RecipeForm 
-                      formData={formData} 
-                      updateFormData={updateFormData} 
-                    />
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-              
-              <Card className="mt-6 p-4">
-                <VisibilityForm 
-                  saving={saving} 
-                  handleSubmit={handleSubmit}
-                  isEditMode={isEditMode} 
-                />
-              </Card>
-            </div>
-            
-            <div className="lg:col-span-2">
-              <div className="sticky top-20">
-                <Card>
-                  <div className="p-4">
-                    <h3 className="font-medium mb-3">Aperçu</h3>
-                    <JamPreview formData={formData} />
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="preview" className="mt-0">
-          <Card>
-            <div className="p-6">
-              <JamPreview formData={formData} fullPreview={true} />
-              
-              <div className="mt-8 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setActiveTab("edit")}>
-                  Retour à l'édition
-                </Button>
-                <Button 
-                  disabled={saving} 
-                  onClick={() => handleSubmit(false)}
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enregistrer en brouillon
-                </Button>
-                <Button 
-                  variant="default" 
-                  disabled={saving || !formData.name} 
-                  onClick={() => handleSubmit(true)}
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Publier
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
       </div>
     </div>
   );
