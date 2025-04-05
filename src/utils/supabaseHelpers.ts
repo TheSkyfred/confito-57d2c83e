@@ -40,9 +40,8 @@ export const getJamById = async (jamId: string) => {
     console.log(`[getJamById] Début de récupération de la confiture avec ID: ${jamId}`);
     console.log(`[getJamById] Type de l'ID: ${typeof jamId}, Valeur: "${jamId}"`);
     
-    // Vérification approfondie de Supabase
+    // Vérification approfondie de Supabase - éviter d'accéder aux propriétés protégées
     const supabaseInfo = {
-      anon_key_length: supabase.supabaseKey ? supabase.supabaseKey.length : 'non défini',
       auth_status: supabase.auth ? 'disponible' : 'non disponible'
     };
     console.log("[getJamById] Info Supabase:", supabaseInfo);
