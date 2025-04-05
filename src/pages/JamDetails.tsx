@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
+import { formatProfileData } from '@/utils/profileHelpers';
 
 import {
   ChevronLeft,
@@ -54,7 +55,7 @@ const JamDetails = () => {
           *,
           jam_images (*),
           reviews (*, reviewer:reviewer_id(username, avatar_url)),
-          profiles:creator_id (user_id, username, full_name, avatar_url)
+          profiles:creator_id (id, username, full_name, avatar_url)
         `)
         .eq('id', jamId)
         .single();
@@ -228,7 +229,7 @@ const JamDetails = () => {
             <div>
               <h1 className="font-serif text-3xl font-bold">{jam.name}</h1>
               <div className="flex items-center mt-2">
-                <Link to={`/user/${jam.profiles.user_id}`} className="flex items-center">
+                <Link to={`/user/${jam.profiles.id}`} className="flex items-center">
                   <Avatar className="h-6 w-6 mr-2">
                     <AvatarImage src={jam.profiles.avatar_url} />
                     <AvatarFallback>{jam.profiles.username?.[0].toUpperCase()}</AvatarFallback>

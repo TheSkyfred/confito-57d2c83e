@@ -59,6 +59,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { ProfileType } from '@/types/supabase';
+import { formatProfileData, formatProfilesData } from '@/utils/profileHelpers';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -80,13 +81,7 @@ const AdminDashboard = () => {
 
       if (error) throw error;
       
-      // Convert to ProfileType format if needed
-      const formattedProfile: ProfileType = {
-        ...data,
-        id: data.id || data.user_id
-      };
-      
-      return formattedProfile;
+      return formatProfileData(data);
     },
     enabled: !!user,
   });
@@ -132,13 +127,7 @@ const AdminDashboard = () => {
       
       if (error) throw error;
       
-      // Convert to ProfileType format if needed
-      const formattedProfiles: ProfileType[] = data.map((profile: any) => ({
-        ...profile,
-        id: profile.id || profile.user_id
-      }));
-      
-      return formattedProfiles;
+      return formatProfilesData(data);
     },
     enabled: !!isAdmin,
   });
