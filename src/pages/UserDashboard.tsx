@@ -22,7 +22,7 @@ import {
   BarChart3,
   Loader2,
 } from "lucide-react";
-import { OrderType } from "@/types/supabase";
+import { OrderType, ProfileType } from "@/types/supabase";
 
 interface Jam {
   id: string;
@@ -34,19 +34,6 @@ interface Jam {
   jam_images: { url: string }[];
 }
 
-interface Order {
-  id: string;
-  created_at: string;
-  status: "pending" | "completed" | "cancelled";
-  total_credits: number;
-  jam_id: string;
-  seller_id: string;
-  buyer_id: string;
-  buyer: any;
-  seller: any;
-  jam: any;
-}
-
 interface Badge {
   id: string;
   name: string;
@@ -55,7 +42,7 @@ interface Badge {
 }
 
 const UserDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [userCredits, setUserCredits] = useState(0);
@@ -161,7 +148,6 @@ const UserDashboard = () => {
 
   return (
     <div className="container py-8">
-      {/* User overview section */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
         <Avatar className="h-20 w-20">
           <AvatarImage
@@ -184,7 +170,7 @@ const UserDashboard = () => {
 
         <div className="flex flex-col items-end justify-center space-y-2">
           <div className="flex items-center gap-2">
-            <CreditBadge amount={user?.credits || 0} size="large" />
+            <CreditBadge amount={profile?.credits || 0} size="large" />
             <Button variant="outline" size="sm" asChild>
               <Link to="/credits">
                 <CreditCard className="h-4 w-4 mr-2" />
@@ -397,8 +383,8 @@ const UserDashboard = () => {
                         .map(order => {
                           const isPurchase = order.buyer_id === user?.id;
                           const otherParty = isPurchase 
-                            ? (order.seller || {}) 
-                            : (order.buyer || {});
+                            ? (order.seller as ProfileType || {}) 
+                            : (order.buyer as ProfileType || {});
                           
                           // Handle possible null values
                           const jamName = order.jam?.name || "Confiture";
@@ -408,16 +394,16 @@ const UserDashboard = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
                                   <AvatarImage 
-                                    src={otherParty.avatar_url || ''} 
-                                    alt={otherParty.username || 'Utilisateur'} 
+                                    src={otherParty?.avatar_url || ''} 
+                                    alt={otherParty?.username || 'Utilisateur'} 
                                   />
                                   <AvatarFallback>
-                                    {(otherParty.username || 'U').substring(0, 1).toUpperCase()}
+                                    {(otherParty?.username || 'U').substring(0, 1).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <p className="text-sm font-medium">
-                                    {isPurchase ? "Achat à" : "Vente à"} {otherParty.username || "un utilisateur"}
+                                    {isPurchase ? "Achat à" : "Vente à"} {otherParty?.username || "un utilisateur"}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     {jamName} - {format(new Date(order.created_at), 'dd MMM', { locale: fr })}
