@@ -20,7 +20,8 @@ const Explore = () => {
     updateMaxSugar,
     updateMinRating,
     updateMaxPrice,
-    resetFilters
+    resetFilters,
+    refreshData
   } = useJamsFiltering();
 
   // Afficher les erreurs et créer une notification pour l'utilisateur
@@ -85,6 +86,7 @@ const Explore = () => {
         isLoading={isLoading}
         error={error}
         resetFilters={resetFilters}
+        refreshData={refreshData}
       />
     </div>
   );

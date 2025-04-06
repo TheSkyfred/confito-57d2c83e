@@ -14,9 +14,6 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
     return <div className="p-4 border border-muted rounded-lg">Confiture non disponible</div>;
   }
   
-  // Debug
-  console.log("JamCard - Données reçues:", jam);
-  
   // Find primary image, or use the first one, or fallback to placeholder
   const primaryImage = jam.jam_images && jam.jam_images.length > 0 
     ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0].url) 
@@ -27,7 +24,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
   
   return (
     <div className="group relative overflow-hidden rounded-lg border border-muted bg-background hover:shadow-md transition-shadow">
-      <div className="aspect-square overflow-hidden">
+      <div className="aspect-square overflow-hidden bg-muted">
         <img 
           src={primaryImage} 
           alt={jam.name || 'Confiture'} 

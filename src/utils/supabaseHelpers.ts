@@ -12,6 +12,12 @@ export const checkSupabaseConnection = async () => {
   try {
     console.log("Tentative de connexion à Supabase...");
     
+    // Vérifions d'abord que le client Supabase existe
+    if (!supabase) {
+      console.error("Client Supabase non initialisé");
+      return { success: false, error: "Client Supabase non initialisé" };
+    }
+    
     // Test simple pour vérifier si la connexion fonctionne
     const { data, error } = await supabase.from('jams').select('id').limit(1);
     
@@ -65,5 +71,57 @@ export const getJamById = async (jamId: string) => {
   } catch (e) {
     console.error(`[getJamById] Exception: ${e}`);
     return { jam: null, error: e };
+  }
+};
+
+// Récupérer toutes les confitures avec filtres
+export const getJams = async (filters = {}) => {
+  try {
+    console.log("[getJams] Récupération de toutes les confitures avec filtres:", filters);
+    
+    let query = supabase
+      .from('jams')
+      .select(`
+        *,
+        jam_images (*),
+        profiles:creator_id (id, username, full_name, avatar_url),
+        reviews (rating)
+      `)
+      .eq('is_active', true);
+    
+    // Application des filtres si nécessaire
+    // À adapter selon la structure de votre objet filters
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("[getJams] Erreur:", error.message);
+      return { jams: null, error };
+    }
+    
+    if (!data || data.length === 0) {
+      console.log("[getJams] Aucune confiture trouvée");
+      return { jams: [], error: null };
+    }
+    
+    console.log(`[getJams] ${data.length} confitures trouvées`);
+    
+    // Calculer les moyennes des notes pour chaque confiture
+    const processedJams = data.map(jam => {
+      const ratings = jam.reviews?.map(review => review.rating) || [];
+      const avgRating = ratings.length > 0 
+        ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+        : 0;
+      
+      return {
+        ...jam,
+        avgRating
+      };
+    });
+    
+    return { jams: processedJams, error: null };
+  } catch (e) {
+    console.error("[getJams] Exception:", e);
+    return { jams: null, error: e };
   }
 };

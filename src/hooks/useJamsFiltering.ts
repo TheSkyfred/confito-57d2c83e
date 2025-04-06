@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { getJams } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
 import { toast } from '@/hooks/use-toast';
 
@@ -30,106 +29,24 @@ export const useJamsFiltering = () => {
     }
   });
   
-  // Charge les confitures
-  const { data: jams, isLoading, error } = useQuery({
-    queryKey: ['jams', filters],
+  const [retryCount, setRetryCount] = useState(0);
+  
+  const refreshData = useCallback(() => {
+    setRetryCount(prev => prev + 1);
+    toast({
+      title: "Rafraîchissement",
+      description: "Tentative de récupération des données...",
+    });
+  }, []);
+  
+  const { data: allJams, isLoading, error } = useQuery({
+    queryKey: ['jams', filters, retryCount],
     queryFn: async () => {
-      console.log("Début de la requête Supabase pour les confitures");
-      try {
-        // Using direct query to avoid typing issues
-        let query = supabase.from('jams')
-          .select(`
-            *,
-            jam_images (*),
-            profiles:creator_id (username, avatar_url),
-            reviews (rating)
-          `)
-          .eq('is_active', true);
-        
-        console.log("Requête initiale construite");
-        
-        // Appliquer les filtres
-        if (filters.searchTerm) {
-          console.log("Filtrage par terme de recherche:", filters.searchTerm);
-          query = query.ilike('name', `%${filters.searchTerm}%`);
-        }
-        
-        // Filtrer par fruit si sélectionné
-        if (filters.filters.fruit && filters.filters.fruit.length > 0) {
-          console.log("Filtrage par fruits:", filters.filters.fruit);
-          for (const fruit of filters.filters.fruit) {
-            query = query.contains('ingredients', [fruit]);
-          }
-        }
-        
-        // Filtrer par allergènes (exclure ceux qui contiennent les allergènes sélectionnés)
-        if (filters.filters.allergens && filters.filters.allergens.length > 0) {
-          console.log("Filtrage par allergènes:", filters.filters.allergens);
-          query = query.not('allergens', 'cs', `{${filters.filters.allergens.join(',')}}`);
-        }
-        
-        // Filtre par prix max
-        if (filters.filters.maxPrice !== undefined && filters.filters.maxPrice < 50) {
-          console.log("Filtrage par prix max:", filters.filters.maxPrice);
-          query = query.lte('price_credits', filters.filters.maxPrice);
-        }
-        
-        // Appliquer le tri
-        console.log("Application du tri:", filters.sortBy);
-        switch (filters.sortBy) {
-          case 'price_asc':
-            query = query.order('price_credits', { ascending: true });
-            break;
-          case 'price_desc':
-            query = query.order('price_credits', { ascending: false });
-            break;
-          case 'popular':
-            // En production, utiliserait une métrique de popularité
-            query = query.order('available_quantity', { ascending: false });
-            break;
-          case 'recent':
-          default:
-            query = query.order('created_at', { ascending: false });
-        }
-        
-        console.log("Exécution de la requête Supabase");
-        const { data, error } = await query;
-        
-        if (error) {
-          console.error("Erreur Supabase:", error);
-          throw error;
-        }
-        
-        console.log("Résultat de la requête:", data);
-        
-        if (!data || data.length === 0) {
-          console.log("Aucune donnée retournée par Supabase");
-          return [];
-        }
-        
-        console.log(`${data.length} confitures trouvées`);
-        
-        // Calculer les notes moyennes et filtrer par note minimale
-        const processedJams = data.map((jam: any) => {
-          const ratings = jam.reviews?.map((review: any) => review.rating) || [];
-          const avgRating = ratings.length > 0 
-            ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
-            : 0;
-            
-          return {
-            ...jam,
-            avgRating
-          } as JamType;
-        });
-        
-        const filteredJams = processedJams.filter((jam: JamType) => 
-          (jam.avgRating || 0) >= (filters.filters.minRating || 0)
-        );
-        
-        console.log(`${filteredJams.length} confitures après filtrage par note`);
-        console.log("Données renvoyées:", filteredJams);
-        return filteredJams;
-      } catch (error) {
+      console.log("Début de la requête pour les confitures");
+      
+      const { jams, error } = await getJams();
+      
+      if (error) {
         console.error("Erreur lors de la récupération des confitures:", error);
         toast({
           title: "Erreur",
@@ -138,11 +55,80 @@ export const useJamsFiltering = () => {
         });
         throw error;
       }
+      
+      if (!jams) {
+        console.log("Aucune confiture retournée");
+        return [];
+      }
+      
+      console.log(`${jams.length} confitures récupérées avant filtrage`);
+      return jams;
     },
-    retry: 3,
-    staleTime: 1000 * 60, // 1 minute
+    retry: 2,
+    staleTime: 1000 * 30, // 30 secondes
   });
-
+  
+  const jams = React.useMemo(() => {
+    if (!allJams) return [];
+    
+    let filteredJams = [...allJams];
+    
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filteredJams = filteredJams.filter(jam => 
+        jam.name.toLowerCase().includes(searchLower) || 
+        (jam.description && jam.description.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    if (filters.filters.fruit && filters.filters.fruit.length > 0) {
+      filteredJams = filteredJams.filter(jam => {
+        if (!jam.ingredients) return false;
+        return filters.filters.fruit!.some(fruit => 
+          jam.ingredients.includes(fruit)
+        );
+      });
+    }
+    
+    if (filters.filters.allergens && filters.filters.allergens.length > 0) {
+      filteredJams = filteredJams.filter(jam => {
+        if (!jam.allergens) return true;
+        return !filters.filters.allergens!.some(allergen => 
+          jam.allergens?.includes(allergen)
+        );
+      });
+    }
+    
+    if (filters.filters.maxPrice !== undefined && filters.filters.maxPrice < 50) {
+      filteredJams = filteredJams.filter(jam => 
+        jam.price_credits <= filters.filters.maxPrice!
+      );
+    }
+    
+    if (filters.filters.minRating !== undefined && filters.filters.minRating > 0) {
+      filteredJams = filteredJams.filter(jam => 
+        (jam.avgRating || 0) >= filters.filters.minRating!
+      );
+    }
+    
+    filteredJams.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'price_asc':
+          return a.price_credits - b.price_credits;
+        case 'price_desc':
+          return b.price_credits - a.price_credits;
+        case 'popular':
+          return (b.avgRating || 0) - (a.avgRating || 0);
+        case 'recent':
+        default:
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+    });
+    
+    console.log(`${filteredJams.length} confitures après filtrage`);
+    return filteredJams;
+  }, [allJams, filters]);
+  
   const updateSearchTerm = (term: string) => {
     setFilters(prev => ({ ...prev, searchTerm: term }));
   };
@@ -249,6 +235,7 @@ export const useJamsFiltering = () => {
     updateMaxSugar,
     updateMinRating,
     updateMaxPrice,
-    resetFilters
+    resetFilters,
+    refreshData
   };
 };

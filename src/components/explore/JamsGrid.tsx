@@ -3,18 +3,38 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RefreshCcw } from "lucide-react";
 import JamCard from '@/components/JamCard';
 import { JamType } from '@/types/supabase';
 import { toast } from '@/hooks/use-toast';
+import { checkSupabaseConnection } from '@/utils/supabaseHelpers';
 
 type JamsGridProps = {
   jams: JamType[] | undefined;
   isLoading: boolean;
   error: Error | null;
   resetFilters: () => void;
+  refreshData?: () => void;
 };
 
-const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilters }) => {
+const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilters, refreshData }) => {
+  // Vérification de la connexion Supabase
+  useEffect(() => {
+    const verifyConnection = async () => {
+      const { success, error } = await checkSupabaseConnection();
+      if (!success) {
+        console.error("Problème de connexion à Supabase:", error);
+        toast({
+          title: "Problème de connexion",
+          description: "Impossible de se connecter à la base de données.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    verifyConnection();
+  }, []);
+  
   // Debug pour voir ce qui est réellement retourné
   useEffect(() => {
     console.log("JamsGrid - jams:", jams);
@@ -41,19 +61,25 @@ const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilter
     // Notification pour l'utilisateur
     toast({
       title: "Erreur",
-      description: "Une erreur est survenue lors du chargement des confitures: " + error.message,
+      description: "Une erreur est survenue lors du chargement des confitures.",
       variant: "destructive"
     });
 
     return (
       <div className="text-center py-10">
-        <p className="text-destructive">Une erreur est survenue lors du chargement des confitures.</p>
+        <p className="text-destructive text-xl font-medium">Une erreur est survenue lors du chargement des confitures</p>
         <pre className="text-xs mt-2 p-2 bg-muted rounded text-left overflow-auto max-h-40">
           {error.message}
         </pre>
-        <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
-          Réessayer
-        </Button>
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button onClick={refreshData || (() => window.location.reload())} className="flex items-center gap-2">
+            <RefreshCcw className="h-4 w-4" />
+            Rafraîchir les données
+          </Button>
+          <Button onClick={resetFilters} variant="outline">
+            Réinitialiser les filtres
+          </Button>
+        </div>
       </div>
     );
   }
@@ -64,9 +90,15 @@ const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilter
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">Aucune donnée n'a été retournée.</p>
-        <Button onClick={resetFilters} variant="outline" className="mt-4">
-          Réinitialiser les filtres
-        </Button>
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button onClick={refreshData || (() => window.location.reload())} className="flex items-center gap-2">
+            <RefreshCcw className="h-4 w-4" />
+            Rafraîchir les données
+          </Button>
+          <Button onClick={resetFilters} variant="outline">
+            Réinitialiser les filtres
+          </Button>
+        </div>
       </div>
     );
   }
@@ -76,12 +108,15 @@ const JamsGrid: React.FC<JamsGridProps> = ({ jams, isLoading, error, resetFilter
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">Aucune confiture ne correspond à vos critères.</p>
-        <Button onClick={resetFilters} variant="outline" className="mt-4">
-          Réinitialiser les filtres
-        </Button>
-        <Button onClick={() => window.location.reload()} variant="outline" className="mt-2 ml-2">
-          Rafraîchir la page
-        </Button>
+        <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
+          <Button onClick={resetFilters} variant="outline">
+            Réinitialiser les filtres
+          </Button>
+          <Button onClick={refreshData || (() => window.location.reload())} className="flex items-center gap-2">
+            <RefreshCcw className="h-4 w-4" />
+            Rafraîchir les données
+          </Button>
+        </div>
       </div>
     );
   }
