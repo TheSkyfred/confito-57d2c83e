@@ -11,7 +11,6 @@ export const getTypedSupabaseQuery = <T extends keyof Database['public']['Tables
 export const checkSupabaseConnection = async () => {
   try {
     console.log("Tentative de connexion à Supabase...");
-    console.log("Vérification de la connexion avec une requête simple");
     
     // Test simple pour vérifier si la connexion fonctionne
     const { data, error } = await supabase.from('jams').select('id').limit(1);
@@ -37,80 +36,22 @@ export const getJamById = async (jamId: string) => {
       return { jam: null, error: "ID de confiture manquant" };
     }
     
-    console.log(`[getJamById] Début de récupération de la confiture avec ID: ${jamId}`);
-    console.log(`[getJamById] Type de l'ID: ${typeof jamId}, Valeur: "${jamId}"`);
+    console.log(`[getJamById] Récupération de la confiture avec ID: ${jamId}`);
     
-    // Vérification approfondie de Supabase - éviter d'accéder aux propriétés protégées
-    const supabaseInfo = {
-      auth_status: supabase.auth ? 'disponible' : 'non disponible'
-    };
-    console.log("[getJamById] Info Supabase:", supabaseInfo);
-    
-    // Récupération directe par ID avec logging détaillé
-    console.log(`[getJamById] Lancement de la requête pour ID: ${jamId}`);
-    
-    // Première tentative: requête complète avec relations
-    const { data, error, status } = await supabase
+    // Requête avec relations
+    const { data, error } = await supabase
       .from('jams')
       .select(`
         *,
         jam_images (*),
-        reviews (*, reviewer:reviewer_id(id, username, full_name, avatar_url)),
+        reviews (*, reviewer:profiles(id, username, full_name, avatar_url)),
         profiles:creator_id (id, username, full_name, avatar_url)
       `)
       .eq('id', jamId)
-      .single();
-    
-    console.log(`[getJamById] Statut HTTP: ${status}`);
-    console.log('[getJamById] Données brutes reçues:', data);
+      .maybeSingle();
     
     if (error) {
-      console.error(`[getJamById] Erreur lors de la récupération de la confiture ${jamId}:`, error);
-      
-      if (error.code === 'PGRST116') {
-        console.log(`[getJamById] Aucune confiture trouvée avec l'ID ${jamId}. Tentative de requête simplifiée...`);
-        
-        // Deuxième tentative: requête simplifiée sans relations
-        const simpleRequest = await supabase
-          .from('jams')
-          .select('id, name')
-          .eq('id', jamId)
-          .maybeSingle();
-          
-        console.log('[getJamById] Résultat de la requête simplifiée:', simpleRequest);
-        
-        if (simpleRequest.error) {
-          console.error('[getJamById] Échec également avec la requête simplifiée:', simpleRequest.error);
-          return { jam: null, error: simpleRequest.error };
-        }
-        
-        if (!simpleRequest.data) {
-          console.log(`[getJamById] Confiture ${jamId} définitivement introuvable`);
-          return { jam: null, error: null };
-        }
-        
-        // Si on a trouvé un enregistrement simple, essayons de récupérer les relations séparément
-        console.log('[getJamById] Confiture trouvée en version simple, tentative de récupération des relations...');
-        const jamData = simpleRequest.data;
-        
-        // Récupérer les images
-        const { data: imagesData } = await supabase
-          .from('jam_images')
-          .select('*')
-          .eq('jam_id', jamId);
-          
-        // Assembler un objet minimal
-        const minimalJam = {
-          ...jamData,
-          jam_images: imagesData || [],
-          reviews: [],
-          profiles: null
-        };
-        
-        console.log('[getJamById] Confiture reconstruite avec données minimales:', minimalJam);
-        return { jam: minimalJam, error: null };
-      }
-      
+      console.error(`[getJamById] Erreur: ${error.message}`);
       return { jam: null, error };
     }
     
@@ -119,10 +60,10 @@ export const getJamById = async (jamId: string) => {
       return { jam: null, error: null };
     }
     
-    console.log(`[getJamById] Confiture ${jamId} trouvée avec succès:`, data);
+    console.log(`[getJamById] Confiture trouvée:`, data);
     return { jam: data, error: null };
   } catch (e) {
-    console.error(`[getJamById] Exception lors de la récupération de la confiture ${jamId}:`, e);
+    console.error(`[getJamById] Exception: ${e}`);
     return { jam: null, error: e };
   }
 };

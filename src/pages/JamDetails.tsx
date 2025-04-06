@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ChevronLeft, AlertCircle, RefreshCw, WifiOff, Bug } from 'lucide-react';
+import { ChevronLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Tabs,
@@ -18,7 +18,7 @@ import { JamHeader } from '@/components/jam-details/JamHeader';
 import { JamDetailsSection } from '@/components/jam-details/JamDetailsSection';
 import { JamRecipeTab } from '@/components/jam-details/JamRecipeTab';
 import { JamReviewsTab } from '@/components/jam-details/JamReviewsTab';
-import { JamDetailsSkeleton, JamDetailsError } from '@/components/jam-details/JamDetailsSkeleton';
+import { JamDetailsSkeleton } from '@/components/jam-details/JamDetailsSkeleton';
 import { useJamDetails } from '@/hooks/useJamDetails';
 import { JamFavoriteShare } from '@/components/jam-details/JamFavoriteShare';
 import { useFavoriteHandler } from '@/components/jam-details/JamFavoriteHandler';
@@ -30,23 +30,17 @@ const JamDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  // Variables pour stocker l'état de la connexion
-  const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'success' | 'error'>('checking');
-  const [connectionError, setConnectionError] = React.useState<any>(null);
-  
   // Vérifier la connexion à Supabase au chargement
+  const [connectionStatus, setConnectionStatus] = React.useState<'checking' | 'success' | 'error'>('checking');
+  
   useEffect(() => {
     const verifyConnection = async () => {
-      setConnectionStatus('checking');
-      console.log("[JamDetails] Vérification de la connexion Supabase");
       const result = await checkSupabaseConnection();
-      console.log("[JamDetails] Résultat de la vérification:", result);
       
       if (result.success) {
         setConnectionStatus('success');
       } else {
         setConnectionStatus('error');
-        setConnectionError(result.error);
         toast({
           title: "Problème de connexion",
           description: "Impossible de se connecter à la base de données.",
@@ -58,12 +52,7 @@ const JamDetails = () => {
     verifyConnection();
   }, []);
   
-  useEffect(() => {
-    console.log("[JamDetails] ID de confiture reçu:", jamId);
-    console.log("[JamDetails] URL complète:", window.location.href);
-  }, [jamId]);
-  
-  // Récupération des données avec le hook amélioré
+  // Récupération des données
   const {
     jam,
     isLoading,
@@ -75,7 +64,6 @@ const JamDetails = () => {
     primaryImage,
     secondaryImages,
     isAuthenticated,
-    refetch,
     retryFetch
   } = useJamDetails(jamId);
 
@@ -90,7 +78,6 @@ const JamDetails = () => {
   // Notification d'erreur
   useEffect(() => {
     if (error) {
-      console.error("[JamDetails] Erreur détectée:", error);
       toast({
         title: "Erreur de chargement",
         description: "Impossible de charger les détails de cette confiture.",
@@ -100,8 +87,7 @@ const JamDetails = () => {
   }, [error]);
 
   // Affichage pendant le chargement
-  if (isLoading) {
-    console.log("[JamDetails] Chargement en cours...");
+  if (isLoading || connectionStatus === 'checking') {
     return <JamDetailsSkeleton />;
   }
 
@@ -119,27 +105,14 @@ const JamDetails = () => {
         </div>
         
         <div className="text-center py-10">
-          <WifiOff className="mx-auto h-12 w-12 text-destructive" />
+          <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
           <h2 className="mt-4 text-2xl font-bold">Problème de connexion</h2>
           <p className="mt-2 text-muted-foreground">
             Impossible de se connecter à la base de données.
           </p>
-          <div className="flex flex-col gap-4 items-center mt-6">
-            <Button onClick={() => window.location.reload()} className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Rafraîchir la page
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/explore">Explorer les confitures</Link>
-            </Button>
-          </div>
-          {connectionError && (
-            <div className="mt-6 p-4 bg-muted rounded-md">
-              <p className="text-sm font-mono overflow-auto text-left">
-                {JSON.stringify(connectionError, null, 2)}
-              </p>
-            </div>
-          )}
+          <Button onClick={() => window.location.reload()} className="mt-6">
+            Rafraîchir la page
+          </Button>
         </div>
       </div>
     );
@@ -147,7 +120,6 @@ const JamDetails = () => {
 
   // Affichage en cas d'erreur ou confiture non trouvée
   if (error || !jam) {
-    console.log("[JamDetails] Erreur ou confiture non trouvée:", error);
     return (
       <div className="container py-8">
         <div className="flex items-center mb-6">
@@ -173,50 +145,13 @@ const JamDetails = () => {
             <Button asChild>
               <Link to="/explore">Découvrir d'autres confitures</Link>
             </Button>
-            <Button variant="outline" onClick={() => navigate(-1)}>
-              Retour à la page précédente
-            </Button>
-            
-            {/* Bouton pour afficher les détails techniques (uniquement en développement) */}
-            {process.env.NODE_ENV !== 'production' && (
-              <Button variant="outline" onClick={() => console.log("État complet:", {
-                  jamId,
-                  error,
-                  connectionStatus,
-                  user: user?.id
-                })}
-                className="flex items-center gap-2"
-              >
-                <Bug className="h-4 w-4" />
-                Debug infos
-              </Button>
-            )}
           </div>
-          {error && process.env.NODE_ENV !== 'production' && (
-            <div className="mt-6 p-4 bg-muted rounded-md">
-              <p className="text-sm font-mono overflow-auto text-left">
-                {error.toString()}
-              </p>
-              <div className="mt-4">
-                <p className="text-sm font-semibold">ID de confiture: {jamId}</p>
-                <p className="text-sm">Statut de connexion: {connectionStatus}</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
-  // Vérification des données de profil
-  if (!jam.profiles) {
-    console.error("[JamDetails] Données de profil manquantes pour la confiture:", jam);
-    return <JamDetailsError />;
-  }
-
   // Succès : affichage normal de la page
-  console.log("[JamDetails] Rendu de la page avec données:", jam);
-  
   return (
     <div className="container py-8">
       <div className="flex items-center mb-6">
