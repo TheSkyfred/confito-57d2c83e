@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getJams } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
@@ -68,7 +69,7 @@ export const useJamsFiltering = () => {
     staleTime: 1000 * 30, // 30 secondes
   });
   
-  const jams = React.useMemo(() => {
+  const jams = useMemo(() => {
     if (!allJams) return [];
     
     let filteredJams = [...allJams];
