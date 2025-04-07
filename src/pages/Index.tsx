@@ -1,3 +1,4 @@
+
 import React from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
@@ -197,7 +198,7 @@ const Index = () => {
         <section className="py-12 bg-white">
           <div className="container">
             <h2 className="text-2xl md:text-3xl font-serif font-bold text-center mb-10">
-              Comment fonctionne <span className="text-jam-raspberry">Jam-Jar Jamboree</span> ?
+              Comment fonctionne <span className="text-jam-raspberry">Confito</span> ?
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
