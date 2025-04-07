@@ -30,7 +30,8 @@ import {
   Info,
   MessageSquare,
   Share2,
-  Printer
+  Printer,
+  Clock
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { RecipeStep } from '@/components/jam-editor/RecipeForm';
 
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -380,7 +382,48 @@ const JamDetails = () => {
             {jam.recipe ? (
               <div className="prose prose-slate max-w-none">
                 <h3 className="text-xl font-serif font-medium mb-4">Recette</h3>
-                <div className="whitespace-pre-line">{jam.recipe}</div>
+                
+                {(() => {
+                  try {
+                    const recipeSteps = JSON.parse(jam.recipe);
+                    if (Array.isArray(recipeSteps) && recipeSteps.length > 0) {
+                      return (
+                        <div className="space-y-6">
+                          {recipeSteps.map((step: RecipeStep, i: number) => (
+                            <div key={step.id} className="flex">
+                              <div className="flex-shrink-0 mr-4">
+                                <div className="rounded-full w-8 h-8 bg-jam-raspberry flex items-center justify-center text-white font-bold">
+                                  {i + 1}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-gray-700">{step.description}</p>
+                                {step.duration && (
+                                  <p className="text-sm text-gray-500 mt-1 flex items-center">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {step.duration}
+                                  </p>
+                                )}
+                                
+                                {step.image_url && (
+                                  <img 
+                                    src={step.image_url} 
+                                    alt={`Étape ${i + 1}`} 
+                                    className="mt-2 rounded-md max-w-[200px] max-h-[150px] object-cover"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // If JSON parsing fails, treat as regular text
+                  }
+                  
+                  return <div className="whitespace-pre-line">{jam.recipe}</div>;
+                })()}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
