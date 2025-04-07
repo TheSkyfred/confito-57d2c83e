@@ -392,7 +392,7 @@ export const useCartStore = create<CartStore>()(
                 id, name, description, price_credits, available_quantity, creator_id,
                 weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
                 created_at, updated_at,
-                jam_images (id, url, is_primary),
+                jam_images (id, url, is_primary, jam_id, created_at),
                 profiles!inner (id, username, full_name, avatar_url)
               )
             `)
