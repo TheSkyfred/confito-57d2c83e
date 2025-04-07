@@ -316,8 +316,12 @@ export type Database = {
           is_active: boolean
           name: string
           price_credits: number
+          production_date: string | null
           recipe: string | null
+          shelf_life_months: number | null
+          special_edition: boolean | null
           sugar_content: number | null
+          type: string | null
           updated_at: string
           weight_grams: number
         }
@@ -333,8 +337,12 @@ export type Database = {
           is_active?: boolean
           name: string
           price_credits: number
+          production_date?: string | null
           recipe?: string | null
+          shelf_life_months?: number | null
+          special_edition?: boolean | null
           sugar_content?: number | null
+          type?: string | null
           updated_at?: string
           weight_grams: number
         }
@@ -350,8 +358,12 @@ export type Database = {
           is_active?: boolean
           name?: string
           price_credits?: number
+          production_date?: string | null
           recipe?: string | null
+          shelf_life_months?: number | null
+          special_edition?: boolean | null
           sugar_content?: number | null
+          type?: string | null
           updated_at?: string
           weight_grams?: number
         }
