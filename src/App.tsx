@@ -21,6 +21,8 @@ import UserProfile from "./pages/UserProfile";
 import Credits from "./pages/Credits";
 import AdminDashboard from "./pages/AdminDashboard";
 import JamEditor from "./pages/JamEditor";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +51,8 @@ const App = () => (
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/jam/create" element={<JamEditor />} />
                 <Route path="/jam/edit/:id" element={<JamEditor />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

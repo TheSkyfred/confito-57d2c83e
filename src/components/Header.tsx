@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
+import { ProfileDisplay } from '@/components/ProfileDisplay';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -116,10 +118,11 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.user_metadata?.avatar_url as string} alt={user.user_metadata?.full_name as string} />
-                    <AvatarFallback>{user.user_metadata?.full_name?.slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  <ProfileDisplay 
+                    profile={user.user_metadata} 
+                    showName={false} 
+                    showCartBadge={true}
+                  />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -129,6 +132,12 @@ const Header = () => {
                   <Link to="/dashboard" onClick={closeMenu}>
                     <User className="mr-2 h-4 w-4" />
                     Tableau de bord
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/cart" onClick={closeMenu}>
+                    <ShoppingBag className="mr-2 h-4 w-4" />
+                    Mon panier
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -181,6 +190,7 @@ const Header = () => {
             {user ? (
               <>
                 <NavItemMobile to="/dashboard" label="Tableau de bord" icon={User} onClick={closeMenu} />
+                <NavItemMobile to="/cart" label="Mon panier" icon={ShoppingBag} onClick={closeMenu} />
                 <NavItemMobile to="/profile" label="Profil" icon={Settings} onClick={closeMenu} />
                 <NavItemMobile to="/credits" label="Crédits" icon={CreditCard} onClick={closeMenu} />
                 <Button variant="ghost" className="justify-start" onClick={handleSignOut}>

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarBadge } from '@/components/ui/avatar-badge';
 import { ProfileType } from '@/types/supabase';
 import { getProfileInitials } from '@/utils/supabaseHelpers';
 import { 
@@ -8,22 +9,26 @@ import {
   getProfileAvatarUrl,
   getProfileFullName
 } from '@/utils/profileTypeGuards';
+import { useCartStore } from '@/stores/useCartStore';
 
 interface ProfileDisplayProps {
   profile: ProfileType | null | undefined | Record<string, any>;
   showName?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  showCartBadge?: boolean;
 }
 
 export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ 
   profile, 
   showName = true,
-  size = 'md'
+  size = 'md',
+  showCartBadge = false
 }) => {
   const username = getProfileUsername(profile);
   const avatarUrl = getProfileAvatarUrl(profile);
   const displayName = getProfileFullName(profile);
   const initial = getProfileInitials(username);
+  const totalItems = useCartStore(state => state.getTotalItems());
   
   const sizeClasses = {
     sm: 'h-6 w-6',
@@ -33,10 +38,19 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
   
   return (
     <div className="flex items-center gap-2">
-      <Avatar className={sizeClasses[size]}>
-        <AvatarImage src={avatarUrl || ''} alt={username} />
-        <AvatarFallback>{initial}</AvatarFallback>
-      </Avatar>
+      <div className="relative">
+        <Avatar className={sizeClasses[size]}>
+          <AvatarImage src={avatarUrl || ''} alt={username} />
+          <AvatarFallback>{initial}</AvatarFallback>
+        </Avatar>
+        {showCartBadge && totalItems > 0 && (
+          <AvatarBadge 
+            variant="default" 
+            size={size === 'lg' ? 'lg' : 'md'}
+            badgeContent={totalItems > 99 ? '99+' : totalItems}
+          />
+        )}
+      </div>
       {showName && (
         <span className="text-sm font-medium">{displayName}</span>
       )}
