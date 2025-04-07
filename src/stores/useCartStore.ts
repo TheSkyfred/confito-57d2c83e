@@ -28,16 +28,22 @@ export const useCartStore = create<CartStore>()(
       
       addItem: async (jam, quantity = 1) => {
         try {
-          const { user } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
           
           if (user) {
             // Utilisateur connecté - utiliser la base de données
             // Vérifier si un panier existe déjà pour cet utilisateur
-            const { data: existingCarts } = await supabase
+            const { data: existingCarts, error: cartsError } = await supabase
               .from('carts')
               .select('id')
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
+            
+            if (cartsError) {
+              console.error("Erreur lors de la récupération du panier:", cartsError.message);
+              throw cartsError;
+            }
             
             let cartId: string;
             
@@ -56,12 +62,17 @@ export const useCartStore = create<CartStore>()(
             }
             
             // Vérifier si l'article existe déjà dans le panier
-            const { data: existingItems } = await supabase
+            const { data: existingItems, error: itemsError } = await supabase
               .from('cart_items')
               .select('id, quantity')
               .eq('cart_id', cartId)
               .eq('jam_id', jam.id)
-              .single();
+              .maybeSingle();
+            
+            if (itemsError) {
+              console.error("Erreur lors de la récupération des articles du panier:", itemsError.message);
+              throw itemsError;
+            }
             
             if (existingItems) {
               // Mettre à jour la quantité si l'article existe
@@ -150,15 +161,21 @@ export const useCartStore = create<CartStore>()(
       
       removeItem: async (jamId) => {
         try {
-          const { user } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
           
           if (user) {
             // Utilisateur connecté - utiliser la base de données
-            const { data: cartData } = await supabase
+            const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
+            
+            if (cartError) {
+              console.error("Erreur lors de la récupération du panier:", cartError.message);
+              throw cartError;
+            }
             
             if (cartData) {
               const { error } = await supabase
@@ -192,23 +209,34 @@ export const useCartStore = create<CartStore>()(
         try {
           if (quantity < 1) return;
           
-          const { user } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
           
           if (user) {
             // Utilisateur connecté - utiliser la base de données
-            const { data: cartData } = await supabase
+            const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
+            
+            if (cartError) {
+              console.error("Erreur lors de la récupération du panier:", cartError.message);
+              throw cartError;
+            }
             
             if (cartData) {
-              const { data: itemData } = await supabase
+              const { data: itemData, error: itemError } = await supabase
                 .from('cart_items')
                 .select('id')
                 .eq('cart_id', cartData.id)
                 .eq('jam_id', jamId)
-                .single();
+                .maybeSingle();
+              
+              if (itemError) {
+                console.error("Erreur lors de la récupération de l'article:", itemError.message);
+                throw itemError;
+              }
               
               if (itemData) {
                 const { error } = await supabase
@@ -282,15 +310,21 @@ export const useCartStore = create<CartStore>()(
       
       clearCart: async () => {
         try {
-          const { user } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
           
           if (user) {
             // Utilisateur connecté - utiliser la base de données
-            const { data: cartData } = await supabase
+            const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
               .eq('user_id', user.id)
-              .single();
+              .maybeSingle();
+            
+            if (cartError) {
+              console.error("Erreur lors de la récupération du panier:", cartError.message);
+              throw cartError;
+            }
             
             if (cartData) {
               const { error } = await supabase
@@ -327,16 +361,22 @@ export const useCartStore = create<CartStore>()(
       
       syncWithDatabase: async () => {
         try {
-          const { user } = await supabase.auth.getUser();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const user = sessionData.session?.user;
           
           if (!user) return;
           
           // Récupérer le panier de l'utilisateur
-          const { data: cartData } = await supabase
+          const { data: cartData, error: cartError } = await supabase
             .from('carts')
             .select('id')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
+          
+          if (cartError) {
+            console.error("Erreur lors de la récupération du panier:", cartError.message);
+            return;
+          }
           
           if (!cartData) {
             set({ items: [] });
@@ -344,7 +384,7 @@ export const useCartStore = create<CartStore>()(
           }
           
           // Récupérer les articles du panier avec les détails des confitures
-          const { data: cartItems, error } = await supabase
+          const { data: cartItemsData, error: itemsError } = await supabase
             .from('cart_items')
             .select(`
               quantity,
@@ -357,18 +397,23 @@ export const useCartStore = create<CartStore>()(
             `)
             .eq('cart_id', cartData.id);
           
-          if (error) throw error;
+          if (itemsError) {
+            console.error("Erreur lors de la récupération des articles du panier:", itemsError.message);
+            return;
+          }
           
           // Transformer les données pour correspondre à la structure CartItem
-          const formattedItems: CartItem[] = (cartItems || []).map(item => ({
-            jam: {
-              ...item.jams,
-              profiles: item.jams.profiles
-            },
-            quantity: item.quantity
-          }));
-          
-          set({ items: formattedItems });
+          if (cartItemsData) {
+            const formattedItems: CartItem[] = cartItemsData.map(item => ({
+              jam: {
+                ...item.jams,
+                profiles: item.jams.profiles
+              },
+              quantity: item.quantity
+            }));
+            
+            set({ items: formattedItems });
+          }
         } catch (error: any) {
           console.error("Erreur lors de la synchronisation avec la base de données:", error.message);
         }
