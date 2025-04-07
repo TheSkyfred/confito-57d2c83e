@@ -307,6 +307,7 @@ export type Database = {
         Row: {
           allergens: string[] | null
           available_quantity: number
+          badges: string[] | null
           created_at: string
           creator_id: string
           description: string
@@ -323,6 +324,7 @@ export type Database = {
         Insert: {
           allergens?: string[] | null
           available_quantity?: number
+          badges?: string[] | null
           created_at?: string
           creator_id: string
           description: string
@@ -339,6 +341,7 @@ export type Database = {
         Update: {
           allergens?: string[] | null
           available_quantity?: number
+          badges?: string[] | null
           created_at?: string
           creator_id?: string
           description?: string
