@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/stores/useCartStore';
 import { Trash2, ShoppingBag, MinusCircle, PlusCircle, ArrowRight } from 'lucide-react';
@@ -15,6 +15,11 @@ const Cart = () => {
   const { user } = useAuth();
   const { items, removeItem, updateQuantity, clearCart, getTotalCredits } = useCartStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Synchroniser le panier avec la base de données au chargement de la page
+  useEffect(() => {
+    useCartStore.getState().syncWithDatabase();
+  }, []);
   
   const handleQuantityChange = (jamId: string, newQuantity: number, maxQuantity: number) => {
     if (newQuantity < 1) {
@@ -45,7 +50,6 @@ const Cart = () => {
       return;
     }
     
-    // À remplacer par la navigation vers la page de personnalisation
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);

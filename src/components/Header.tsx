@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,12 +32,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
+import { useCartStore } from '@/stores/useCartStore';
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const totalCartItems = useCartStore((state) => state.getTotalItems());
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,6 +53,10 @@ const Header = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    useCartStore.getState().syncWithDatabase();
+  }, [location.pathname]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -87,13 +92,11 @@ const Header = () => {
       ${isScrolled ? 'bg-background/95 backdrop-blur-sm' : 'bg-transparent'}
     `}>
       <div className="container flex items-center justify-between h-16">
-        {/* Logo and Brand */}
         <Link to="/" className="flex items-center font-bold text-xl md:text-2xl font-serif">
           <img src="/logo.svg" alt="Jam-Jar Jamboree Logo" className="h-8 w-8 mr-2" />
           Jam-Jar Jamboree
         </Link>
 
-        {/* Mobile Menu Button */}
         <Button
           variant="ghost"
           size="icon"
@@ -103,7 +106,6 @@ const Header = () => {
           {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </Button>
 
-        {/* Main Navigation (Desktop) */}
         <nav className="hidden md:flex space-x-6">
           <NavItem to="/" label="Accueil" icon={Home} isCurrent={isCurrentPage('/')} />
           <NavItem to="/explore" label="Explorer" icon={Search} isCurrent={isCurrentPage('/explore')} />
@@ -112,7 +114,6 @@ const Header = () => {
           <NavItem to="/rankings" label="Classement" icon={Trophy} isCurrent={isCurrentPage('/rankings')} />
         </nav>
 
-        {/* Auth Actions and Profile (Desktop) */}
         <div className="hidden md:flex items-center space-x-4">
           {user ? (
             <DropdownMenu>
@@ -138,6 +139,11 @@ const Header = () => {
                   <Link to="/cart" onClick={closeMenu}>
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     Mon panier
+                    {totalCartItems > 0 && (
+                      <span className="ml-auto bg-jam-raspberry text-white text-xs rounded-full px-1.5 py-0.5">
+                        {totalCartItems}
+                      </span>
+                    )}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -177,7 +183,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden bg-background border-b">
           <nav className="flex flex-col space-y-4 p-4">
@@ -190,7 +195,12 @@ const Header = () => {
             {user ? (
               <>
                 <NavItemMobile to="/dashboard" label="Tableau de bord" icon={User} onClick={closeMenu} />
-                <NavItemMobile to="/cart" label="Mon panier" icon={ShoppingBag} onClick={closeMenu} />
+                <NavItemMobile 
+                  to="/cart" 
+                  label={`Mon panier${totalCartItems > 0 ? ` (${totalCartItems})` : ''}`} 
+                  icon={ShoppingBag} 
+                  onClick={closeMenu} 
+                />
                 <NavItemMobile to="/profile" label="Profil" icon={Settings} onClick={closeMenu} />
                 <NavItemMobile to="/credits" label="Crédits" icon={CreditCard} onClick={closeMenu} />
                 <Button variant="ghost" className="justify-start" onClick={handleSignOut}>
