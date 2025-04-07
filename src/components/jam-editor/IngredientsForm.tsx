@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { 
-  FormLabel, 
-  FormDescription
+  StandaloneFormLabel as FormLabel, 
+  StandaloneFormDescription as FormDescription 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -151,7 +150,6 @@ const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormD
                     }}
                     onFocus={() => handleIngredientSearch(ingredient.name, index)}
                     onBlur={() => {
-                      // Delay hiding suggestions to allow clicking on them
                       setTimeout(() => setSuggestions([]), 200);
                     }}
                   />

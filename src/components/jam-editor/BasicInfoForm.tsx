@@ -1,12 +1,7 @@
-
 import React from 'react';
 import { 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
+  StandaloneFormLabel as FormLabel, 
+  StandaloneFormDescription as FormDescription 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,7 +28,6 @@ export interface BasicInfoFormProps {
   handleImageChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-// Common tags for jams
 const commonTags = [
   { id: 'bio', label: 'Bio' },
   { id: 'vegan', label: 'Végan' },
@@ -43,7 +37,6 @@ const commonTags = [
   { id: 'artisanal', label: 'Artisanal' }
 ];
 
-// Categories for jams
 const jamCategories = [
   { value: 'classic', label: 'Classique (fruits)' },
   { value: 'vegetable', label: 'Légumes' },
@@ -61,7 +54,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
 }) => {
   const selectedTags = formData.badges || [];
 
-  // Toggle tag selection
   const toggleTag = (tagId: string) => {
     const currentTags = [...(selectedTags || [])];
     const tagIndex = currentTags.indexOf(tagId);
@@ -77,7 +69,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Jam Name */}
       <div>
         <FormLabel>Nom de la confiture *</FormLabel>
         <Input 
@@ -90,7 +81,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </FormDescription>
       </div>
 
-      {/* Main Image */}
       {handleImageChange && (
         <div>
           <FormLabel>Photo principale</FormLabel>
@@ -132,7 +122,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </div>
       )}
 
-      {/* Description */}
       <div>
         <FormLabel>Description</FormLabel>
         <Textarea
@@ -146,7 +135,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </FormDescription>
       </div>
 
-      {/* Category */}
       <div>
         <FormLabel>Catégorie *</FormLabel>
         <Select 
@@ -169,7 +157,6 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </FormDescription>
       </div>
 
-      {/* Tags */}
       <div>
         <FormLabel>Badges</FormLabel>
         <div className="flex flex-wrap gap-2">

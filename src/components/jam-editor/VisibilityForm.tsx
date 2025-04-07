@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { 
-  FormLabel, 
-  FormDescription
+  StandaloneFormLabel, 
+  StandaloneFormDescription 
 } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';

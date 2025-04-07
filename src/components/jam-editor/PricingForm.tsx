@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { 
-  FormLabel, 
-  FormDescription
+  StandaloneFormLabel as FormLabel, 
+  StandaloneFormDescription as FormDescription 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';

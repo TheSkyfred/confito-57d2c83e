@@ -1,9 +1,10 @@
+
 import React from 'react';
 import { addMonths, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
-  FormLabel, 
-  FormDescription
+  StandaloneFormLabel as FormLabel, 
+  StandaloneFormDescription as FormDescription 
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';

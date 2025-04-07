@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -164,6 +165,35 @@ const FormMessage = React.forwardRef<
 })
 FormMessage.displayName = "FormMessage"
 
+// Standalone versions that don't require FormContext
+const StandaloneFormLabel = React.forwardRef<
+  React.ElementRef<typeof LabelPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
+>(({ className, ...props }, ref) => {
+  return (
+    <Label
+      ref={ref}
+      className={className}
+      {...props}
+    />
+  )
+})
+StandaloneFormLabel.displayName = "StandaloneFormLabel"
+
+const StandaloneFormDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <p
+      ref={ref}
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+})
+StandaloneFormDescription.displayName = "StandaloneFormDescription"
+
 export {
   useFormField,
   Form,
@@ -173,4 +203,7 @@ export {
   FormDescription,
   FormMessage,
   FormField,
+  // Export standalone versions
+  StandaloneFormLabel,
+  StandaloneFormDescription,
 }
