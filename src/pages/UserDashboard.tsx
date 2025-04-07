@@ -23,6 +23,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { OrderType, ProfileType } from "@/types/supabase";
+import { ProfileDisplay } from '@/components/ProfileDisplay';
+import { getProfileUsername, isProfileType } from '@/utils/profileTypeGuards';
 
 interface Jam {
   id: string;
@@ -383,27 +385,20 @@ const UserDashboard = () => {
                         .map(order => {
                           const isPurchase = order.buyer_id === user?.id;
                           const otherParty = isPurchase 
-                            ? (order.seller as ProfileType || {}) 
-                            : (order.buyer as ProfileType || {});
+                            ? (order.seller || {})
+                            : (order.buyer || {});
                           
                           // Handle possible null values
                           const jamName = order.jam?.name || "Confiture";
+                          const username = getProfileUsername(otherParty);
                           
                           return (
                             <div key={order.id} className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage 
-                                    src={otherParty?.avatar_url || ''} 
-                                    alt={otherParty?.username || 'Utilisateur'} 
-                                  />
-                                  <AvatarFallback>
-                                    {(otherParty?.username || 'U').substring(0, 1).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <ProfileDisplay profile={otherParty} showName={false} size="sm" />
                                 <div>
                                   <p className="text-sm font-medium">
-                                    {isPurchase ? "Achat à" : "Vente à"} {otherParty?.username || "un utilisateur"}
+                                    {isPurchase ? "Achat à" : "Vente à"} {username}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     {jamName} - {format(new Date(order.created_at), 'dd MMM', { locale: fr })}

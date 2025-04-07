@@ -1,7 +1,9 @@
+
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileType } from '@/types/supabase';
+import { isNullOrUndefined } from '@/utils/supabaseHelpers';
 
 interface AuthContextProps {
   user: User | null;
@@ -45,8 +47,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       if (data) {
-        setProfile(data);
-        return data;
+        setProfile(data as ProfileType);
+        return data as ProfileType;
       }
       return null;
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,8 +6,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getTypedSupabaseQuery, safeAccess, getProfileInitials } from '@/utils/supabaseHelpers';
-import { JamType } from '@/types/supabase';
+import { 
+  getTypedSupabaseQuery, 
+  safeAccess, 
+  getProfileInitials,
+  isNullOrUndefined,
+  safeAccessNested
+} from '@/utils/supabaseHelpers';
+import { JamType, ProfileType, ReviewType } from '@/types/supabase';
+import { ProfileDisplay } from '@/components/ProfileDisplay';
+import {
+  getProfileUsername,
+  getProfileAvatarUrl,
+  isProfileType
+} from '@/utils/profileTypeGuards';
 
 import {
   ChevronLeft,
@@ -55,7 +68,7 @@ const JamDetails = () => {
           reviews (*, reviewer:reviewer_id(username, avatar_url)),
           profiles:creator_id (id, username, full_name, avatar_url)
         `)
-        .eq('id', id)
+        .eq('id', id as string)
         .single();
 
       if (error) throw error;
@@ -63,7 +76,7 @@ const JamDetails = () => {
       if (user) {
         const { data: favorite } = await getTypedSupabaseQuery('favorites')
           .select('id')
-          .eq('jam_id', id)
+          .eq('jam_id', id as string)
           .eq('user_id', user.id)
           .maybeSingle();
           
@@ -72,7 +85,7 @@ const JamDetails = () => {
         }
       }
       
-      return data;
+      return data as JamType;
     },
     enabled: !!id,
   });
@@ -92,12 +105,12 @@ const JamDetails = () => {
         await supabase
           .from('favorites')
           .delete()
-          .eq('jam_id', id)
+          .eq('jam_id', id as string)
           .eq('user_id', user.id);
       } else {
         await supabase
           .from('favorites')
-          .insert([{ jam_id: id, user_id: user.id }]);
+          .insert([{ jam_id: id as string, user_id: user.id }]);
       }
       
       setFavorited(!favorited);
@@ -167,17 +180,21 @@ const JamDetails = () => {
     );
   }
 
-  const profiles = safeAccess(jam, 'profiles') || {};
-  const username = safeAccess(profiles, 'username') || 'Utilisateur';
-  const fullName = safeAccess(profiles, 'full_name') || username;
-  const avatarUrl = safeAccess(profiles, 'avatar_url');
+  // Get creator profile safely
+  const creatorProfile = jam.profiles || {};
+  const username = safeAccess(creatorProfile as ProfileType, 'username') || 'Utilisateur';
+  const fullName = safeAccess(creatorProfile as ProfileType, 'full_name') || username;
+  const avatarUrl = safeAccess(creatorProfile as ProfileType, 'avatar_url');
   const profileInitial = getProfileInitials(username);
+  const creatorId = safeAccess(creatorProfile as ProfileType, 'id');
 
-  const ratings = jam.reviews?.map((review: any) => review.rating) || [];
+  // Safely get ratings
+  const ratings = (jam.reviews || []).map((review: ReviewType) => review.rating);
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
     : 0;
 
+  // Get images
   const primaryImage = jam.jam_images.find((img: any) => img.is_primary)?.url || 
                       (jam.jam_images.length > 0 ? jam.jam_images[0].url : null);
   const secondaryImages = jam.jam_images.filter((img: any) => 
@@ -232,19 +249,19 @@ const JamDetails = () => {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="font-serif text-3xl font-bold">{jam.name}</h1>
-              <div className="flex items-center mt-2">
-                {profiles && profiles.id && (
-                  <Link to={`/profile/${profiles.id}`} className="flex items-center">
+              {creatorId && (
+                <div className="flex items-center mt-2">
+                  <Link to={`/profile/${creatorId}`} className="flex items-center">
                     <Avatar className="h-6 w-6 mr-2">
-                      <AvatarImage src={avatarUrl} />
+                      <AvatarImage src={avatarUrl || undefined} />
                       <AvatarFallback>{profileInitial}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm text-muted-foreground">
                       Par {fullName}
                     </span>
                   </Link>
-                )}
-              </div>
+                </div>
+              )}
             </div>
             <div className="flex space-x-2">
               <Button 
@@ -270,7 +287,7 @@ const JamDetails = () => {
           <div className="mt-6">
             <h3 className="font-medium mb-2">Ingrédients</h3>
             <div className="flex flex-wrap gap-2">
-              {jam.ingredients.map((ingredient: string, index: number) => (
+              {jam.ingredients && jam.ingredients.map((ingredient: string, index: number) => (
                 <Badge key={index} variant="outline">{ingredient}</Badge>
               ))}
             </div>
@@ -389,16 +406,15 @@ const JamDetails = () => {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {jam.reviews.map((review: any) => (
+                  {(jam.reviews || []).map((review: ReviewType) => (
                     <div key={review.id} className="border rounded-lg p-4">
                       <div className="flex justify-between">
                         <div className="flex items-center">
-                          <Avatar className="h-10 w-10 mr-3">
-                            <AvatarImage src={review.reviewer?.avatar_url} />
-                            <AvatarFallback>{review.reviewer?.username?.[0].toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{review.reviewer?.username}</p>
+                          <ProfileDisplay profile={review.reviewer} />
+                          <div className="ml-3">
+                            <p className="font-medium">
+                              {review.reviewer ? getProfileUsername(review.reviewer) : 'Utilisateur'}
+                            </p>
                             <div className="flex items-center">
                               {Array.from({ length: 5 }).map((_, i) => (
                                 <Star

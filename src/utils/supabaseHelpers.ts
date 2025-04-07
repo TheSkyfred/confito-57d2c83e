@@ -18,7 +18,10 @@ export const isNullOrUndefined = (obj: any): boolean => {
 };
 
 // Helper function for safely accessing object properties
-export const safeAccess = <T, K extends keyof T>(obj: T | null | undefined, key: K): T[K] | undefined => {
+export const safeAccess = <T extends Record<string, any>, K extends keyof T>(
+  obj: T | null | undefined, 
+  key: K
+): T[K] | undefined => {
   if (isNullOrUndefined(obj)) {
     return undefined;
   }
@@ -29,4 +32,19 @@ export const safeAccess = <T, K extends keyof T>(obj: T | null | undefined, key:
 export const getProfileInitials = (username: string | null | undefined): string => {
   if (!username) return 'U';
   return username.substring(0, 1).toUpperCase();
+};
+
+// Helper function to safely access nested properties
+export const safeAccessNested = <T extends Record<string, any> | null | undefined>(
+  obj: T,
+  keys: string[]
+): any => {
+  let current: any = obj;
+  for (const key of keys) {
+    if (isNullOrUndefined(current)) {
+      return undefined;
+    }
+    current = current[key];
+  }
+  return current;
 };
