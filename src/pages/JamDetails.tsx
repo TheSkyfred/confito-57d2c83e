@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +14,7 @@ import {
 } from '@/utils/supabaseHelpers';
 import { JamType, ProfileType, ReviewType } from '@/types/supabase';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
+import { useCartStore } from '@/stores/useCartStore';
 import {
   getProfileUsername,
   getProfileAvatarUrl,
@@ -57,6 +57,7 @@ const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
+  const { addItem } = useCartStore();
   
   const { data: jam, isLoading, error } = useQuery({
     queryKey: ['jam', id],
@@ -128,7 +129,7 @@ const JamDetails = () => {
     }
   };
 
-  const addToCart = () => {
+  const addToCart = async () => {
     if (!user) {
       toast({
         title: "Connexion requise",
@@ -138,10 +139,22 @@ const JamDetails = () => {
       return;
     }
     
-    toast({
-      title: "Ajouté au panier",
-      description: "Cette confiture a été ajoutée à votre panier",
-    });
+    if (!jam) return;
+    
+    try {
+      await addItem(jam);
+      toast({
+        title: "Ajouté au panier",
+        description: "Cette confiture a été ajoutée à votre panier",
+      });
+    } catch (error) {
+      console.error('Error adding item to cart:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter cet article au panier",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isLoading) {

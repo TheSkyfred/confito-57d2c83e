@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/stores/useCartStore';
@@ -18,7 +17,11 @@ const Cart = () => {
   
   // Synchroniser le panier avec la base de données au chargement de la page
   useEffect(() => {
-    useCartStore.getState().syncWithDatabase();
+    const syncCart = async () => {
+      await useCartStore.getState().syncWithDatabase();
+    };
+    
+    syncCart();
   }, []);
   
   const handleQuantityChange = (jamId: string, newQuantity: number, maxQuantity: number) => {
