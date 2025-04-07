@@ -6,9 +6,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { formatProfileData } from '@/utils/profileHelpers';
-import { ProfileType } from '@/types/supabase';
-import { Edit, MapPin, Globe, Mail, Phone, User, Star, Award } from 'lucide-react';
+import {
+  User,
+  Edit,
+  MapPin,
+  Globe,
+  Mail,
+  Phone,
+  Award,
+  Star,
+  Settings,
+  Loader2
+} from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -49,9 +58,7 @@ const UserProfile = () => {
         .single();
 
       if (error) throw error;
-      
-      // Format the profile data
-      return formatProfileData(data);
+      return data;
     },
     enabled: !!profileId,
   });

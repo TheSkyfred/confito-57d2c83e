@@ -10,8 +10,7 @@ export interface JamCardProps {
 
 const JamCard: React.FC<JamCardProps> = ({ jam }) => {
   if (!jam) {
-    console.error("JamCard reçoit une prop jam nulle ou non définie");
-    return <div className="p-4 border border-muted rounded-lg">Confiture non disponible</div>;
+    return <div className="p-4 border border-muted rounded-lg">Loading...</div>;
   }
   
   // Find primary image, or use the first one, or fallback to placeholder
@@ -19,44 +18,39 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
     ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0].url) 
     : '/placeholder.svg';
   
-  // Calculate average rating - ensure we handle undefined/null values
+  // Calculate average rating
   const avgRating = jam.avgRating || 0;
   
   return (
     <div className="group relative overflow-hidden rounded-lg border border-muted bg-background hover:shadow-md transition-shadow">
-      <div className="aspect-square overflow-hidden bg-muted">
+      <div className="aspect-square overflow-hidden">
         <img 
           src={primaryImage} 
-          alt={jam.name || 'Confiture'} 
+          alt={jam.name} 
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
-          onError={(e) => {
-            console.log("Erreur de chargement d'image, utilisation du placeholder");
-            e.currentTarget.src = '/placeholder.svg';
-            e.currentTarget.onerror = null;
-          }}
         />
       </div>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium line-clamp-2">{jam.name || 'Sans nom'}</h3>
+          <h3 className="font-medium line-clamp-2">{jam.name}</h3>
           <div className="flex items-center space-x-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
             <span className="text-sm font-medium">
-              {avgRating > 0 ? avgRating.toFixed(1) : 'N/A'}
+              {avgRating ? avgRating.toFixed(1) : 'N/A'}
             </span>
           </div>
         </div>
         <div className="text-sm text-muted-foreground line-clamp-2 mb-2">
-          {jam.description || 'Aucune description disponible'}
+          {jam.description}
         </div>
         <div className="flex items-end justify-between">
           <div className="flex flex-wrap gap-1">
-            {Array.isArray(jam.ingredients) && jam.ingredients?.slice(0, 2).map((ingredient, idx) => (
+            {jam.ingredients?.slice(0, 2).map((ingredient, idx) => (
               <Badge key={idx} variant="outline" className="text-xs">
                 {ingredient}
               </Badge>
             ))}
-            {Array.isArray(jam.ingredients) && jam.ingredients && jam.ingredients.length > 2 && (
+            {jam.ingredients && jam.ingredients.length > 2 && (
               <Badge variant="outline" className="text-xs">+{jam.ingredients.length - 2}</Badge>
             )}
           </div>

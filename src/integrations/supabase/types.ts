@@ -598,10 +598,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      random_date_last_6months: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
       badge_category: "achievement" | "specialty" | "community"

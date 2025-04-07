@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -59,7 +60,6 @@ import {
 import { toast } from '@/hooks/use-toast';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { ProfileType } from '@/types/supabase';
-import { formatProfileData, formatProfilesData } from '@/utils/profileHelpers';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -80,8 +80,7 @@ const AdminDashboard = () => {
         .single();
 
       if (error) throw error;
-      
-      return formatProfileData(data);
+      return data as ProfileType;
     },
     enabled: !!user,
   });
@@ -126,8 +125,7 @@ const AdminDashboard = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
-      
-      return formatProfilesData(data);
+      return data as ProfileType[];
     },
     enabled: !!isAdmin,
   });
