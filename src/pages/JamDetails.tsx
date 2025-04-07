@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
+import { getTypedSupabaseQuery, safeAccess, getProfileInitials } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
 
 import {
@@ -167,6 +167,12 @@ const JamDetails = () => {
     );
   }
 
+  const profiles = safeAccess(jam, 'profiles') || {};
+  const username = safeAccess(profiles, 'username') || 'Utilisateur';
+  const fullName = safeAccess(profiles, 'full_name') || username;
+  const avatarUrl = safeAccess(profiles, 'avatar_url');
+  const profileInitial = getProfileInitials(username);
+
   const ratings = jam.reviews?.map((review: any) => review.rating) || [];
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
@@ -227,15 +233,17 @@ const JamDetails = () => {
             <div>
               <h1 className="font-serif text-3xl font-bold">{jam.name}</h1>
               <div className="flex items-center mt-2">
-                <Link to={`/profile/${jam.profiles.id}`} className="flex items-center">
-                  <Avatar className="h-6 w-6 mr-2">
-                    <AvatarImage src={jam.profiles.avatar_url} />
-                    <AvatarFallback>{jam.profiles.username?.[0].toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground">
-                    Par {jam.profiles.full_name || jam.profiles.username}
-                  </span>
-                </Link>
+                {profiles && profiles.id && (
+                  <Link to={`/profile/${profiles.id}`} className="flex items-center">
+                    <Avatar className="h-6 w-6 mr-2">
+                      <AvatarImage src={avatarUrl} />
+                      <AvatarFallback>{profileInitial}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground">
+                      Par {fullName}
+                    </span>
+                  </Link>
+                )}
               </div>
             </div>
             <div className="flex space-x-2">

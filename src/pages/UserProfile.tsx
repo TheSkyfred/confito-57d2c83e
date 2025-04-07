@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getProfileInitials, safeAccess } from '@/utils/supabaseHelpers';
 import {
   User,
   Edit,
@@ -55,7 +56,7 @@ const UserProfile = () => {
         .from('profiles')
         .select('*')
         .eq('id', profileId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle null case
 
       if (error) throw error;
       return data;
@@ -211,7 +212,7 @@ const UserProfile = () => {
               <div className="flex flex-col items-center gap-4">
                 <Avatar className="h-24 w-24">
                   <AvatarImage src={profile.avatar_url || undefined} />
-                  <AvatarFallback>{profile.username[0].toUpperCase()}</AvatarFallback>
+                  <AvatarFallback>{getProfileInitials(profile.username)}</AvatarFallback>
                 </Avatar>
                 
                 <div className="text-center space-y-2">
