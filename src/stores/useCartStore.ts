@@ -29,7 +29,7 @@ export const useCartStore = create<CartStore>()(
       addItem: async (jam, quantity = 1) => {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
+          const user = sessionData?.session?.user;
           
           if (user) {
             // Utilisateur connecté - utiliser la base de données
@@ -362,7 +362,7 @@ export const useCartStore = create<CartStore>()(
       syncWithDatabase: async () => {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
+          const user = sessionData?.session?.user;
           
           if (!user) return;
           
@@ -390,7 +390,8 @@ export const useCartStore = create<CartStore>()(
               quantity,
               jams!inner (
                 id, name, description, price_credits, available_quantity, creator_id,
-                weight_grams, allergens, ingredients, sugar_content,
+                weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
+                created_at, updated_at,
                 jam_images (id, url, is_primary),
                 profiles!inner (id, username, full_name, avatar_url)
               )
@@ -407,7 +408,8 @@ export const useCartStore = create<CartStore>()(
             const formattedItems: CartItem[] = cartItemsData.map(item => ({
               jam: {
                 ...item.jams,
-                profiles: item.jams.profiles
+                profiles: item.jams.profiles,
+                jam_images: item.jams.jam_images || []
               },
               quantity: item.quantity
             }));
