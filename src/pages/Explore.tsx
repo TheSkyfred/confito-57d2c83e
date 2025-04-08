@@ -47,6 +47,7 @@ type FilterState = {
     maxSugar?: number;
     minRating?: number;
     maxPrice?: number;
+    proOnly?: boolean;
   }
 };
 
@@ -63,7 +64,8 @@ const Explore = () => {
       allergens: [],
       maxSugar: 100,
       minRating: 0,
-      maxPrice: 50
+      maxPrice: 50,
+      proOnly: false
     }
   });
   
@@ -98,6 +100,11 @@ const Explore = () => {
       // Filtre par prix max
       if (filters.filters.maxPrice) {
         query = query.lte('price_credits', filters.filters.maxPrice);
+      }
+      
+      // Filtrer par "pro only" si l'option est sélectionnée
+      if (filters.filters.proOnly) {
+        query = query.eq('is_pro', true);
       }
       
       // Appliquer le tri
@@ -208,6 +215,16 @@ const Explore = () => {
     }));
   };
   
+  const toggleProOnlyFilter = () => {
+    setFilters(prev => ({
+      ...prev,
+      filters: {
+        ...prev.filters,
+        proOnly: !prev.filters.proOnly
+      }
+    }));
+  };
+  
   const resetFilters = () => {
     setFilters({
       searchTerm: '',
@@ -217,7 +234,8 @@ const Explore = () => {
         allergens: [],
         maxSugar: 100,
         minRating: 0,
-        maxPrice: 50
+        maxPrice: 50,
+        proOnly: false
       }
     });
   };
@@ -227,7 +245,8 @@ const Explore = () => {
     (filters.filters.allergens?.length || 0) +
     (filters.filters.maxSugar !== 100 ? 1 : 0) +
     (filters.filters.minRating !== 0 ? 1 : 0) +
-    (filters.filters.maxPrice !== 50 ? 1 : 0);
+    (filters.filters.maxPrice !== 50 ? 1 : 0) +
+    (filters.filters.proOnly ? 1 : 0);
 
   return (
     <div className="container py-8">
@@ -378,6 +397,27 @@ const Explore = () => {
                       </div>
                     </AccordionContent>
                   </AccordionItem>
+
+                  <AccordionItem value="protype">
+                    <AccordionTrigger>Confitures professionnelles</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="px-1">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="pro-only" 
+                            checked={filters.filters.proOnly}
+                            onCheckedChange={toggleProOnlyFilter}
+                          />
+                          <label htmlFor="pro-only" className="text-sm cursor-pointer">
+                            Afficher uniquement les confitures pro
+                          </label>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Les confitures professionnelles sont vendues en euros et en crédits
+                        </p>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 </Accordion>
               </div>
 
@@ -431,6 +471,13 @@ const Explore = () => {
             <Badge variant="secondary" className="flex items-center gap-1">
               Max {filters.filters.maxPrice} crédits
               <button onClick={() => updateMaxPrice([50])} className="ml-1 hover:text-muted-foreground">×</button>
+            </Badge>
+          )}
+          
+          {filters.filters.proOnly && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              Confitures pro uniquement
+              <button onClick={toggleProOnlyFilter} className="ml-1 hover:text-muted-foreground">×</button>
             </Badge>
           )}
         </div>

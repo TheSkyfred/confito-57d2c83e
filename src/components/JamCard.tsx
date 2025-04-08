@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, BadgeEuro } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { JamType } from '@/types/supabase';
+import { CreditBadge } from '@/components/ui/credit-badge';
 
 export interface JamCardProps {
   jam: JamType;
@@ -35,6 +36,14 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
           alt={jam.name} 
           className="h-full w-full object-cover transition-transform group-hover:scale-105"
         />
+        {jam.is_pro && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="secondary" className="bg-jam-honey text-white flex items-center gap-1">
+              <BadgeEuro className="h-3 w-3" />
+              PRO
+            </Badge>
+          </div>
+        )}
       </div>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
@@ -60,8 +69,13 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
               <Badge variant="outline" className="text-xs">+{jam.ingredients.length - 2}</Badge>
             )}
           </div>
-          <div className="font-medium">
-            {jam.price_credits} crédits
+          <div className="flex flex-col items-end">
+            <div className="font-medium flex items-center gap-2">
+              <CreditBadge amount={jam.price_credits} size="sm" />
+              {jam.is_pro && jam.price_euros && (
+                <span className="text-sm text-muted-foreground">{jam.price_euros.toFixed(2)} €</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
