@@ -156,6 +156,12 @@ const Rankings = () => {
     }
   };
 
+  // Safe toFixed function to handle undefined/null values
+  const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
+    if (value === undefined || value === null) return '0.0';
+    return value.toFixed(digits);
+  };
+
   return (
     <div className="container py-8">
       <div className="flex flex-col mb-8">
@@ -192,7 +198,7 @@ const Rankings = () => {
                       </div>
                       <div className="flex-shrink-0 mr-4">
                         <img 
-                          src={jam.jam_images[0]?.url || '/placeholder.svg'} 
+                          src={jam.jam_images?.[0]?.url || '/placeholder.svg'} 
                           alt={jam.name}
                           className="h-16 w-16 object-cover rounded-md"
                         />
@@ -202,17 +208,17 @@ const Rankings = () => {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Avatar className="h-4 w-4 mr-1">
                             <AvatarImage src={jam.profile?.avatar_url || undefined} />
-                            <AvatarFallback>{jam.profile?.username?.[0].toUpperCase()}</AvatarFallback>
+                            <AvatarFallback>{jam.profile?.username?.[0]?.toUpperCase() || 'J'}</AvatarFallback>
                           </Avatar>
-                          <span>{jam.profile?.username}</span>
+                          <span>{jam.profile?.username || 'Utilisateur'}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
                         <div className="flex items-center mb-1">
                           <Star className="h-4 w-4 text-jam-honey fill-jam-honey mr-1" />
-                          <span className="font-medium">{jam.avg_rating.toFixed(1)}</span>
+                          <span className="font-medium">{safeToFixed(jam.avg_rating)}</span>
                           <span className="text-xs text-muted-foreground ml-1">
-                            ({jam.review_count})
+                            ({jam.review_count || 0})
                           </span>
                         </div>
                         <div className="flex items-center text-sm text-muted-foreground">
@@ -249,7 +255,7 @@ const Rankings = () => {
                       </div>
                       <Avatar className="h-16 w-16 mr-4">
                         <AvatarImage src={user.avatar_url || undefined} />
-                        <AvatarFallback>{user.username[0].toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{(user.username?.[0] || 'U').toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-grow">
                         <h3 className="font-medium">{user.full_name || user.username}</h3>
@@ -265,7 +271,7 @@ const Rankings = () => {
                         <div>
                           <div className="flex items-center justify-center">
                             <Star className="h-3 w-3 text-jam-honey fill-jam-honey mr-1" />
-                            <span className="font-medium">{user.avg_rating.toFixed(1)}</span>
+                            <span className="font-medium">{safeToFixed(user.avg_rating)}</span>
                           </div>
                           <div className="text-xs text-muted-foreground">Note moy.</div>
                         </div>

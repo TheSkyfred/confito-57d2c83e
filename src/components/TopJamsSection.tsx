@@ -9,6 +9,12 @@ import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { getProfileUsername } from '@/utils/profileTypeGuards';
 
 const TopJamsSection = () => {
+  // Safe toFixed function to handle undefined/null values
+  const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
+    if (value === undefined || value === null) return '0.0';
+    return value.toFixed(digits);
+  };
+
   const { data: topJams, isLoading } = useQuery({
     queryKey: ['topJams'],
     queryFn: async () => {
@@ -110,7 +116,7 @@ const TopJamsSection = () => {
                       <Star 
                         key={star} 
                         className={`h-4 w-4 ${
-                          star <= Math.round(jam.avgRating) 
+                          star <= Math.round(jam.avgRating || 0) 
                             ? 'fill-jam-honey text-jam-honey' 
                             : 'text-gray-300'
                         }`}

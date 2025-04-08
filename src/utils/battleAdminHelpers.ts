@@ -45,7 +45,7 @@ export const validateBattleJudge = async (judgeId: string) => {
     // Just mark the judge as validated
     const { error } = await supabase
       .from('battle_judges')
-      .update({ is_validated: true })
+      .update({ is_validated: true }) // This field now exists in the schema
       .eq('id', judgeId);
       
     if (error) throw error;

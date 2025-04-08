@@ -40,6 +40,12 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
       ? validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length
       : 0;
   };
+
+  // Safe toFixed function to handle undefined/null values
+  const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
+    if (value === undefined || value === null) return '0.0';
+    return value.toFixed(digits);
+  };
   
   if (!reviews || reviews.length === 0) {
     return null;
@@ -80,7 +86,7 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
                         />
                       ))}
                       <span className="ml-2 text-sm text-muted-foreground">
-                        {avgRating.toFixed(1)}/5
+                        {safeToFixed(avgRating)}/5
                       </span>
                     </div>
                   </div>
