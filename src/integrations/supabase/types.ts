@@ -36,6 +36,392 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_candidates: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          is_selected: boolean | null
+          motivation: string
+          reference_jam_id: string | null
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          is_selected?: boolean | null
+          motivation: string
+          reference_jam_id?: string | null
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          is_selected?: boolean | null
+          motivation?: string
+          reference_jam_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_candidates_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_candidates_reference_jam_id_fkey"
+            columns: ["reference_jam_id"]
+            isOneToOne: false
+            referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_candidates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_criterias: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      battle_judges: {
+        Row: {
+          battle_id: string
+          created_at: string
+          has_ordered: boolean
+          has_received: boolean
+          id: string
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          has_ordered?: boolean
+          has_received?: boolean
+          id?: string
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          has_ordered?: boolean
+          has_received?: boolean
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_judges_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_judges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_participants: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          jam_id: string | null
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          jam_id?: string | null
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          jam_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_participants_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_participants_jam_id_fkey"
+            columns: ["jam_id"]
+            isOneToOne: false
+            referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_results: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          participant_a_id: string
+          participant_a_score: number | null
+          participant_b_id: string
+          participant_b_score: number | null
+          reward_distributed: boolean
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          participant_a_id: string
+          participant_a_score?: number | null
+          participant_b_id: string
+          participant_b_score?: number | null
+          reward_distributed?: boolean
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          participant_a_id?: string
+          participant_a_score?: number | null
+          participant_b_id?: string
+          participant_b_score?: number | null
+          reward_distributed?: boolean
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_results_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: true
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_results_participant_a_id_fkey"
+            columns: ["participant_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_results_participant_b_id_fkey"
+            columns: ["participant_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_results_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_shipments: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          shipped_at: string | null
+          status: string
+          tracking_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          shipped_at?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          shipped_at?: string | null
+          status?: string
+          tracking_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_shipments_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_shipments_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_shipments_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_stars: {
+        Row: {
+          created_at: string
+          id: string
+          last_battle_date: string | null
+          participations: number
+          total_score: number
+          updated_at: string
+          user_id: string
+          victories: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_battle_date?: string | null
+          participations?: number
+          total_score?: number
+          updated_at?: string
+          user_id: string
+          victories?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_battle_date?: string | null
+          participations?: number
+          total_score?: number
+          updated_at?: string
+          user_id?: string
+          victories?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_vote_comments: {
+        Row: {
+          battle_id: string
+          comment: string
+          created_at: string
+          id: string
+          is_draft: boolean
+          judge_id: string
+          participant_id: string
+          updated_at: string
+        }
+        Insert: {
+          battle_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          is_draft?: boolean
+          judge_id: string
+          participant_id: string
+          updated_at?: string
+        }
+        Update: {
+          battle_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          is_draft?: boolean
+          judge_id?: string
+          participant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_vote_comments_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_vote_comments_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_vote_comments_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battle_votes: {
         Row: {
           battle_id: string
@@ -78,6 +464,68 @@ export type Database = {
             columns: ["voted_for_jam_id"]
             isOneToOne: false
             referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_votes_detailed: {
+        Row: {
+          battle_id: string
+          created_at: string
+          criteria_id: string
+          id: string
+          judge_id: string
+          participant_id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          criteria_id: string
+          id?: string
+          judge_id: string
+          participant_id: string
+          score: number
+          updated_at?: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          criteria_id?: string
+          id?: string
+          judge_id?: string
+          participant_id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_votes_detailed_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_votes_detailed_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "battle_criterias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_votes_detailed_judge_id_fkey"
+            columns: ["judge_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_votes_detailed_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -270,6 +718,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      jam_battles_new: {
+        Row: {
+          constraints: Json
+          created_at: string
+          id: string
+          is_featured: boolean
+          judge_discount_percent: number
+          max_judges: number
+          max_price_credits: number
+          min_jams_required: number
+          production_end_date: string
+          registration_end_date: string
+          registration_start_date: string
+          reward_credits: number
+          reward_description: string | null
+          status: Database["public"]["Enums"]["battle_status"]
+          theme: string
+          updated_at: string
+          voting_end_date: string
+        }
+        Insert: {
+          constraints?: Json
+          created_at?: string
+          id?: string
+          is_featured?: boolean
+          judge_discount_percent?: number
+          max_judges?: number
+          max_price_credits?: number
+          min_jams_required?: number
+          production_end_date: string
+          registration_end_date: string
+          registration_start_date?: string
+          reward_credits?: number
+          reward_description?: string | null
+          status?: Database["public"]["Enums"]["battle_status"]
+          theme: string
+          updated_at?: string
+          voting_end_date: string
+        }
+        Update: {
+          constraints?: Json
+          created_at?: string
+          id?: string
+          is_featured?: boolean
+          judge_discount_percent?: number
+          max_judges?: number
+          max_price_credits?: number
+          min_jams_required?: number
+          production_end_date?: string
+          registration_end_date?: string
+          registration_start_date?: string
+          reward_credits?: number
+          reward_description?: string | null
+          status?: Database["public"]["Enums"]["battle_status"]
+          theme?: string
+          updated_at?: string
+          voting_end_date?: string
+        }
+        Relationships: []
       }
       jam_images: {
         Row: {
@@ -683,6 +1191,13 @@ export type Database = {
     }
     Enums: {
       badge_category: "achievement" | "specialty" | "community"
+      battle_status:
+        | "inscription"
+        | "selection"
+        | "production"
+        | "envoi"
+        | "vote"
+        | "termine"
       order_status:
         | "pending"
         | "accepted"
@@ -806,6 +1321,14 @@ export const Constants = {
   public: {
     Enums: {
       badge_category: ["achievement", "specialty", "community"],
+      battle_status: [
+        "inscription",
+        "selection",
+        "production",
+        "envoi",
+        "vote",
+        "termine",
+      ],
       order_status: [
         "pending",
         "accepted",

@@ -23,6 +23,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import JamEditor from "./pages/JamEditor";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import BattlesList from "./pages/BattlesList";
+import BattleDetails from "./pages/BattleDetails";
+import BattleAdmin from "./pages/BattleAdmin";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +45,9 @@ const App = () => (
                 <Route path="/explore" element={<Explore />} />
                 <Route path="/jam/:id" element={<JamDetails />} />
                 <Route path="/rankings" element={<Rankings />} />
-                <Route path="/battles" element={<JamBattles />} />
+                <Route path="/battles" element={<BattlesList />} />
+                <Route path="/battles/:id" element={<BattleDetails />} />
+                <Route path="/battles/admin" element={<BattleAdmin />} />
                 <Route path="/seasonal" element={<SeasonalCalendar />} />
                 <Route path="/dashboard" element={<UserDashboard />} />
                 <Route path="/profile" element={<UserProfile />} />

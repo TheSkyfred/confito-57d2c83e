@@ -1,5 +1,4 @@
-
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import HeroSection from '@/components/HeroSection'
@@ -7,8 +6,10 @@ import JamCard from '@/components/JamCard'
 import SeasonalFruit from '@/components/SeasonalFruit'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Award, TrendingUp, Heart, Users } from 'lucide-react'
-import { JamType } from '@/types/supabase'
+import { ChevronRight, Award, TrendingUp, Heart, Users, Trophy } from 'lucide-react'
+import { JamType, NewBattleType } from '@/types/supabase'
+import { supabase } from '@/integrations/supabase/client'
+import BattleCard from '@/components/battle/BattleCard'
 
 const createMockJam = (data: any): JamType => ({
   id: data.id,
@@ -182,6 +183,28 @@ const featuredJams = featuredJamData.map(createMockJam);
 const popularJams = popularJamData.map(createMockJam);
 
 const Index = () => {
+  const [featuredBattles, setFeaturedBattles] = useState<NewBattleType[]>([]);
+  
+  useEffect(() => {
+    const fetchFeaturedBattles = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('jam_battles_new')
+          .select('*')
+          .eq('is_featured', true)
+          .order('created_at', { ascending: false })
+          .limit(2);
+          
+        if (error) throw error;
+        setFeaturedBattles(data as NewBattleType[]);
+      } catch (error) {
+        console.error('Erreur lors du chargement des battles en vedette:', error);
+      }
+    };
+    
+    fetchFeaturedBattles();
+  }, []);
+  
   const handleAddToCart = (id: string) => {
     console.log(`Ajouter au panier: ${id}`);
   };
@@ -246,7 +269,43 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="py-12 bg-muted/30">
+        {featuredBattles.length > 0 && (
+          <section className="py-12 bg-muted/30">
+            <div className="container">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
+                  <Trophy className="h-6 w-6 text-jam-raspberry" />
+                  Battles en cours
+                </h2>
+                <Button asChild variant="ghost" size="sm" className="gap-1">
+                  <Link to="/battles">
+                    Voir tous
+                    <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {featuredBattles.map(battle => (
+                  <Link to={`/battles/${battle.id}`} key={battle.id} className="block h-full">
+                    <BattleCard battle={battle} />
+                  </Link>
+                ))}
+              </div>
+              
+              <div className="mt-6 text-center">
+                <Button asChild variant="outline">
+                  <Link to="/battles">
+                    Découvrir tous les battles
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="py-12 bg-white">
           <div className="container">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
@@ -271,7 +330,7 @@ const Index = () => {
           </div>
         </section>
 
-        <section className="py-12 bg-white">
+        <section className="py-12 bg-muted/30">
           <div className="container">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-1">
