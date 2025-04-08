@@ -144,12 +144,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signUp = async (email: string, password: string, metadata?: object) => {
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata },
     });
+    
     if (error) throw error;
+    
+    // If this is a professional account registration, create a placeholder pro_profile
+    if (metadata && 'accountType' in metadata && metadata.accountType === 'professional' && data.user) {
+      try {
+        // Create a basic pro_profile entry that will be completed later by the user
+        const { error: proProfileError } = await supabase.from('pro_profiles').insert({
+          id: data.user.id,
+          company_name: metadata.fullName || 'Company Name',
+          business_email: email,
+        });
+        
+        if (proProfileError) {
+          console.error('Error creating pro_profile:', proProfileError);
+        }
+      } catch (err) {
+        console.error('Error in pro_profile creation process:', err);
+      }
+    }
   };
 
   const signOut = async () => {
