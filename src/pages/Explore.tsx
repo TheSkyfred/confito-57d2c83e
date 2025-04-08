@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ import { JamType } from '@/types/supabase';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 
 import JamCard from '@/components/JamCard';
+import AdBanner from '@/components/AdBanner';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -143,6 +145,32 @@ const Explore = () => {
     },
   });
 
+  // Fonction pour mélanger les résultats
+  const getShuffledResults = () => {
+    if (!jams || jams.length === 0) return [];
+    
+    // Créer un tableau d'éléments mélangés
+    let shuffledItems: Array<{ type: 'jam' | 'ad', item: JamType | number }> = [];
+    
+    // D'abord, ajouter toutes les confitures
+    jams.forEach((jam: JamType) => {
+      shuffledItems.push({ type: 'jam', item: jam });
+    });
+    
+    // Déterminer combien de publicités à insérer (environ 1 toutes les 6 confitures)
+    const adCount = Math.ceil(jams.length / 6);
+    
+    // Ajouter les emplacements de publicité
+    for (let i = 0; i < adCount; i++) {
+      shuffledItems.push({ type: 'ad', item: i });
+    }
+    
+    // Mélanger le tableau
+    shuffledItems = shuffledItems.sort(() => Math.random() - 0.5);
+    
+    return shuffledItems;
+  };
+
   const updateSearchTerm = (term: string) => {
     setFilters(prev => ({ ...prev, searchTerm: term }));
   };
@@ -247,6 +275,9 @@ const Explore = () => {
     (filters.filters.minRating !== 0 ? 1 : 0) +
     (filters.filters.maxPrice !== 50 ? 1 : 0) +
     (filters.filters.proOnly ? 1 : 0);
+
+  // Obtenir les résultats mélangés
+  const shuffledResults = getShuffledResults();
 
   return (
     <div className="container py-8">
@@ -503,10 +534,14 @@ const Explore = () => {
         </div>
       ) : jams && jams.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {jams.map((jam: JamType) => (
-            <Link to={`/jam/${jam.id}`} key={jam.id}>
-              <JamCard jam={jam} />
-            </Link>
+          {shuffledResults.map((item, index) => (
+            item.type === 'jam' ? (
+              <Link to={`/jam/${(item.item as JamType).id}`} key={`jam-${(item.item as JamType).id}`}>
+                <JamCard jam={item.item as JamType} />
+              </Link>
+            ) : (
+              <AdBanner key={`ad-${index}`} cardIndex={item.item as number} />
+            )
           ))}
         </div>
       ) : (

@@ -20,9 +20,10 @@ export type Database = {
           end_date: string
           id: string
           is_visible: boolean
-          jam_id: string
+          jam_id: string | null
           name: string
           planned_impressions: number
+          redirect_url: string | null
           start_date: string
           status: string
           updated_at: string
@@ -37,9 +38,10 @@ export type Database = {
           end_date: string
           id?: string
           is_visible?: boolean
-          jam_id: string
+          jam_id?: string | null
           name: string
           planned_impressions: number
+          redirect_url?: string | null
           start_date: string
           status?: string
           updated_at?: string
@@ -54,9 +56,10 @@ export type Database = {
           end_date?: string
           id?: string
           is_visible?: boolean
-          jam_id?: string
+          jam_id?: string | null
           name?: string
           planned_impressions?: number
+          redirect_url?: string | null
           start_date?: string
           status?: string
           updated_at?: string
