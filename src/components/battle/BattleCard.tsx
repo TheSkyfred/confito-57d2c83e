@@ -55,7 +55,17 @@ const getBattleDate = (battle: NewBattleType) => {
 };
 
 const BattleCard: React.FC<BattleCardProps> = ({ battle, variant = 'default' }) => {
+  if (!battle) {
+    console.error('Battle is undefined in BattleCard');
+    return null;
+  }
+
   const dateInfo = getBattleDate(battle);
+  if (!dateInfo || !dateInfo.date) {
+    console.error('Invalid date information for battle', battle);
+    return null;
+  }
+
   const isCompact = variant === 'compact';
   
   const formattedDate = format(new Date(dateInfo.date), 'd MMMM yyyy', { locale: fr });
@@ -76,7 +86,7 @@ const BattleCard: React.FC<BattleCardProps> = ({ battle, variant = 'default' }) 
         <CardTitle className={`mt-2 ${isCompact ? 'text-lg' : 'text-2xl'} font-serif`}>
           {battle.theme}
         </CardTitle>
-        {!isCompact && (
+        {!isCompact && battle.constraints && (
           <CardDescription>
             {Object.entries(battle.constraints).map(([key, value]) => (
               <span key={key} className="inline-block mr-2 text-xs bg-muted px-2 py-1 rounded-md">

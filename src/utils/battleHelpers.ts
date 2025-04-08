@@ -19,7 +19,7 @@ export const fetchAllBattles = async () => {
       .order('created_at', { ascending: false });
       
     if (error) throw error;
-    return data as unknown as NewBattleType[];
+    return data as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles:', error.message);
     return [];
@@ -29,14 +29,20 @@ export const fetchAllBattles = async () => {
 // Fonction pour récupérer les battles à venir
 export const fetchUpcomingBattles = async () => {
   try {
+    console.log('Fetching upcoming battles...');
     const { data, error } = await supabase
       .from('jam_battles_new')
       .select('*')
       .in('status', ['inscription', 'selection'])
       .order('registration_end_date', { ascending: true });
       
-    if (error) throw error;
-    return data as unknown as NewBattleType[];
+    if (error) {
+      console.error('Error fetching upcoming battles:', error);
+      throw error;
+    }
+    
+    console.log('Upcoming battles fetched:', data);
+    return data as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles à venir:', error.message);
     return [];

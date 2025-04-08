@@ -1,7 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +14,7 @@ import { NewBattleType, BattleStarsType } from '@/types/supabase';
 import BattleCard from '@/components/battle/BattleCard';
 import BattleStar from '@/components/battle/BattleStar';
 import { fetchUpcomingBattles, fetchActiveBattles, fetchCompletedBattles, fetchBattleStars } from '@/utils/battleHelpers';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const BattlesList = () => {
   const { toast } = useToast();
@@ -23,30 +22,14 @@ const BattlesList = () => {
   const [activeBattles, setActiveBattles] = useState<NewBattleType[]>([]);
   const [completedBattles, setCompletedBattles] = useState<NewBattleType[]>([]);
   const [battleStars, setBattleStars] = useState<BattleStarsType[]>([]);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('upcoming');
+  const { isAdmin } = useUserRole();
   
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
-        // Récupérer les données de l'utilisateur
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          // Récupérer le rôle de l'utilisateur
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-            
-          if (userData) {
-            setUserRole(userData.role);
-          }
-        }
         
         // Récupérer les battles à venir
         const upcomingData = await fetchUpcomingBattles();
@@ -90,7 +73,7 @@ const BattlesList = () => {
         </div>
         
         <div className="flex gap-2">
-          {userRole === 'admin' && (
+          {isAdmin && (
             <Button asChild>
               <Link to="/battles/admin">
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -133,7 +116,7 @@ const BattlesList = () => {
               ) : (
                 <div className="text-center py-12">
                   <p className="text-muted-foreground">Aucun battle à venir pour le moment.</p>
-                  {userRole === 'admin' && (
+                  {isAdmin && (
                     <Button asChild className="mt-4">
                       <Link to="/battles/admin">
                         <PlusCircle className="h-4 w-4 mr-2" />

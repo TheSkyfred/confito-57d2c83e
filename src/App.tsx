@@ -68,10 +68,10 @@ function App() {
                   <Route path="/jam/:id" element={<JamDetails />} />
                   <Route path="/jam/create" element={<JamEditor />} />
                   <Route path="/jam/edit/:id" element={<JamEditor />} />
-                  <Route path="/battles" element={<JamBattles />} />
-                  <Route path="/battles/all" element={<BattlesList />} />
+                  <Route path="/battles" element={<BattlesList />} />
+                  <Route path="/battles/jam" element={<JamBattles />} />
                   <Route path="/battles/:id" element={<BattleDetails />} />
-                  <Route path="/admin/battles" element={<BattleAdmin />} />
+                  <Route path="/battles/admin" element={<BattleAdmin />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
