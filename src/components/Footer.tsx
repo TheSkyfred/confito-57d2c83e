@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { Coffee } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -8,7 +7,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2">
-              <Coffee className="h-6 w-6 text-jam-honey" />
+              <img src="/logo-confito.png" alt="Confito Logo" className="h-6 w-6 text-jam-honey" />
               <span className="font-serif text-xl font-bold text-jam-cream">
                 Confi<span className="text-jam-raspberry">to</span>
               </span>

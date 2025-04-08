@@ -93,7 +93,7 @@ const Header = () => {
     `}>
       <div className="container flex items-center justify-between h-16">
         <Link to="/" className="flex items-center font-bold text-xl md:text-2xl font-serif">
-          <img src="/logo.svg" alt="Confito Logo" className="h-8 w-8 mr-2" />
+          <img src="/logo-confito.png" alt="Confito Logo" className="h-8 w-8 mr-2" />
           Confito
         </Link>
 
