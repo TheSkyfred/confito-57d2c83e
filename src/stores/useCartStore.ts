@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { JamType } from '@/types/supabase';
@@ -391,6 +390,7 @@ export const useCartStore = create<CartStore>()(
               jams!inner (
                 id, name, description, price_credits, available_quantity, creator_id,
                 weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
+                status, rejection_reason,
                 created_at, updated_at,
                 jam_images (id, url, is_primary, jam_id, created_at),
                 profiles!inner (
@@ -412,7 +412,8 @@ export const useCartStore = create<CartStore>()(
               jam: {
                 ...item.jams,
                 profiles: item.jams.profiles,
-                jam_images: item.jams.jam_images || []
+                jam_images: item.jams.jam_images || [],
+                status: item.jams.status || 'pending'
               },
               quantity: item.quantity
             }));

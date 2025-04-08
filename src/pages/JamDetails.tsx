@@ -12,7 +12,7 @@ import {
   isNullOrUndefined,
   safeAccessNested
 } from '@/utils/supabaseHelpers';
-import { JamType, ProfileType, ReviewType } from '@/types/supabase';
+import { JamType, ProfileType, ReviewType, DetailedReviewType } from '@/types/supabase';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { useCartStore } from '@/stores/useCartStore';
 import {

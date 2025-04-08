@@ -1,4 +1,3 @@
-
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {

@@ -1,58 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 import {
-  Users,
-  MessageSquare,
-  FileText,
-  ShieldAlert,
-  Award,
-  BarChart3,
-  ChevronDown,
-  Search,
-  Loader2,
-  RefreshCw,
   AlertTriangle,
-  Lock,
-  PlusCircle,
-  Settings,
-  Flag,
-  Activity,
-  Check,
-  X
+  CheckCircle,
+  XCircle,
+  ShieldCheck,
+  MessageSquare,
+  User,
+  PackageCheck,
+  PackageX,
+  Search,
+  ArrowLeft,
+  ArrowRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -60,132 +43,202 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { toast } from '@/hooks/use-toast';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
-import { JamType, ProfileType } from '@/types/supabase';
-
-const mockReports = [
-  {
-    id: '1',
-    type: 'comment',
-    status: 'pending',
-    reporter: { username: 'alice', avatar_url: null },
-    reason: 'Contenu inapproprié',
-    content: 'Ce commentaire contient un langage offensant...'
-  },
-  {
-    id: '2',
-    type: 'jam',
-    status: 'pending',
-    reporter: { username: 'bob', avatar_url: null },
-    reason: 'Information trompeuse',
-    content: 'Cette confiture prétend ne pas contenir de sucre, mais les ingrédients mentionnent du sucre de canne.'
-  },
-  {
-    id: '3',
-    type: 'profile',
-    status: 'resolved',
-    reporter: { username: 'charlie', avatar_url: null },
-    reason: 'Usurpation d\'identité',
-    content: 'Ce profil se fait passer pour un artisan reconnu.'
-  }
-];
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('all');
-  const [selectedRejectionReason, setSelectedRejectionReason] = useState('');
-  const [jamIdToReject, setJamIdToReject] = useState<string | null>(null);
-  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const { user, session, signOut } = useAuth();
+  const [pendingJams, setPendingJams] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pendingJamsLoading, setPendingJamsLoading] = useState(true);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [pendingJamsPage, setPendingJamsPage] = useState(1);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [pendingJamsTotalPages, setPendingJamsTotalPages] = useState(1);
+  const [reportsTotalPages, setReportsTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredReports, setFilteredReports] = useState([]);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [selectedJamId, setSelectedJamId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   
-  const navigate = useNavigate();
+  const JAMS_PER_PAGE = 5;
+  const REPORTS_PER_PAGE = 5;
 
-  const { data: userProfile, isLoading: loadingProfile } = useQuery({
-    queryKey: ['adminProfile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      
-      const { data, error } = await getTypedSupabaseQuery('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+  useEffect(() => {
+    if (!user || !session) {
+      signOut();
+      return;
+    }
 
-      if (error) throw error;
-      return data as ProfileType;
-    },
-    enabled: !!user,
-  });
-  
-  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'moderator';
+    fetchPendingJams();
+    fetchReports();
+  }, [user, session, signOut, pendingJamsPage, reportsPage]);
 
-  const { data: stats, isLoading: loadingStats } = useQuery({
-    queryKey: ['adminStats'],
-    queryFn: async () => {
-      const [usersResponse, jamsResponse, ordersResponse] = await Promise.all([
-        supabaseDirect.select('profiles', 'count'),
-        supabaseDirect.select('jams', 'count'),
-        supabaseDirect.select('orders', 'count')
-      ]);
-      
-      const { data: pendingJams } = await supabaseDirect.select('jams', 'count')
-        .match({ status: 'pending' });
-      
-      return {
-        userCount: usersResponse.data || 0,
-        jamCount: jamsResponse.data || 0,
-        orderCount: ordersResponse.data || 0,
-        pendingJamCount: pendingJams?.length || 0
-      };
-    },
-    enabled: !!isAdmin,
-  });
-  
-  const { data: users, isLoading: loadingUsers } = useQuery({
-    queryKey: ['adminUsers', searchTerm, userRoleFilter],
-    queryFn: async () => {
-      let query = getTypedSupabaseQuery('profiles').select('*');
-      
-      if (searchTerm) {
-        query = query.or(`username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`);
-      }
-      
-      if (userRoleFilter !== 'all') {
-        query = query.eq('role', userRoleFilter as 'user' | 'moderator' | 'admin');
-      }
-      
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as ProfileType[];
-    },
-    enabled: !!isAdmin,
-  });
-  
-  const { data: pendingJams, isLoading: loadingPendingJams, refetch: refetchPendingJams } = useQuery({
-    queryKey: ['pendingJams'],
-    queryFn: async () => {
-      const { data, error } = await supabaseDirect.select('jams', `
-        *,
-        profiles:creator_id (id, username, full_name, avatar_url)
-      `);
-        
-      if (error) throw error;
-      
-      return data?.filter(jam => jam.status === 'pending') || [];
-    },
-    enabled: !!isAdmin,
-  });
-  
-  const approveJam = async (jamId: string) => {
+  const fetchPendingJams = async () => {
+    if (!user) return;
+    setPendingJamsLoading(true);
+
     try {
-      const { error } = await supabaseDirect.update('jams', 
+      const { data, error, count } = await supabase
+        .from('jams')
+        .select('*', { count: 'exact' })
+        .eq('status', 'pending')
+        .range((pendingJamsPage - 1) * JAMS_PER_PAGE, pendingJamsPage * JAMS_PER_PAGE - 1);
+
+      if (error) throw error;
+
+      setPendingJams(data || []);
+      setPendingJamsTotalPages(Math.ceil((count || 0) / JAMS_PER_PAGE));
+    } catch (error: any) {
+      console.error('Error fetching pending jams:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les confitures en attente",
+        variant: "destructive"
+      });
+    } finally {
+      setPendingJamsLoading(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    setReportsLoading(true);
+    try {
+      // Replace with your actual reports fetching logic
+      const mockReports = [
+        {
+          id: '1',
+          reporterName: 'Alice Dupont',
+          reportType: 'Inappropriate Content',
+          itemId: '5678',
+          itemType: 'comment',
+          content: 'Ce commentaire contient des propos inappropriés.',
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: '2',
+          reporterName: 'Michel Martin',
+          reportType: 'Fraud',
+          itemId: '1234',
+          itemType: 'jam',
+          content: 'Cette confiture n\'est pas comme décrite dans l\'annonce.',
+          status: 'resolved',
+          createdAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+        },
+        {
+          id: '3',
+          reporterName: 'Sophie Lemaire',
+          reportType: 'Spam',
+          itemId: '9012',
+          itemType: 'user',
+          content: 'Cet utilisateur envoie des messages non sollicités.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+        },
+        {
+          id: '4',
+          reporterName: 'David Bernard',
+          reportType: 'Harassment',
+          itemId: '3456',
+          itemType: 'comment',
+          content: 'Ce commentaire est harcelant et offensant.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 259200000).toISOString() // 3 days ago
+        },
+        {
+          id: '5',
+          reporterName: 'Isabelle Garcia',
+          reportType: 'Copyright Violation',
+          itemId: '7890',
+          itemType: 'jam',
+          content: 'Cette confiture utilise une image protégée par le droit d\'auteur.',
+          status: 'resolved',
+          createdAt: new Date(Date.now() - 345600000).toISOString() // 4 days ago
+        },
+        {
+          id: '6',
+          reporterName: 'Thomas Dubois',
+          reportType: 'Misleading Information',
+          itemId: '4321',
+          itemType: 'jam',
+          content: 'Les informations sur cette confiture sont trompeuses.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 432000000).toISOString() // 5 days ago
+        },
+        {
+          id: '7',
+          reporterName: 'Emilie Lefevre',
+          reportType: 'Privacy Violation',
+          itemId: '6543',
+          itemType: 'user',
+          content: 'Cet utilisateur divulgue des informations personnelles.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 518400000).toISOString() // 6 days ago
+        },
+        {
+          id: '8',
+          reporterName: 'Antoine Richard',
+          reportType: 'Hate Speech',
+          itemId: '2109',
+          itemType: 'comment',
+          content: 'Ce commentaire contient des propos haineux.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 604800000).toISOString() // 7 days ago
+        },
+        {
+          id: '9',
+          reporterName: 'Julie Garnier',
+          reportType: 'Impersonation',
+          itemId: '8765',
+          itemType: 'user',
+          content: 'Cet utilisateur se fait passer pour une autre personne.',
+          status: 'resolved',
+          createdAt: new Date(Date.now() - 691200000).toISOString() // 8 days ago
+        },
+        {
+          id: '10',
+          reporterName: 'Lucas Moreau',
+          reportType: 'Illegal Activities',
+          itemId: '3210',
+          itemType: 'jam',
+          content: 'Cette confiture est liée à des activités illégales.',
+          status: 'pending',
+          createdAt: new Date(Date.now() - 777600000).toISOString() // 9 days ago
+        }
+      ];
+
+      setReports(mockReports);
+      setFilteredReports(mockReports);
+      setReportsTotalPages(Math.ceil(mockReports.length / REPORTS_PER_PAGE));
+    } catch (error: any) {
+      console.error('Error fetching reports:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les signalements",
+        variant: "destructive"
+      });
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const pendingJamsRefetch = () => {
+    fetchPendingJams();
+  };
+
+  const approveJam = async (jamId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabaseDirect.update(
+        'jams',
         { status: 'approved' },
         { id: jamId }
       );
-        
+      
       if (error) throw error;
       
       toast({
@@ -193,661 +246,471 @@ const AdminDashboard = () => {
         description: "La confiture est maintenant visible pour tous les utilisateurs",
       });
       
-      refetchPendingJams();
+      // Refresh the list
+      pendingJamsRefetch();
     } catch (error: any) {
       console.error('Error approving jam:', error);
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de l'approbation",
+        description: "Impossible d'approuver cette confiture",
         variant: "destructive"
       });
     }
   };
-  
-  const openRejectDialog = (jamId: string) => {
-    setJamIdToReject(jamId);
-    setIsRejectionDialogOpen(true);
-  };
-  
-  const rejectJam = async () => {
-    if (!jamIdToReject) return;
+
+  const rejectJam = async (jamId: string, reason: string = "Cette confiture ne répond pas à nos critères de qualité.") => {
+    if (!user) return;
     
     try {
-      const rejectionReason = selectedRejectionReason === 'other' 
-        ? "Cette confiture ne répond pas à nos critères de qualité." 
-        : selectedRejectionReason;
-        
-      const { error } = await supabaseDirect.update('jams', 
+      const { error } = await supabaseDirect.update(
+        'jams',
         { 
-          status: 'rejected',
-          rejection_reason: rejectionReason
+          status: 'rejected', 
+          rejection_reason: reason 
         },
-        { id: jamIdToReject }
+        { id: jamId }
       );
-        
+      
       if (error) throw error;
       
       toast({
         title: "Confiture rejetée",
-        description: "La confiture a été rejetée et le créateur a été informé",
+        description: "La confiture a été rejetée",
       });
       
-      setIsRejectionDialogOpen(false);
-      setSelectedRejectionReason('');
-      setJamIdToReject(null);
-      refetchPendingJams();
+      // Refresh the list
+      pendingJamsRefetch();
     } catch (error: any) {
       console.error('Error rejecting jam:', error);
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur est survenue lors du rejet",
+        description: "Impossible de rejeter cette confiture",
         variant: "destructive"
       });
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: 'user' | 'moderator' | 'admin') => {
-    try {
-      const { error } = await getTypedSupabaseQuery('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Rôle mis à jour",
-        description: "Le rôle de l'utilisateur a été modifié avec succès.",
-      });
-      
-    } catch (error) {
-      console.error("Error updating user role:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de la mise à jour du rôle.",
-        variant: "destructive"
-      });
+  useEffect(() => {
+    setLoading(pendingJamsLoading || reportsLoading);
+  }, [pendingJamsLoading, reportsLoading]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+
+    if (query) {
+      const filtered = reports.filter(report =>
+        report.reporterName.toLowerCase().includes(query.toLowerCase()) ||
+        report.reportType.toLowerCase().includes(query.toLowerCase()) ||
+        report.content.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredReports(filtered);
+      setReportsTotalPages(Math.ceil(filtered.length / REPORTS_PER_PAGE));
+    } else {
+      setFilteredReports(reports);
+      setReportsTotalPages(Math.ceil(reports.length / REPORTS_PER_PAGE));
     }
   };
 
-  if (!user || loadingProfile) {
+  const handleOpenRejectModal = (jamId: string | null) => {
+    setSelectedJamId(jamId);
+    setIsRejectModalOpen(true);
+  };
+
+  const handleCloseRejectModal = () => {
+    setIsRejectModalOpen(false);
+    setSelectedJamId(null);
+    setRejectionReason('');
+  };
+
+  const handleConfirmReject = () => {
+    if (selectedJamId) {
+      rejectJam(selectedJamId, rejectionReason);
+      handleCloseRejectModal();
+    }
+  };
+
+  const goToPreviousPendingJamsPage = () => {
+    setPendingJamsPage(Math.max(1, pendingJamsPage - 1));
+  };
+
+  const goToNextPendingJamsPage = () => {
+    setPendingJamsPage(Math.min(pendingJamsTotalPages, pendingJamsPage + 1));
+  };
+
+  const goToFirstPendingJamsPage = () => {
+    setPendingJamsPage(1);
+  };
+
+  const goToLastPendingJamsPage = () => {
+    setPendingJamsPage(pendingJamsTotalPages);
+  };
+
+  const goToPreviousReportsPage = () => {
+    setReportsPage(Math.max(1, reportsPage - 1));
+  };
+
+  const goToNextReportsPage = () => {
+    setReportsPage(Math.min(reportsTotalPages, reportsPage + 1));
+  };
+
+  const goToFirstReportsPage = () => {
+    setReportsPage(1);
+  };
+
+  const goToLastReportsPage = () => {
+    setReportsPage(reportsTotalPages);
+  };
+
+  if (loading) {
     return (
       <div className="container py-8">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-jam-raspberry" />
-          </CardContent>
-        </Card>
+        <h1 className="text-2xl font-bold mb-4">Tableau de bord administrateur</h1>
+        <p>Chargement...</p>
       </div>
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="container py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldAlert className="h-6 w-6 text-destructive" />
-              Accès restreint
-            </CardTitle>
-            <CardDescription>
-              Cette page est réservée aux administrateurs et modérateurs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <Lock className="h-16 w-16 text-muted-foreground mb-4" />
-            <p className="text-center text-muted-foreground max-w-md">
-              Vous n'avez pas les permissions nécessaires pour accéder à cette section. 
-              Si vous pensez qu'il s'agit d'une erreur, veuillez contacter un administrateur.
-            </p>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <Button asChild>
-              <Link to="/">Retour à l'accueil</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
+  const mockReports = [
+    {
+      id: '1',
+      reporterName: 'Alice Dupont',
+      reportType: 'Inappropriate Content',
+      itemId: '5678',
+      itemType: 'comment',
+      content: 'Ce commentaire contient des propos inappropriés.',
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: '2',
+      reporterName: 'Michel Martin',
+      reportType: 'Fraud',
+      itemId: '1234',
+      itemType: 'jam',
+      content: 'Cette confiture n\'est pas comme décrite dans l\'annonce.',
+      status: 'resolved',
+      createdAt: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+    },
+    {
+      id: '3',
+      reporterName: 'Sophie Lemaire',
+      reportType: 'Spam',
+      itemId: '9012',
+      itemType: 'user',
+      content: 'Cet utilisateur envoie des messages non sollicités.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 172800000).toISOString() // 2 days ago
+    },
+    {
+      id: '4',
+      reporterName: 'David Bernard',
+      reportType: 'Harassment',
+      itemId: '3456',
+      itemType: 'comment',
+      content: 'Ce commentaire est harcelant et offensant.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 259200000).toISOString() // 3 days ago
+    },
+    {
+      id: '5',
+      reporterName: 'Isabelle Garcia',
+      reportType: 'Copyright Violation',
+      itemId: '7890',
+      itemType: 'jam',
+      content: 'Cette confiture utilise une image protégée par le droit d\'auteur.',
+      status: 'resolved',
+      createdAt: new Date(Date.now() - 345600000).toISOString() // 4 days ago
+    },
+    {
+      id: '6',
+      reporterName: 'Thomas Dubois',
+      reportType: 'Misleading Information',
+      itemId: '4321',
+      itemType: 'jam',
+      content: 'Les informations sur cette confiture sont trompeuses.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 432000000).toISOString() // 5 days ago
+    },
+    {
+      id: '7',
+      reporterName: 'Emilie Lefevre',
+      reportType: 'Privacy Violation',
+      itemId: '6543',
+      itemType: 'user',
+      content: 'Cet utilisateur divulgue des informations personnelles.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 518400000).toISOString() // 6 days ago
+    },
+    {
+      id: '8',
+      reporterName: 'Antoine Richard',
+      reportType: 'Hate Speech',
+      itemId: '2109',
+      itemType: 'comment',
+      content: 'Ce commentaire contient des propos haineux.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 604800000).toISOString() // 7 days ago
+    },
+    {
+      id: '9',
+      reporterName: 'Julie Garnier',
+      reportType: 'Impersonation',
+      itemId: '8765',
+      itemType: 'user',
+      content: 'Cet utilisateur se fait passer pour une autre personne.',
+      status: 'resolved',
+      createdAt: new Date(Date.now() - 691200000).toISOString() // 8 days ago
+    },
+    {
+      id: '10',
+      reporterName: 'Lucas Moreau',
+      reportType: 'Illegal Activities',
+      itemId: '3210',
+      itemType: 'jam',
+      content: 'Cette confiture est liée à des activités illégales.',
+      status: 'pending',
+      createdAt: new Date(Date.now() - 777600000).toISOString() // 9 days ago
+    }
+  ];
 
   return (
     <div className="container py-8">
-      <div className="flex items-center gap-2 mb-8">
-        <ShieldAlert className="h-8 w-8 text-jam-raspberry" />
-        <h1 className="font-serif text-3xl font-bold">Administration</h1>
-      </div>
+      <h1 className="text-2xl font-bold mb-4">Tableau de bord administrateur</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="bg-jam-raspberry/10 p-3 rounded-full">
-              <Users className="h-6 w-6 text-jam-raspberry" />
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Confitures en attente de validation</h2>
+        {pendingJamsLoading ? (
+          <p>Chargement des confitures en attente...</p>
+        ) : pendingJams.length > 0 ? (
+          <>
+            <Table>
+              <TableCaption>Confitures en attente de validation.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Date</TableHead>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Créateur</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingJams.map(jam => (
+                  <TableRow key={jam.id}>
+                    <TableCell className="font-medium">{format(new Date(jam.created_at), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{jam.name}</TableCell>
+                    <TableCell>{jam.creator_id}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => approveJam(jam.id)}>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Approuver
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleOpenRejectModal(jam.id)}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Rejeter
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToFirstPendingJamsPage}
+                  disabled={pendingJamsPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                  <span className="sr-only">Aller à la première page</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToPreviousPendingJamsPage}
+                  disabled={pendingJamsPage === 1}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Page précédente</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToNextPendingJamsPage}
+                  disabled={pendingJamsPage === pendingJamsTotalPages}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Page suivante</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToLastPendingJamsPage}
+                  disabled={pendingJamsPage === pendingJamsTotalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                  <span className="sr-only">Aller à la dernière page</span>
+                </Button>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                Page {pendingJamsPage} sur {pendingJamsTotalPages}
+              </span>
             </div>
-            <div>
-              {loadingStats ? (
-                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
-              ) : (
-                <p className="text-2xl font-bold">{stats?.userCount}</p>
-              )}
-              <p className="text-sm text-muted-foreground">Utilisateurs</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="bg-jam-honey/10 p-3 rounded-full">
-              <BarChart3 className="h-6 w-6 text-jam-honey" />
-            </div>
-            <div>
-              {loadingStats ? (
-                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
-              ) : (
-                <p className="text-2xl font-bold">{stats?.jamCount}</p>
-              )}
-              <p className="text-sm text-muted-foreground">Confitures</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="bg-jam-leaf/10 p-3 rounded-full">
-              <Activity className="h-6 w-6 text-jam-leaf" />
-            </div>
-            <div>
-              {loadingStats ? (
-                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
-              ) : (
-                <p className="text-2xl font-bold">{stats?.orderCount}</p>
-              )}
-              <p className="text-sm text-muted-foreground">Échanges</p>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className={stats?.pendingJamCount ? "border-amber-300 bg-amber-50" : ""}>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className={`${stats?.pendingJamCount ? "bg-amber-400/20" : "bg-muted"} p-3 rounded-full`}>
-              <AlertTriangle className={`h-6 w-6 ${stats?.pendingJamCount ? "text-amber-600" : "text-muted-foreground"}`} />
-            </div>
-            <div>
-              {loadingStats ? (
-                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
-              ) : (
-                <p className="text-2xl font-bold">{stats?.pendingJamCount}</p>
-              )}
-              <p className="text-sm text-muted-foreground">En attente</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="pending-jams">
-        <TabsList className="grid w-full md:w-fit grid-cols-4 mb-6">
-          <TabsTrigger value="pending-jams" className="relative">
+          </>
+        ) : (
+          <div className="flex items-center justify-center py-4">
             <AlertTriangle className="mr-2 h-4 w-4" />
-            En attente
-            {stats?.pendingJamCount ? (
-              <Badge variant="destructive" className="ml-2 absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 h-5 min-w-[1.25rem] flex items-center justify-center">
-                {stats.pendingJamCount}
-              </Badge>
-            ) : null}
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            <Users className="mr-2 h-4 w-4" />
-            Utilisateurs
-          </TabsTrigger>
-          <TabsTrigger value="reports">
-            <Flag className="mr-2 h-4 w-4" />
-            Signalements
-          </TabsTrigger>
-          <TabsTrigger value="badges">
-            <Award className="mr-2 h-4 w-4" />
-            Badges
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="pending-jams">
-          <Card>
-            <CardHeader>
-              <CardTitle>Confitures en attente d'approbation</CardTitle>
-              <CardDescription>
-                Vérifiez et approuvez les confitures soumises par les utilisateurs
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingPendingJams ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-jam-raspberry" />
-                </div>
-              ) : pendingJams?.length === 0 ? (
-                <div className="text-center py-8">
-                  <Check className="h-12 w-12 mx-auto text-green-500 mb-4" />
-                  <p className="font-medium text-lg">Aucune confiture en attente</p>
-                  <p className="text-muted-foreground">Toutes les soumissions ont été traitées.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {pendingJams?.map((jam) => (
-                    <Card key={jam.id}>
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-14 w-14 rounded-md overflow-hidden bg-muted">
-                              {jam.jam_images && jam.jam_images[0] ? (
-                                <img 
-                                  src={jam.jam_images[0].url} 
-                                  alt={jam.name} 
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
-                                  No image
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <h3 className="font-medium">{jam.name}</h3>
-                              <div className="flex items-center mt-1">
-                                <Avatar className="h-4 w-4 mr-1">
-                                  <AvatarImage src={(jam.profiles as any)?.avatar_url || undefined} />
-                                  <AvatarFallback>{((jam.profiles as any)?.username || '?')[0].toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-muted-foreground">
-                                  {(jam.profiles as any)?.username || 'Utilisateur inconnu'}
-                                </span>
-                                <Badge variant="outline" className="ml-2 text-xs">
-                                  {format(new Date(jam.created_at), 'dd/MM/yyyy', { locale: fr })}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/jam/${jam.id}`} target="_blank">
-                                Voir
-                              </Link>
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="text-red-600 border-red-200 hover:bg-red-50"
-                              onClick={() => openRejectDialog(jam.id)}
-                            >
-                              <X className="mr-1 h-4 w-4" />
-                              Rejeter
-                            </Button>
-                            <Button 
-                              variant="default" 
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => approveJam(jam.id)}
-                            >
-                              <Check className="mr-1 h-4 w-4" />
-                              Approuver
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => refetchPendingJams()}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Actualiser
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gestion des utilisateurs</CardTitle>
-              <CardDescription>
-                Recherchez et gérez les comptes utilisateurs
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="relative flex-grow">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Rechercher un utilisateur..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
-                  <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Filtrer par rôle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les rôles</SelectItem>
-                    <SelectItem value="user">Utilisateurs</SelectItem>
-                    <SelectItem value="moderator">Modérateurs</SelectItem>
-                    <SelectItem value="admin">Administrateurs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {loadingUsers ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-jam-raspberry" />
-                </div>
-              ) : users?.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Aucun utilisateur trouvé.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {users?.map((user: ProfileType) => (
-                    <Card key={user.id}>
-                      <CardContent className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback>{user.username?.[0].toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{user.full_name || user.username}</p>
-                            <p className="text-sm text-muted-foreground">@{user.username}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 ml-auto">
-                          <Badge 
-                            variant={
-                              user.role === 'admin' 
-                                ? 'default' 
-                                : user.role === 'moderator'
-                                  ? 'secondary'
-                                  : 'outline'
-                            }
-                            className={
-                              user.role === 'admin' 
-                                ? 'bg-jam-raspberry' 
-                                : user.role === 'moderator'
-                                  ? 'bg-jam-honey'
-                                  : ''
-                            }
-                          >
-                            {user.role === 'admin' && 'Administrateur'}
-                            {user.role === 'moderator' && 'Modérateur'}
-                            {user.role === 'user' && 'Utilisateur'}
-                          </Badge>
-                          
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                <Settings className="mr-2 h-4 w-4" />
-                                Gérer
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Gestion de l'utilisateur</DialogTitle>
-                                <DialogDescription>
-                                  Modifier les paramètres de @{user.username}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="py-4 space-y-4">
-                                <div>
-                                  <h3 className="text-sm font-medium mb-2">Modifier le rôle</h3>
-                                  <div className="flex gap-2">
-                                    <Button 
-                                      variant={user.role === 'user' ? 'default' : 'outline'} 
-                                      size="sm"
-                                      onClick={() => updateUserRole(user.id, 'user')}
-                                    >
-                                      Utilisateur
-                                    </Button>
-                                    <Button 
-                                      variant={user.role === 'moderator' ? 'default' : 'outline'} 
-                                      size="sm"
-                                      onClick={() => updateUserRole(user.id, 'moderator')}
-                                    >
-                                      Modérateur
-                                    </Button>
-                                    <Button 
-                                      variant={user.role === 'admin' ? 'default' : 'outline'} 
-                                      size="sm"
-                                      onClick={() => updateUserRole(user.id, 'admin')}
-                                    >
-                                      Administrateur
-                                    </Button>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex justify-between">
-                                  <Button variant="outline" size="sm" asChild>
-                                    <Link to={`/profile/${user.id}`}>
-                                      Voir le profil
-                                    </Link>
-                                  </Button>
-                                  <Button 
-                                    variant="destructive" 
-                                    size="sm"
-                                    onClick={() => {
-                                      toast({
-                                        title: "Fonctionnalité limitée",
-                                        description: "La suspension de compte n'est pas disponible dans cette démo."
-                                      });
-                                    }}
-                                  >
-                                    Suspendre le compte
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Actualiser
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="reports">
-          <Card>
-            <CardHeader>
-              <CardTitle>Modération des signalements</CardTitle>
-              <CardDescription>
-                Gérer les contenus signalés par la communauté
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockReports.map((report) => (
-                  <Card key={report.id} className={report.status === 'resolved' ? 'opacity-60' : ''}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <Flag className={`h-4 w-4 ${
-                            report.status === 'pending' ? 'text-red-500' : 'text-green-500'
-                          }`} />
-                          <span className="font-medium">
-                            Signalement de {report.type === 'comment' ? 'commentaire' : 
-                                            report.type === 'jam' ? 'confiture' : 'profil'}
-                          </span>
-                        </div>
-                        <Badge variant={report.status === 'pending' ? 'outline' : 'secondary'}>
-                          {report.status === 'pending' ? 'En attente' : 'Résolu'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <p className="text-sm text-muted-foreground mb-1">
-                          Signalé par:
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={report.reporter.avatar_url || undefined} />
-                            <AvatarFallback>{report.reporter.username[0].toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">@{report.reporter.username}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-3">
-                        <p className="text-sm text-muted-foreground mb-1">
-                          Raison du signalement: <span className="text-foreground">{report.reason}</span>
-                        </p>
-                        <p className="text-sm mt-1">{report.content}</p>
-                      </div>
-                      
-                      <div className="flex justify-end mt-4 gap-2">
-                        <Button variant="outline" size="sm">
-                          Voir le contenu
-                        </Button>
-                        {report.status === 'pending' && (
-                          <>
-                            <Button 
-                              variant="secondary" 
-                              size="sm"
-                              onClick={() => {
-                                toast({
-                                  title: "Fonctionnalité limitée",
-                                  description: "La modération n'est pas disponible dans cette démo."
-                                });
-                              }}
-                            >
-                              Ignorer
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => {
-                                toast({
-                                  title: "Fonctionnalité limitée",
-                                  description: "La suppression n'est pas disponible dans cette démo."
-                                });
-                              }}
-                            >
-                              Supprimer
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="badges">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des badges</CardTitle>
-                <CardDescription>
-                  Créer et attribuer des badges aux utilisateurs
-                </CardDescription>
-              </div>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Créer un badge
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: "Chef étoilé", description: "Pour les confituriers d'exception", category: "achievement", image: "⭐" },
-                  { name: "Aventurier des saveurs", description: "Utilise des ingrédients rares ou exotiques", category: "creativity", image: "🌶️" },
-                  { name: "Confiturier du mois", description: "Meilleur vendeur du mois", category: "sales", image: "🏆" },
-                  { name: "Éco-responsable", description: "Utilise des méthodes et ingrédients durables", category: "sustainability", image: "🌱" },
-                  { name: "Super goûteur", description: "A reçu plus de 50 avis 5 étoiles", category: "reviews", image: "👅" },
-                  { name: "Jam-bassadeur", description: "A invité plus de 10 nouveaux membres", category: "community", image: "🤝" },
-                ].map((badge, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="flex-shrink-0 h-12 w-12 rounded-full bg-muted flex items-center justify-center text-xl">
-                        {badge.image}
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{badge.name}</h3>
-                        <p className="text-sm text-muted-foreground">{badge.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
+            <p>Aucune confiture en attente de validation.</p>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-2">Signalements</h2>
+        <div className="mb-4 flex items-center space-x-2">
+          <Search className="h-4 w-4 text-gray-500" />
+          <Input
+            type="text"
+            placeholder="Rechercher un signalement..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="flex-1"
+          />
+        </div>
+        {reportsLoading ? (
+          <p>Chargement des signalements...</p>
+        ) : (filteredReports.length > 0) ? (
+          <>
+            <Table>
+              <TableCaption>Liste des signalements.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Utilisateur</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Contenu</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredReports
+                  .slice((reportsPage - 1) * REPORTS_PER_PAGE, reportsPage * REPORTS_PER_PAGE)
+                  .map(report => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <div className="text-xs">
                           <Badge variant="outline" className="text-xs">
-                            {badge.category}
+                            {format(new Date(report.createdAt), 'dd/MM/yyyy')}
                           </Badge>
                         </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="px-4 py-2 border-t">
-                      <div className="flex justify-between items-center w-full">
-                        <Button variant="ghost" size="sm">
-                          Modifier
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Attribuer
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </TableCell>
+                      <TableCell>{report.reporterName}</TableCell>
+                      <TableCell>{report.reportType}</TableCell>
+                      <TableCell>{report.content}</TableCell>
+                      <TableCell>
+                        {report.status === 'pending' ? (
+                          <Badge variant="secondary">En attente</Badge>
+                        ) : (
+                          <Badge variant="outline">Résolu</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {report.status === 'pending' ? (
+                          <Button variant="ghost" size="sm">
+                            <PackageCheck className="mr-2 h-4 w-4" />
+                            Marquer comme résolu
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm">
+                            <PackageX className="mr-2 h-4 w-4" />
+                            Rouvrir
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToFirstReportsPage}
+                  disabled={reportsPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                  <span className="sr-only">Aller à la première page</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToPreviousReportsPage}
+                  disabled={reportsPage === 1}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Page précédente</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToNextReportsPage}
+                  disabled={reportsPage === reportsTotalPages}
+                >
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="sr-only">Page suivante</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={goToLastReportsPage}
+                  disabled={reportsPage === reportsTotalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                  <span className="sr-only">Aller à la dernière page</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
-        <DialogContent>
+              <span className="text-sm text-muted-foreground">
+                Page {reportsPage} sur {reportsTotalPages}
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center py-4">
+            <MessageSquare className="mr-2 h-4 w-4" />
+            <p>Aucun signalement trouvé.</p>
+          </div>
+        )}
+      </section>
+
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Rejeter la confiture</DialogTitle>
             <DialogDescription>
-              Veuillez indiquer la raison du rejet qui sera communiquée au créateur.
+              Êtes-vous sûr de vouloir rejeter cette confiture ? Veuillez fournir une raison.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex flex-col space-y-2">
-              <Select value={selectedRejectionReason} onValueChange={setSelectedRejectionReason}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez une raison" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ingredients_inappropriés">Ingrédients inappropriés ou dangereux</SelectItem>
-                  <SelectItem value="description_insuffisante">Description insuffisante</SelectItem>
-                  <SelectItem value="images_inadéquates">Images inadéquates ou manquantes</SelectItem>
-                  <SelectItem value="allergenes_non_indiqués">Allergènes non indiqués</SelectItem>
-                  <SelectItem value="other">Autre raison</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Textarea
+                id="reason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="col-span-4"
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" onClick={handleCloseRejectModal}>
               Annuler
             </Button>
-            <Button 
-              variant="default" 
-              className="bg-red-600 hover:bg-red-700"
-              onClick={rejectJam}
-              disabled={!selectedRejectionReason}
-            >
-              Rejeter la confiture
+            <Button type="button" onClick={handleConfirmReject} className="ml-2">
+              Rejeter
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
