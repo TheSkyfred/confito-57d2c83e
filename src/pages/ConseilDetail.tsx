@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -178,7 +179,7 @@ const ConseilDetail: React.FC = () => {
       </div>
       
       {article.images && article.images.length > 0 && (
-        <img src={article.images[0].url} alt={article.title} className="w-full rounded-md mb-4" />
+        <img src={article.images[0].image_url} alt={article.title} className="w-full rounded-md mb-4" />
       )}
       
       <div className="mb-6" dangerouslySetInnerHTML={{ __html: article.content || '' }} />

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const supabaseDirect = {
@@ -233,14 +232,22 @@ export const supabaseDirect = {
    */
   async incrementProductClick(productId: string) {
     try {
-      // Mise à jour directe au lieu d'utiliser une fonction RPC
-      const { data, error } = await supabase
-        .from('advice_products' as any)
-        .update({ click_count: supabase.sql`click_count + 1` })
-        .eq('id', productId);
+      // Use the update method instead of SQL
+      const { data, error } = await this.select('advice_products', '*', { id: productId });
       
       if (error) throw error;
-      return { data, error: null };
+      if (!data || data.length === 0) throw new Error('Product not found');
+      
+      const product = data[0];
+      const newClickCount = (product.click_count || 0) + 1;
+      
+      const updateResult = await this.update('advice_products', 
+        { click_count: newClickCount }, 
+        { id: productId }
+      );
+      
+      if (updateResult.error) throw updateResult.error;
+      return { data: updateResult.data, error: null };
     } catch (error: any) {
       console.error(`Erreur lors de l'incrémentation du compteur de clics:`, error);
       return { data: null, error };
@@ -253,7 +260,7 @@ export const supabaseDirect = {
    */
   async updateCommentLikesCount(commentId: string) {
     try {
-      // Calculer le nombre de likes du commentaire
+      // Count the likes for this comment
       const { count, error: countError } = await supabase
         .from('advice_comment_likes' as any)
         .select('*', { count: 'exact', head: true })
@@ -261,18 +268,17 @@ export const supabaseDirect = {
       
       if (countError) throw countError;
       
-      // Mettre à jour le compteur de likes dans le commentaire
-      const { data, error } = await supabase
-        .from('advice_comments' as any)
-        .update({ likes_count: count })
-        .eq('id', commentId);
+      // Update the comment with the new likes count
+      const updateResult = await this.update('advice_comments',
+        { likes_count: count },
+        { id: commentId }
+      );
       
-      if (error) throw error;
-      return { data, error: null };
+      if (updateResult.error) throw updateResult.error;
+      return { data: updateResult.data, error: null };
     } catch (error: any) {
       console.error(`Erreur lors de la mise à jour du compteur de likes:`, error);
       return { data: null, error };
     }
   }
 };
-
