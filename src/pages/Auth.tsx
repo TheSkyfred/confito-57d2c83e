@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Coffee, Mail, Lock, ArrowRight } from "lucide-react";
+import { Coffee, Mail, Lock, ArrowRight, Briefcase, User } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Email invalide" }),
@@ -26,6 +27,9 @@ const registerSchema = z.object({
   fullName: z.string().min(2, { message: "Nom complet requis" }),
   username: z.string().min(3, { message: "Nom d'utilisateur d'au moins 3 caractères" })
     .regex(/^[a-zA-Z0-9_]+$/, { message: "Uniquement lettres, chiffres et underscore" }),
+  accountType: z.enum(["standard", "professional"], {
+    required_error: "Veuillez choisir un type de compte"
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
@@ -56,6 +60,7 @@ const Auth = () => {
       confirmPassword: "",
       fullName: "",
       username: "",
+      accountType: "standard",
     },
   });
 
@@ -113,6 +118,15 @@ const Auth = () => {
         title: "Inscription réussie !",
         description: "Vérifiez votre email pour confirmer votre compte.",
       });
+      
+      if (values.accountType === "professional") {
+        // Rediriger vers la page de création de profil professionnel après connexion
+        localStorage.setItem("redirect_to_pro_registration", "true");
+        toast({
+          title: "Compte professionnel",
+          description: "Après confirmation de votre email, vous pourrez compléter votre profil professionnel.",
+        });
+      }
       
       setActiveTab("login");
     } catch (error: any) {
@@ -334,6 +348,50 @@ const Auth = () => {
                         <FormLabel>Confirmer le mot de passe</FormLabel>
                         <FormControl>
                           <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={registerForm.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Type de compte</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                          >
+                            <div className="flex items-center space-x-3 rounded-md border p-3">
+                              <RadioGroupItem value="standard" id="standard" />
+                              <label htmlFor="standard" className="flex flex-1 cursor-pointer items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium leading-none">Particulier</p>
+                                    <p className="text-xs text-muted-foreground">Compte standard pour les amateurs de confitures</p>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3 rounded-md border p-3">
+                              <RadioGroupItem value="professional" id="professional" />
+                              <label htmlFor="professional" className="flex flex-1 cursor-pointer items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium leading-none">Professionnel</p>
+                                    <p className="text-xs text-muted-foreground">Pour les producteurs et artisans de confitures</p>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                          </RadioGroup>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

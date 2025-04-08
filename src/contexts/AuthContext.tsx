@@ -48,6 +48,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (data) {
         setProfile(data as ProfileType);
+        
+        // Check if user needs to be redirected to pro registration
+        if (data.role === 'user' && localStorage.getItem('redirect_to_pro_registration') === 'true') {
+          localStorage.removeItem('redirect_to_pro_registration');
+          window.location.href = '/pro-registration';
+        }
+        
         return data as ProfileType;
       }
       return null;
