@@ -8,8 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import { 
+  Loader2, 
   Eye, 
   EyeOff, 
   Clock, 
@@ -35,6 +35,9 @@ const VisibilityForm: React.FC<VisibilityFormProps> = ({ saving, handleSubmit, i
               Seules les confitures complètement renseignées seront visibles par les autres utilisateurs.
               Assurez-vous d'avoir ajouté toutes les informations nécessaires avant de publier.
             </p>
+            <p className="text-sm text-muted-foreground mt-2 italic">
+              Les nouvelles confitures publiées doivent être approuvées par un modérateur avant d'être visibles par tous les utilisateurs.
+            </p>
           </div>
         </div>
       </div>
@@ -54,7 +57,7 @@ const VisibilityForm: React.FC<VisibilityFormProps> = ({ saving, handleSubmit, i
           onClick={() => handleSubmit(true)}
         >
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditMode ? 'Mettre à jour' : 'Publier'}
+          {isEditMode ? 'Mettre à jour' : 'Soumettre pour approbation'}
         </Button>
       </div>
     </div>

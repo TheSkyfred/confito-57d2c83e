@@ -1,3 +1,4 @@
+
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -42,6 +43,8 @@ export type JamType = {
   shelf_life_months?: number;
   special_edition?: boolean;
   is_active: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string | null;
   created_at: string;
   updated_at: string;
   jam_images: JamImageType[];
@@ -55,6 +58,20 @@ export type ReviewType = {
   jam_id: string;
   reviewer_id: string;
   rating: number;
+  comment: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewer?: ProfileType;
+};
+
+export type DetailedReviewType = {
+  id: string;
+  jam_id: string;
+  reviewer_id: string;
+  taste_rating: number;
+  texture_rating: number;
+  originality_rating: number;
+  balance_rating: number;
   comment: string | null;
   created_at: string;
   updated_at: string;

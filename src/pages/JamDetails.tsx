@@ -31,7 +31,10 @@ import {
   MessageSquare,
   Share2,
   Printer,
-  Clock
+  Clock,
+  Edit,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +57,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { RecipeStep } from '@/components/jam-editor/RecipeForm';
+import JamReviewForm from '@/components/jam-review/JamReviewForm';
+import JamReviewsList from '@/components/jam-review/JamReviewsList';
+import AllergensBadges from '@/components/AllergensBadges';
 
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +67,7 @@ const JamDetails = () => {
   const [favorited, setFavorited] = useState(false);
   const { addItem } = useCartStore();
   
-  const { data: jam, isLoading, error } = useQuery({
+  const { data: jam, isLoading, error, refetch } = useQuery({
     queryKey: ['jam', id],
     queryFn: async () => {
       const { data, error } = await getTypedSupabaseQuery('jams')
@@ -69,7 +75,7 @@ const JamDetails = () => {
           *,
           jam_images (*),
           reviews (*, reviewer:reviewer_id(username, avatar_url)),
-          profiles:creator_id (id, username, full_name, avatar_url)
+          profiles:creator_id (id, username, full_name, avatar_url, role)
         `)
         .eq('id', id as string)
         .single();
@@ -92,6 +98,32 @@ const JamDetails = () => {
     },
     enabled: !!id,
   });
+
+  const { data: detailedReviews } = useQuery({
+    queryKey: ['jam-detailed-reviews', id],
+    queryFn: async () => {
+      const { data, error } = await getTypedSupabaseQuery('jam_reviews')
+        .select(`
+          *,
+          reviewer:reviewer_id (id, username, avatar_url, full_name)
+        `)
+        .eq('jam_id', id as string)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const userHasReviewed = () => {
+    if (!user || !detailedReviews) return false;
+    return detailedReviews.some((review: any) => review.reviewer_id === user.id);
+  };
+
+  const isCreator = user && jam && user.id === jam.creator_id;
+  
+  const isModerator = user && jam?.profiles?.role && ['admin', 'moderator'].includes(jam.profiles.role);
 
   const toggleFavorite = async () => {
     if (!user) {
@@ -159,6 +191,63 @@ const JamDetails = () => {
     }
   };
 
+  const approveJam = async () => {
+    if (!user || !jam) return;
+    
+    try {
+      const { error } = await supabase
+        .from('jams')
+        .update({ status: 'approved' })
+        .eq('id', jam.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture approuvée",
+        description: "La confiture est maintenant visible pour tous les utilisateurs",
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error approving jam:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'approuver cette confiture",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const rejectJam = async () => {
+    if (!user || !jam) return;
+    
+    try {
+      const { error } = await supabase
+        .from('jams')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: "Cette confiture ne répond pas à nos critères de qualité."
+        })
+        .eq('id', jam.id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture rejetée",
+        description: "La confiture a été rejetée",
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error rejecting jam:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de rejeter cette confiture",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -195,7 +284,6 @@ const JamDetails = () => {
     );
   }
 
-  // Get creator profile safely
   const creatorProfile = jam.profiles || {};
   const username = safeAccess(creatorProfile as ProfileType, 'username') || 'Utilisateur';
   const fullName = safeAccess(creatorProfile as ProfileType, 'full_name') || username;
@@ -203,13 +291,11 @@ const JamDetails = () => {
   const profileInitial = getProfileInitials(username);
   const creatorId = safeAccess(creatorProfile as ProfileType, 'id');
 
-  // Safely get ratings
   const ratings = (jam.reviews || []).map((review: ReviewType) => review.rating);
   const avgRating = ratings.length > 0 
     ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
     : 0;
 
-  // Get images
   const primaryImage = jam.jam_images.find((img: any) => img.is_primary)?.url || 
                       (jam.jam_images.length > 0 ? jam.jam_images[0].url : null);
   const secondaryImages = jam.jam_images.filter((img: any) => 
@@ -218,13 +304,66 @@ const JamDetails = () => {
 
   return (
     <div className="container py-8">
-      <div className="flex items-center mb-6">
+      {jam.status === 'pending' && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="flex items-center gap-2 text-yellow-700">
+            <AlertTriangle className="h-5 w-5" />
+            <h3 className="font-medium">Confiture en attente de validation</h3>
+          </div>
+          <p className="mt-1 text-sm text-yellow-600">
+            Cette confiture est visible uniquement par son créateur et les modérateurs jusqu'à son approbation.
+          </p>
+          
+          {isModerator && (
+            <div className="flex gap-2 mt-3">
+              <Button variant="outline" size="sm" onClick={approveJam}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Approuver
+              </Button>
+              <Button variant="outline" size="sm" className="text-destructive" onClick={rejectJam}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Rejeter
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {jam.status === 'rejected' && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+          <div className="flex items-center gap-2 text-red-700">
+            <XCircle className="h-5 w-5" />
+            <h3 className="font-medium">Confiture rejetée</h3>
+          </div>
+          <p className="mt-1 text-sm text-red-600">
+            {jam.rejection_reason || "Cette confiture a été rejetée par un modérateur."}
+          </p>
+          
+          {isModerator && (
+            <Button variant="outline" size="sm" className="mt-2" onClick={approveJam}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Approuver malgré tout
+            </Button>
+          )}
+        </div>
+      )}
+      
+      <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" size="sm" asChild className="mr-2">
           <Link to="/explore">
             <ChevronLeft className="mr-1 h-4 w-4" />
             Retour
           </Link>
         </Button>
+        
+        {isCreator && (
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/jam/edit/${jam.id}`}>
+              <Edit className="mr-2 h-4 w-4" />
+              Modifier ma confiture
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -337,12 +476,8 @@ const JamDetails = () => {
                 <AlertTriangle className="h-4 w-4" />
                 <p className="font-medium">Allergènes</p>
               </div>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {jam.allergens.map((allergen: string, index: number) => (
-                  <Badge key={index} variant="outline" className="bg-amber-100 border-amber-200 text-amber-800">
-                    {allergen}
-                  </Badge>
-                ))}
+              <div className="mt-1">
+                <AllergensBadges allergens={jam.allergens} />
               </div>
             </div>
           )}
@@ -357,6 +492,7 @@ const JamDetails = () => {
                 variant="default" 
                 className="bg-jam-raspberry hover:bg-jam-raspberry/90"
                 onClick={addToCart}
+                disabled={jam.status !== 'approved'}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 Ajouter au panier
@@ -367,13 +503,13 @@ const JamDetails = () => {
       </div>
 
       <div className="mt-12">
-        <Tabs defaultValue="recipe">
+        <Tabs defaultValue="reviews">
           <TabsList className="w-full sm:w-fit">
             <TabsTrigger value="recipe">Recette</TabsTrigger>
             <TabsTrigger value="reviews" className="flex items-center gap-1">
               Avis
-              {ratings.length > 0 && (
-                <Badge variant="secondary" className="ml-1">{ratings.length}</Badge>
+              {detailedReviews && detailedReviews.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{detailedReviews.length}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
@@ -440,60 +576,21 @@ const JamDetails = () => {
             <div className="space-y-8">
               <h3 className="text-xl font-serif font-medium mb-4">
                 Avis et commentaires
-                {ratings.length > 0 && (
-                  <span className="ml-2 text-muted-foreground">
-                    (Note moyenne : {avgRating.toFixed(1)}/5)
-                  </span>
-                )}
               </h3>
               
-              {ratings.length === 0 ? (
+              {user && !userHasReviewed() && jam.status === 'approved' && (
+                <JamReviewForm jamId={jam.id} onReviewSubmitted={() => refetch()} />
+              )}
+              
+              {detailedReviews && detailedReviews.length > 0 ? (
+                <JamReviewsList reviews={detailedReviews} />
+              ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-medium">Aucun avis pour l'instant</h3>
                   <p className="text-muted-foreground mt-2">
                     Soyez le premier à donner votre avis sur cette confiture.
                   </p>
-                  {user && (
-                    <Button className="mt-4 bg-jam-raspberry hover:bg-jam-raspberry/90">
-                      Laisser un avis
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {(jam.reviews || []).map((review: ReviewType) => (
-                    <div key={review.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between">
-                        <div className="flex items-center">
-                          <ProfileDisplay profile={review.reviewer} />
-                          <div className="ml-3">
-                            <p className="font-medium">
-                              {review.reviewer ? getProfileUsername(review.reviewer) : 'Utilisateur'}
-                            </p>
-                            <div className="flex items-center">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className="h-4 w-4"
-                                  fill={i < review.rating ? "#FFA000" : "none"}
-                                  stroke={i < review.rating ? "#FFA000" : "currentColor"}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {format(new Date(review.created_at), 'dd MMM yyyy', { locale: fr })}
-                        </div>
-                      </div>
-                      {review.comment && (
-                        <div className="mt-3">
-                          <p>{review.comment}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
                 </div>
               )}
             </div>

@@ -841,6 +841,53 @@ export type Database = {
           },
         ]
       }
+      jam_reviews: {
+        Row: {
+          balance_rating: number
+          comment: string | null
+          created_at: string
+          id: string
+          jam_id: string
+          originality_rating: number
+          reviewer_id: string
+          taste_rating: number
+          texture_rating: number
+          updated_at: string
+        }
+        Insert: {
+          balance_rating: number
+          comment?: string | null
+          created_at?: string
+          id?: string
+          jam_id: string
+          originality_rating: number
+          reviewer_id: string
+          taste_rating: number
+          texture_rating: number
+          updated_at?: string
+        }
+        Update: {
+          balance_rating?: number
+          comment?: string | null
+          created_at?: string
+          id?: string
+          jam_id?: string
+          originality_rating?: number
+          reviewer_id?: string
+          taste_rating?: number
+          texture_rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jam_reviews_jam_id_fkey"
+            columns: ["jam_id"]
+            isOneToOne: false
+            referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jams: {
         Row: {
           allergens: string[] | null
@@ -856,8 +903,10 @@ export type Database = {
           price_credits: number
           production_date: string | null
           recipe: string | null
+          rejection_reason: string | null
           shelf_life_months: number | null
           special_edition: boolean | null
+          status: string | null
           sugar_content: number | null
           type: string | null
           updated_at: string
@@ -877,8 +926,10 @@ export type Database = {
           price_credits: number
           production_date?: string | null
           recipe?: string | null
+          rejection_reason?: string | null
           shelf_life_months?: number | null
           special_edition?: boolean | null
+          status?: string | null
           sugar_content?: number | null
           type?: string | null
           updated_at?: string
@@ -898,8 +949,10 @@ export type Database = {
           price_credits?: number
           production_date?: string | null
           recipe?: string | null
+          rejection_reason?: string | null
           shelf_life_months?: number | null
           special_edition?: boolean | null
+          status?: string | null
           sugar_content?: number | null
           type?: string | null
           updated_at?: string
@@ -1214,6 +1267,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_jam_average_rating: {
+        Args: { jam_uuid: string }
+        Returns: number
+      }
       random_date_last_6months: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -20,7 +19,9 @@ import {
   PlusCircle,
   Settings,
   Flag,
-  Activity
+  Activity,
+  Check,
+  X
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -59,12 +60,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from '@/hooks/use-toast';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
-import { ProfileType } from '@/types/supabase';
+import { JamType, ProfileType } from '@/types/supabase';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
+  const [selectedRejectionReason, setSelectedRejectionReason] = useState('');
+  const [jamIdToReject, setJamIdToReject] = useState<string | null>(null);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   
   const navigate = useNavigate();
 
@@ -87,22 +91,23 @@ const AdminDashboard = () => {
   
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'moderator';
 
-  // Fetch stats
+  // Fetch stats with pending jams count
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['adminStats'],
     queryFn: async () => {
-      // In a real app, this would be an aggregation query
       // For demo purposes, we fetch the counts separately
-      const [usersResponse, jamsResponse, ordersResponse] = await Promise.all([
+      const [usersResponse, jamsResponse, ordersResponse, pendingJamsResponse] = await Promise.all([
         getTypedSupabaseQuery('profiles').select('count'),
         getTypedSupabaseQuery('jams').select('count'),
-        getTypedSupabaseQuery('orders').select('count')
+        getTypedSupabaseQuery('orders').select('count'),
+        getTypedSupabaseQuery('jams').select('count').eq('status', 'pending')
       ]);
       
       return {
         userCount: usersResponse.count || 0,
         jamCount: jamsResponse.count || 0,
-        orderCount: ordersResponse.count || 0
+        orderCount: ordersResponse.count || 0,
+        pendingJamCount: pendingJamsResponse.count || 0
       };
     },
     enabled: !!isAdmin,
@@ -130,43 +135,93 @@ const AdminDashboard = () => {
     enabled: !!isAdmin,
   });
   
-  // Fetch reports for the Reports tab (this would be a real table in a production app)
-  // For demo, we're just simulating data
-  const mockReports = [
-    {
-      id: 'report-1',
-      type: 'comment',
-      reporter_id: 'user1',
-      reported_id: 'comment1',
-      reason: 'Contenu inapproprié',
-      status: 'pending',
-      created_at: '2023-06-15T14:32:00Z',
-      content: 'Ce commentaire contient des propos déplacés et offensants.',
-      reporter: { username: 'alice_confiture', avatar_url: null }
+  // Fetch pending jams
+  const { data: pendingJams, isLoading: loadingPendingJams, refetch: refetchPendingJams } = useQuery({
+    queryKey: ['pendingJams'],
+    queryFn: async () => {
+      const { data, error } = await getTypedSupabaseQuery('jams')
+        .select(`
+          *,
+          profiles:creator_id (id, username, full_name, avatar_url)
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      return data as JamType[];
     },
-    {
-      id: 'report-2',
-      type: 'jam',
-      reporter_id: 'user2',
-      reported_id: 'jam1',
-      reason: 'Information trompeuse',
-      status: 'pending',
-      created_at: '2023-06-14T10:15:00Z',
-      content: 'Les ingrédients listés ne correspondent pas au contenu réel.',
-      reporter: { username: 'bob_confiture', avatar_url: null }
-    },
-    {
-      id: 'report-3',
-      type: 'user',
-      reporter_id: 'user3',
-      reported_id: 'user4',
-      reason: 'Comportement abusif',
-      status: 'resolved',
-      created_at: '2023-06-10T08:45:00Z',
-      content: 'Cet utilisateur a envoyé des messages harcelants.',
-      reporter: { username: 'charlie_confiture', avatar_url: null }
+    enabled: !!isAdmin,
+  });
+  
+  // Fonction pour approuver une confiture
+  const approveJam = async (jamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('jams')
+        .update({ status: 'approved' })
+        .eq('id', jamId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture approuvée",
+        description: "La confiture est maintenant visible pour tous les utilisateurs",
+      });
+      
+      refetchPendingJams();
+    } catch (error: any) {
+      console.error('Error approving jam:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de l'approbation",
+        variant: "destructive"
+      });
     }
-  ];
+  };
+  
+  // Fonction pour ouvrir la boîte de dialogue de rejet
+  const openRejectDialog = (jamId: string) => {
+    setJamIdToReject(jamId);
+    setIsRejectionDialogOpen(true);
+  };
+  
+  // Fonction pour rejeter une confiture
+  const rejectJam = async () => {
+    if (!jamIdToReject) return;
+    
+    try {
+      const rejectionReason = selectedRejectionReason === 'other' 
+        ? "Cette confiture ne répond pas à nos critères de qualité." 
+        : selectedRejectionReason;
+        
+      const { error } = await supabase
+        .from('jams')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: rejectionReason
+        })
+        .eq('id', jamIdToReject);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture rejetée",
+        description: "La confiture a été rejetée et le créateur a été informé",
+      });
+      
+      setIsRejectionDialogOpen(false);
+      setSelectedRejectionReason('');
+      setJamIdToReject(null);
+      refetchPendingJams();
+    } catch (error: any) {
+      console.error('Error rejecting jam:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du rejet",
+        variant: "destructive"
+      });
+    }
+  };
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'moderator' | 'admin') => {
     try {
@@ -241,7 +296,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="bg-jam-raspberry/10 p-3 rounded-full">
@@ -289,11 +344,36 @@ const AdminDashboard = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <Card className={stats?.pendingJamCount ? "border-amber-300 bg-amber-50" : ""}>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className={`${stats?.pendingJamCount ? "bg-amber-400/20" : "bg-muted"} p-3 rounded-full`}>
+              <AlertTriangle className={`h-6 w-6 ${stats?.pendingJamCount ? "text-amber-600" : "text-muted-foreground"}`} />
+            </div>
+            <div>
+              {loadingStats ? (
+                <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
+              ) : (
+                <p className="text-2xl font-bold">{stats?.pendingJamCount}</p>
+              )}
+              <p className="text-sm text-muted-foreground">En attente</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Admin Tabs */}
-      <Tabs defaultValue="users">
-        <TabsList className="grid w-full md:w-fit grid-cols-3 mb-6">
+      <Tabs defaultValue="pending-jams">
+        <TabsList className="grid w-full md:w-fit grid-cols-4 mb-6">
+          <TabsTrigger value="pending-jams" className="relative">
+            <AlertTriangle className="mr-2 h-4 w-4" />
+            En attente
+            {stats?.pendingJamCount ? (
+              <Badge variant="destructive" className="ml-2 absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 h-5 min-w-[1.25rem] flex items-center justify-center">
+                {stats.pendingJamCount}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
           <TabsTrigger value="users">
             <Users className="mr-2 h-4 w-4" />
             Utilisateurs
@@ -307,6 +387,104 @@ const AdminDashboard = () => {
             Badges
           </TabsTrigger>
         </TabsList>
+        
+        {/* Pending Jams Tab */}
+        <TabsContent value="pending-jams">
+          <Card>
+            <CardHeader>
+              <CardTitle>Confitures en attente d'approbation</CardTitle>
+              <CardDescription>
+                Vérifiez et approuvez les confitures soumises par les utilisateurs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingPendingJams ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-jam-raspberry" />
+                </div>
+              ) : pendingJams?.length === 0 ? (
+                <div className="text-center py-8">
+                  <Check className="h-12 w-12 mx-auto text-green-500 mb-4" />
+                  <p className="font-medium text-lg">Aucune confiture en attente</p>
+                  <p className="text-muted-foreground">Toutes les soumissions ont été traitées.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingJams?.map((jam) => (
+                    <Card key={jam.id}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-14 w-14 rounded-md overflow-hidden bg-muted">
+                              {jam.jam_images && jam.jam_images[0] ? (
+                                <img 
+                                  src={jam.jam_images[0].url} 
+                                  alt={jam.name} 
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                                  No image
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{jam.name}</h3>
+                              <div className="flex items-center mt-1">
+                                <Avatar className="h-4 w-4 mr-1">
+                                  <AvatarImage src={(jam.profiles as any)?.avatar_url || undefined} />
+                                  <AvatarFallback>{((jam.profiles as any)?.username || '?')[0].toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground">
+                                  {(jam.profiles as any)?.username || 'Utilisateur inconnu'}
+                                </span>
+                                <Badge variant="outline" size="sm" className="ml-2 text-xs">
+                                  {format(new Date(jam.created_at), 'dd/MM/yyyy')}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/jam/${jam.id}`} target="_blank">
+                                Voir
+                              </Link>
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => openRejectDialog(jam.id)}
+                            >
+                              <X className="mr-1 h-4 w-4" />
+                              Rejeter
+                            </Button>
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => approveJam(jam.id)}
+                            >
+                              <Check className="mr-1 h-4 w-4" />
+                              Approuver
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => refetchPendingJams()}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Actualiser
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
         
         {/* Users Tab */}
         <TabsContent value="users">
@@ -616,6 +794,47 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Dialog de rejet */}
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeter la confiture</DialogTitle>
+            <DialogDescription>
+              Veuillez indiquer la raison du rejet qui sera communiquée au créateur.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col space-y-2">
+              <Select value={selectedRejectionReason} onValueChange={setSelectedRejectionReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une raison" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ingredients_inappropriés">Ingrédients inappropriés ou dangereux</SelectItem>
+                  <SelectItem value="description_insuffisante">Description insuffisante</SelectItem>
+                  <SelectItem value="images_inadéquates">Images inadéquates ou manquantes</SelectItem>
+                  <SelectItem value="allergenes_non_indiqués">Allergènes non indiqués</SelectItem>
+                  <SelectItem value="other">Autre raison</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              variant="default" 
+              className="bg-red-600 hover:bg-red-700"
+              onClick={rejectJam}
+              disabled={!selectedRejectionReason}
+            >
+              Rejeter la confiture
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
