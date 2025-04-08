@@ -89,52 +89,56 @@ const FruitDetail = () => {
   const { data: recipes, isLoading: loadingRecipes } = useQuery({
     queryKey: ['fruitRecipes', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('recipes')
-        .select(`
-          id, 
-          title, 
-          image_url, 
-          difficulty, 
-          prep_time_minutes,
-          average_rating
-        `)
-        .eq('primary_fruit_id', id)
-        .limit(6);
-
-      if (error) throw error;
-
-      // Get recipes from recipe links
-      const { data: linkedRecipes, error: linkError } = await supabase
-        .from('fruit_recipe_links')
-        .select(`
-          recipe_id,
-          recipes (
+      try {
+        // Fetch recipes where this fruit is the primary fruit
+        const { data: primaryRecipes, error: primaryError } = await supabase
+          .from('recipes')
+          .select(`
             id, 
             title, 
             image_url, 
             difficulty, 
-            prep_time_minutes,
-            average_rating
-          )
-        `)
-        .eq('fruit_id', id)
-        .limit(10);
+            prep_time_minutes
+          `)
+          .eq('primary_fruit_id', id)
+          .limit(6);
 
-      if (linkError) throw linkError;
+        if (primaryError) throw primaryError;
 
-      // Combine both sets of recipes
-      const allRecipes = [
-        ...(data || []), 
-        ...(linkedRecipes?.filter(r => r.recipes).map(link => link.recipes) || [])
-      ];
+        // Get recipes from recipe links
+        const { data: linkedRecipes, error: linkError } = await supabase
+          .from('fruit_recipe_links')
+          .select(`
+            recipe_id,
+            recipes (
+              id, 
+              title, 
+              image_url, 
+              difficulty, 
+              prep_time_minutes
+            )
+          `)
+          .eq('fruit_id', id)
+          .limit(10);
 
-      // Remove duplicates
-      const uniqueRecipes = Array.from(
-        new Map(allRecipes.filter(Boolean).map(item => [item['id'], item]))
-      ).map(([_, item]) => item);
+        if (linkError) throw linkError;
 
-      return uniqueRecipes;
+        // Combine both sets of recipes
+        const allRecipes = [
+          ...(primaryRecipes || []), 
+          ...(linkedRecipes?.filter(r => r.recipes).map(link => link.recipes) || [])
+        ];
+
+        // Remove duplicates
+        const uniqueRecipes = Array.from(
+          new Map(allRecipes.filter(Boolean).map(item => [item['id'], item]))
+        ).map(([_, item]) => item);
+
+        return uniqueRecipes;
+      } catch (error) {
+        console.error("Erreur lors de la récupération des recettes:", error);
+        return [];
+      }
     },
     enabled: !!id,
   });
@@ -393,7 +397,7 @@ const FruitDetail = () => {
                     </div>
                   ) : recipes && recipes.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {recipes.map((recipe) => (
+                      {recipes.map((recipe: any) => (
                         <Link to={`/recipes/${recipe.id}`} key={recipe.id}>
                           <Card className="h-full hover:shadow-md transition-shadow cursor-pointer">
                             <CardHeader className="p-4">
