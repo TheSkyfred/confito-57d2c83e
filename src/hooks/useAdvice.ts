@@ -9,19 +9,13 @@ export const useAdvice = (filters?: AdviceFilters) => {
   const [filteredAdvice, setFilteredAdvice] = useState<AdviceArticle[]>([]);
 
   const fetchAdviceArticles = async () => {
-    let query = supabase
-      .from('advice_articles')
-      .select(`
+    const { data, error } = await supabaseDirect.select('advice_articles', `
         *,
         author:profiles(*),
         images:advice_images(*),
         products:advice_products(*),
         comments:advice_comments(count)
-      `)
-      .eq('visible', true)
-      .order('published_at', { ascending: false });
-    
-    const { data, error } = await query;
+      `, 'visible=eq.true');
     
     if (error) {
       console.error('Erreur lors de la récupération des conseils:', error);
@@ -101,30 +95,33 @@ export const useAdvice = (filters?: AdviceFilters) => {
 
 export const useAdviceArticle = (articleId: string) => {
   const fetchAdviceArticle = async () => {
-    const { data, error } = await supabase
-      .from('advice_articles')
-      .select(`
+    if (!articleId) throw new Error("Article ID est requis");
+    
+    const { data, error } = await supabaseDirect.select('advice_articles', `
+      *,
+      author:profiles(*),
+      images:advice_images(*),
+      products:advice_products(*),
+      comments:advice_comments(
         *,
-        author:profiles(*),
-        images:advice_images(*),
-        products:advice_products(*),
-        comments:advice_comments(
-          *,
-          user:profiles(*)
-        )
-      `)
-      .eq('id', articleId)
-      .eq('visible', true)
-      .single();
+        user:profiles(*)
+      )
+    `, `id=eq.${articleId},visible=eq.true`);
     
     if (error) {
       console.error('Erreur lors de la récupération du conseil:', error);
       throw error;
     }
     
+    if (!data || data.length === 0) {
+      throw new Error('Article non trouvé');
+    }
+    
+    const article = data[0];
+    
     // Transformer les commentaires pour identifier les fils de discussion
-    if (data && data.comments) {
-      const comments = data.comments as any[];
+    if (article && article.comments) {
+      const comments = article.comments as any[];
       const rootComments = comments.filter(c => !c.parent_comment_id);
       const commentReplies = comments.filter(c => c.parent_comment_id);
       
@@ -134,13 +131,13 @@ export const useAdviceArticle = (articleId: string) => {
         );
       });
       
-      data.comments = rootComments;
+      article.comments = rootComments;
     }
     
     return {
-      ...data,
-      has_video: Boolean(data.video_url),
-      has_products: data.products && data.products.length > 0
+      ...article,
+      has_video: Boolean(article.video_url),
+      has_products: article.products && article.products.length > 0
     } as AdviceArticle;
   };
   

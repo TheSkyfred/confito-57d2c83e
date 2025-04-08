@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAdviceArticle } from '@/hooks/useAdvice';
@@ -7,7 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { AdviceComment } from '@/types/advice';
 import { 
   ArrowLeft, 
@@ -59,17 +58,14 @@ const ConseilDetail = () => {
   };
   
   const handleSubmitComment = async () => {
-    if (!user || !newComment.trim()) return;
+    if (!user || !newComment.trim() || !id) return;
     
     try {
-      const { data, error } = await supabase
-        .from('advice_comments')
-        .insert({
-          article_id: id,
-          user_id: user.id,
-          content: newComment.trim(),
-        })
-        .select('*');
+      const { data, error } = await supabaseDirect.insertAndReturn('advice_comments', {
+        article_id: id,
+        user_id: user.id,
+        content: newComment.trim(),
+      });
         
       if (error) throw error;
       
@@ -91,18 +87,15 @@ const ConseilDetail = () => {
   };
   
   const handleSubmitReply = async (parentId: string) => {
-    if (!user || !replyContent[parentId]?.trim()) return;
+    if (!user || !replyContent[parentId]?.trim() || !id) return;
     
     try {
-      const { data, error } = await supabase
-        .from('advice_comments')
-        .insert({
-          article_id: id,
-          user_id: user.id,
-          content: replyContent[parentId].trim(),
-          parent_comment_id: parentId
-        })
-        .select('*');
+      const { data, error } = await supabaseDirect.insertAndReturn('advice_comments', {
+        article_id: id,
+        user_id: user.id,
+        content: replyContent[parentId].trim(),
+        parent_comment_id: parentId
+      });
         
       if (error) throw error;
       
@@ -131,31 +124,24 @@ const ConseilDetail = () => {
     try {
       if (isLiked) {
         // Supprimer le like
-        const { error } = await supabase
-          .from('advice_comment_likes')
-          .delete()
-          .eq('comment_id', commentId)
-          .eq('user_id', user.id);
+        const { error } = await supabaseDirect.delete('advice_comment_likes', {
+          comment_id: commentId,
+          user_id: user.id
+        });
           
         if (error) throw error;
       } else {
         // Ajouter un like
-        const { error } = await supabase
-          .from('advice_comment_likes')
-          .insert({
-            comment_id: commentId,
-            user_id: user.id
-          });
+        const { error } = await supabaseDirect.insert('advice_comment_likes', {
+          comment_id: commentId,
+          user_id: user.id
+        });
           
         if (error) throw error;
       }
       
       // Mettre à jour le compteur de likes du commentaire
-      const { error } = await supabase.rpc('update_comment_likes_count', {
-        p_comment_id: commentId
-      });
-      
-      if (error) throw error;
+      await supabaseDirect.updateCommentLikesCount(commentId);
       
       refetch();
     } catch (error: any) {
@@ -170,10 +156,9 @@ const ConseilDetail = () => {
   
   const handleDeleteComment = async (commentId: string) => {
     try {
-      const { error } = await supabase
-        .from('advice_comments')
-        .delete()
-        .eq('id', commentId);
+      const { error } = await supabaseDirect.delete('advice_comments', {
+        id: commentId
+      });
         
       if (error) throw error;
       
@@ -195,13 +180,6 @@ const ConseilDetail = () => {
   
   const toggleReplyForm = (commentId: string) => {
     if (article && article.comments) {
-      const updatedComments = article.comments.map(comment => {
-        if (comment.id === commentId) {
-          return { ...comment, is_replying: !comment.is_replying };
-        }
-        return comment;
-      });
-      
       refetch();
     }
   };
@@ -211,11 +189,7 @@ const ConseilDetail = () => {
     
     try {
       // Incrémenter le compteur de clics
-      const { error } = await supabase.rpc('increment_product_clicks', {
-        p_product_id: productId
-      });
-      
-      if (error) throw error;
+      await supabaseDirect.incrementProductClick(productId);
     } catch (error) {
       console.error('Erreur lors du suivi du clic:', error);
     }
@@ -296,10 +270,9 @@ const ConseilDetail = () => {
                   <AlertDialogAction
                     onClick={async () => {
                       try {
-                        const { error } = await supabase
-                          .from('advice_articles')
-                          .delete()
-                          .eq('id', article.id);
+                        const { error } = await supabaseDirect.delete('advice_articles', {
+                          id: article.id
+                        });
                           
                         if (error) throw error;
                         

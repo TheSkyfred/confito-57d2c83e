@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { AdviceType } from '@/types/advice';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -76,7 +75,7 @@ const ConseilCreate = () => {
       cover_image_url: '',
       video_url: '',
       content: '',
-      type: 'fruitee' as AdviceType,
+      type: 'fruits' as AdviceType,
       tags: '',
       visible: true,
     }
@@ -92,20 +91,16 @@ const ConseilCreate = () => {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
       
-      const { data: articleData, error } = await supabase
-        .from('advice_articles')
-        .insert({
-          title: data.title,
-          author_id: user.id,
-          cover_image_url: data.cover_image_url || null,
-          video_url: data.video_url || null,
-          content: data.content,
-          type: data.type,
-          tags: tagsArray,
-          visible: data.visible
-        })
-        .select()
-        .single();
+      const { data: articleData, error } = await supabaseDirect.insertAndReturn('advice_articles', {
+        title: data.title,
+        author_id: user.id,
+        cover_image_url: data.cover_image_url || null,
+        video_url: data.video_url || null,
+        content: data.content,
+        type: data.type,
+        tags: tagsArray,
+        visible: data.visible
+      });
         
       if (error) throw error;
       
@@ -114,7 +109,7 @@ const ConseilCreate = () => {
         description: "Votre conseil a été publié avec succès"
       });
       
-      navigate(`/conseils/${articleData.id}`);
+      navigate(`/conseils/${articleData[0].id}`);
     } catch (error: any) {
       console.error('Erreur lors de la création du conseil:', error);
       toast({

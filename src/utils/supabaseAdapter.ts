@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const supabaseDirect = {
@@ -232,9 +233,11 @@ export const supabaseDirect = {
    */
   async incrementProductClick(productId: string) {
     try {
-      const { data, error } = await supabase.rpc('increment_product_clicks', {
-        p_product_id: productId
-      });
+      // Mise à jour directe au lieu d'utiliser une fonction RPC
+      const { data, error } = await supabase
+        .from('advice_products' as any)
+        .update({ click_count: supabase.rpc('increment', { value: 1 }) })
+        .eq('id', productId);
       
       if (error) throw error;
       return { data, error: null };
@@ -250,9 +253,19 @@ export const supabaseDirect = {
    */
   async updateCommentLikesCount(commentId: string) {
     try {
-      const { data, error } = await supabase.rpc('update_comment_likes_count', {
-        p_comment_id: commentId
-      });
+      // Calculer le nombre de likes du commentaire
+      const { count, error: countError } = await supabase
+        .from('advice_comment_likes' as any)
+        .select('*', { count: 'exact', head: true })
+        .eq('comment_id', commentId);
+      
+      if (countError) throw countError;
+      
+      // Mettre à jour le compteur de likes dans le commentaire
+      const { data, error } = await supabase
+        .from('advice_comments' as any)
+        .update({ likes_count: count })
+        .eq('id', commentId);
       
       if (error) throw error;
       return { data, error: null };
