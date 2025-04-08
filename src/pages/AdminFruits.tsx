@@ -124,7 +124,8 @@ const AdminFruits = () => {
     setIsFormOpen(true);
     setActiveTab("add");
   };
-
+  
+  // Fix: Prevent rendering until role check is complete
   if (roleLoading) {
     return (
       <div className="container py-8 flex items-center justify-center">
@@ -133,6 +134,7 @@ const AdminFruits = () => {
     );
   }
 
+  // Fix: Return null early if not authorized
   if (!isAdmin && !isModerator) {
     return null;
   }
@@ -224,13 +226,15 @@ const AdminFruits = () => {
               <CardDescription>Complétez les informations pour créer un nouveau fruit saisonnier</CardDescription>
             </CardHeader>
             <CardContent>
-              <FruitForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
+              {activeTab === "add" && (
+                <FruitForm onSubmit={handleFormSubmit} onCancel={handleFormCancel} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="edit" className="mt-0">
-          {selectedFruit && (
+          {selectedFruit && activeTab === "edit" && (
             <Card>
               <CardHeader>
                 <CardTitle>Modifier {selectedFruit.name}</CardTitle>
@@ -244,7 +248,7 @@ const AdminFruits = () => {
         </TabsContent>
 
         <TabsContent value="view" className="mt-0">
-          {selectedFruit && (
+          {selectedFruit && activeTab === "view" && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
