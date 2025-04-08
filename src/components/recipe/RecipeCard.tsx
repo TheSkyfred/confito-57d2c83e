@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -23,7 +22,7 @@ interface RecipeCardProps {
   recipe: RecipeType;
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
+export default function RecipeCard({ recipe }: RecipeCardProps) {
   const {
     id,
     title,
@@ -118,6 +117,4 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
       </CardFooter>
     </Card>
   );
-};
-
-export default RecipeCard;
+}

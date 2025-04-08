@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RecipeCard } from '@/components/recipe/RecipeCard';
+import RecipeCard from '@/components/recipe/RecipeCard'; // Updated import
 import { RecipeFilters } from '@/components/recipe/RecipeFilters';
 import { RecipeType } from '@/types/recipes';
 import { adaptDbRecipeToRecipeType } from '@/utils/supabaseHelpers';
