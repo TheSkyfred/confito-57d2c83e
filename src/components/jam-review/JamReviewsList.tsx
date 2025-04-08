@@ -49,7 +49,13 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
       {reviews.map(review => {
         const avgRating = calculateAverageRating(review);
         const isUserReview = user && review.reviewer_id === user.id;
+        // Fix: Handle reviewer properly to ensure type safety
         const reviewer = review.reviewer || {};
+        const reviewerName = review.reviewer 
+          ? (typeof review.reviewer === 'object' && 'full_name' in review.reviewer 
+             ? review.reviewer.full_name || review.reviewer.username 
+             : 'Utilisateur')
+          : 'Utilisateur';
         
         return (
           <Card key={review.id}>
@@ -61,7 +67,7 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
                   )}
                   <div className="ml-3">
                     <p className="font-medium">
-                      {review.reviewer ? (reviewer.full_name || reviewer.username) : 'Utilisateur'}
+                      {reviewerName}
                     </p>
                     <div className="flex items-center mt-1">
                       {[1, 2, 3, 4, 5].map((value) => (

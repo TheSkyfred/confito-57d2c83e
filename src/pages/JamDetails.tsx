@@ -104,31 +104,29 @@ const JamDetails = () => {
   const { data: detailedReviews, refetch: refetchReviews } = useQuery({
     queryKey: ['jam-detailed-reviews', id],
     queryFn: async () => {
-      const { data: reviews, error: reviewsError } = await supabaseDirect.select('jam_reviews', `*`)
-        .eq('jam_id', id as string);
+      const { data: reviews, error: reviewsError } = await supabaseDirect.selectWhere('jam_reviews', 'jam_id', id);
       
       if (reviewsError) throw reviewsError;
       
-      const reviewerIds = reviews.map((review: any) => review.reviewer_id);
+      const reviewerIds = reviews?.map((review: any) => review.reviewer_id) || [];
       
       if (reviewerIds.length > 0) {
-        const { data: reviewers, error: reviewersError } = await supabaseDirect.select('profiles', `*`)
-          .in('id', reviewerIds);
+        const { data: reviewers, error: reviewersError } = await supabaseDirect.selectWhereIn('profiles', 'id', reviewerIds);
         
         if (reviewersError) throw reviewersError;
         
         const detailedReviews = reviews.map((review: any) => {
-          const reviewer = reviewers.find((r: any) => r.id === review.reviewer_id);
+          const reviewer = reviewers?.find((r: any) => r.id === review.reviewer_id) || null;
           return {
             ...review,
-            reviewer: reviewer || null
+            reviewer
           };
         });
         
         return detailedReviews;
       }
       
-      return reviews.map((review: any) => ({ ...review, reviewer: null }));
+      return reviews?.map((review: any) => ({ ...review, reviewer: null })) || [];
     },
     enabled: !!id,
   });
