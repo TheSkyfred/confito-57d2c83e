@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
 import { Coffee } from "lucide-react"
 
-export default function HeroSection() {
+interface HeroSectionProps {
+  showRegistration?: boolean;
+}
+
+export default function HeroSection({ showRegistration = true }: HeroSectionProps) {
   return (
     <div className="relative bg-gradient-to-br from-jam-honey/20 via-white to-jam-raspberry/10 overflow-hidden">
       {/* Formes décoratives */}
@@ -33,9 +37,11 @@ export default function HeroSection() {
               <Button asChild size="lg" className="bg-jam-raspberry hover:bg-jam-raspberry/90">
                 <Link to="/explore">Découvrir les confitures</Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/register">Créer un compte</Link>
-              </Button>
+              {showRegistration && (
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/register">Créer un compte</Link>
+                </Button>
+              )}
             </div>
             
             <div className="flex items-center justify-center md:justify-start gap-2 mt-8">
