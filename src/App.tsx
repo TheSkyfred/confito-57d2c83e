@@ -39,6 +39,7 @@ import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminFruits from './pages/AdminFruits';
 import FruitDetail from './pages/FruitDetail';
+import AdminUsers from './pages/AdminUsers';
 
 // Nouvelles pages pour les conseils
 import Conseils from './pages/Conseils';
@@ -82,6 +83,7 @@ function App() {
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" id="id" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   <Route path="/admin/fruits" element={<AdminFruits />} />
+                  <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/rankings" element={<Rankings />} />
                   <Route path="/pro-dashboard" element={<ProDashboard />} />
                   <Route path="/pro-registration" element={<ProRegistration />} />
