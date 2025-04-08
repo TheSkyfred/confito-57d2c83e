@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +10,15 @@ interface AuthContextProps {
   profile: ProfileType | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, metadata?: object) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: AccountMetadata) => Promise<void>;
   signOut: () => Promise<void>;
+}
+
+interface AccountMetadata {
+  accountType: 'standard' | 'professional';
+  fullName?: string;
+  username?: string;
+  [key: string]: any;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -27,7 +33,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch profile data with error handling
   const fetchUserProfile = async (userId: string) => {
     try {
       if (!userId) {
@@ -39,7 +44,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle instead of single to handle null case
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -49,12 +54,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (data) {
         setProfile(data as ProfileType);
         
-        // Check if user needs to be redirected to pro registration
         if (data.role === 'user' && localStorage.getItem('redirect_to_pro_registration') === 'true') {
           localStorage.removeItem('redirect_to_pro_registration');
           window.location.href = '/pro-registration';
         }
-        // Redirect new pros to the pro dashboard after registration is complete
         else if (data.role === 'pro' && localStorage.getItem('pro_registration_complete') === 'true') {
           localStorage.removeItem('pro_registration_complete');
           window.location.href = '/pro-dashboard';
@@ -70,12 +73,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   useEffect(() => {
-    // Keep track if the component is mounted
     let isMounted = true;
 
     const setupAuth = async () => {
       try {
-        // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           (event, currentSession) => {
             if (!isMounted) return;
@@ -84,7 +85,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(currentSession?.user ?? null);
             
             if (currentSession?.user) {
-              // Use setTimeout to avoid potential recursive auth issues
               setTimeout(() => {
                 if (isMounted) {
                   fetchUserProfile(currentSession.user.id);
@@ -102,7 +102,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         );
 
-        // THEN check for existing session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
         if (isMounted) {
@@ -143,7 +142,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, metadata?: object) => {
+  const signUp = async (email: string, password: string, metadata?: AccountMetadata) => {
     const { error, data } = await supabase.auth.signUp({
       email,
       password,
@@ -152,10 +151,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     if (error) throw error;
     
-    // If this is a professional account registration, create a placeholder pro_profile
-    if (metadata && 'accountType' in metadata && metadata.accountType === 'professional' && data.user) {
+    if (metadata && metadata.accountType === 'professional' && data.user) {
       try {
-        // Create a basic pro_profile entry that will be completed later by the user
         const { error: proProfileError } = await supabase.from('pro_profiles').insert({
           id: data.user.id,
           company_name: metadata.fullName || 'Company Name',
