@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -54,34 +55,39 @@ const AdsCampaignsList: React.FC = () => {
   const { data: campaigns, isLoading, error, refetch } = useQuery({
     queryKey: ['adsCampaigns'],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select('ads_campaigns', `
-        *,
-        jam:jam_id (
-          id,
-          name,
-          image_url: jam_images(url, is_primary)
-        ),
-        creator:created_by (
-          id, 
-          username, 
-          full_name
-        ),
-        clicks:ads_clicks (id),
-        conversions:ads_conversions (id)
-      `);
+      try {
+        const { data, error } = await supabaseDirect.select('ads_campaigns', `
+          *,
+          jam:jam_id (
+            id,
+            name,
+            image_url: jam_images(url, is_primary)
+          ),
+          creator:created_by (
+            id, 
+            username, 
+            full_name
+          ),
+          clicks:ads_clicks (id),
+          conversions:ads_conversions (id)
+        `);
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      // Calculer les métriques
-      return (data || []).map((campaign: any) => ({
-        ...campaign,
-        clicks_count: campaign.clicks?.length || 0,
-        conversions_count: campaign.conversions?.length || 0,
-        ctr: campaign.clicks?.length ? 
-          (campaign.clicks.length / campaign.planned_impressions) * 100 : 0,
-        conversion_rate: campaign.clicks?.length && campaign.conversions?.length ? 
-          (campaign.conversions.length / campaign.clicks.length) * 100 : 0
-      })) as AdsCampaignType[];
+        // Calculer les métriques
+        return (data || []).map((campaign: any) => ({
+          ...campaign,
+          clicks_count: campaign.clicks?.length || 0,
+          conversions_count: campaign.conversions?.length || 0,
+          ctr: campaign.clicks?.length ? 
+            (campaign.clicks.length / campaign.planned_impressions) * 100 : 0,
+          conversion_rate: campaign.clicks?.length && campaign.conversions?.length ? 
+            (campaign.conversions.length / campaign.clicks.length) * 100 : 0
+        })) as AdsCampaignType[];
+      } catch (error) {
+        console.error("Error fetching campaigns:", error);
+        throw error;
+      }
     }
   });
   
@@ -227,7 +233,7 @@ const AdsCampaignsList: React.FC = () => {
         </div>
         
         <Button asChild className="w-full sm:w-auto">
-          <Link to="/admin/campaigns/new">
+          <Link to="/admin/ads/new">
             <Plus className="mr-2 h-4 w-4" />
             Nouvelle campagne
           </Link>
@@ -308,17 +314,17 @@ const AdsCampaignsList: React.FC = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                          <Link to={`/admin/campaigns/${campaign.id}`}>
+                          <Link to={`/admin/ads/view/${campaign.id}`}>
                             <Eye className="mr-2 h-4 w-4" /> Voir les détails
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/admin/campaigns/edit/${campaign.id}`}>
+                          <Link to={`/admin/ads/edit/${campaign.id}`}>
                             <Edit className="mr-2 h-4 w-4" /> Modifier
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/admin/campaigns/${campaign.id}/invoices`}>
+                          <Link to={`/admin/ads/invoices/${campaign.id}`}>
                             <FileText className="mr-2 h-4 w-4" /> Factures
                           </Link>
                         </DropdownMenuItem>
