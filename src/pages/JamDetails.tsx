@@ -68,6 +68,7 @@ const JamDetails = () => {
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   const { addItem } = useCartStore();
+  const [reviewToEdit, setReviewToEdit] = useState<DetailedReviewType | undefined>();
   
   const { data: jam, isLoading, error, refetch } = useQuery({
     queryKey: ['jam', id],
@@ -101,7 +102,7 @@ const JamDetails = () => {
     enabled: !!id,
   });
 
-  const { data: detailedReviews } = useQuery({
+  const { data: detailedReviews, refetch: refetchReviews } = useQuery({
     queryKey: ['jam-detailed-reviews', id],
     queryFn: async () => {
       const { data, error } = await supabaseDirect.select('jam_reviews', `
@@ -120,9 +121,27 @@ const JamDetails = () => {
     return detailedReviews.some((review: any) => review.reviewer_id === user.id);
   };
 
+  const getUserReview = () => {
+    if (!user || !detailedReviews) return undefined;
+    return detailedReviews.find((review: any) => review.reviewer_id === user.id);
+  };
+
   const isCreator = user && jam && user.id === jam.creator_id;
   
   const isModerator = user && jam?.profiles?.role && ['admin', 'moderator'].includes(jam.profiles.role);
+
+  const refreshReviews = () => {
+    refetchReviews();
+    setReviewToEdit(undefined);
+  };
+
+  const handleEditReview = (review: DetailedReviewType) => {
+    setReviewToEdit(review);
+  };
+
+  const cancelEditReview = () => {
+    setReviewToEdit(undefined);
+  };
 
   const toggleFavorite = async () => {
     if (!user) {
@@ -300,6 +319,8 @@ const JamDetails = () => {
   const secondaryImages = jam.jam_images.filter((img: any) => 
     img.url !== primaryImage
   );
+
+  const userReview = getUserReview();
 
   return (
     <div className="container py-8">
@@ -577,12 +598,42 @@ const JamDetails = () => {
                 Avis et commentaires
               </h3>
               
-              {user && !userHasReviewed() && jam.status === 'approved' && (
-                <JamReviewForm jamId={jam.id} onReviewSubmitted={() => refetch()} />
+              {user && jam.status === 'approved' && (
+                <>
+                  {reviewToEdit ? (
+                    <JamReviewForm 
+                      jamId={jam.id} 
+                      onReviewSubmitted={refreshReviews} 
+                      reviewToEdit={reviewToEdit} 
+                      onCancelEdit={cancelEditReview}
+                    />
+                  ) : (
+                    userReview ? (
+                      <div className="mb-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-lg font-medium">Votre avis</h4>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleEditReview(userReview as DetailedReviewType)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Modifier votre avis
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <JamReviewForm jamId={jam.id} onReviewSubmitted={refreshReviews} />
+                    )
+                  )}
+                </>
               )}
               
               {detailedReviews && detailedReviews.length > 0 ? (
-                <JamReviewsList reviews={detailedReviews as DetailedReviewType[]} />
+                <JamReviewsList 
+                  reviews={detailedReviews as DetailedReviewType[]} 
+                  onEditReview={user ? handleEditReview : undefined}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />

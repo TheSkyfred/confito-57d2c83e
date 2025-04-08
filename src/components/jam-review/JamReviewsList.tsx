@@ -1,14 +1,18 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Star } from 'lucide-react';
+import { Star, Edit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { DetailedReviewType } from '@/types/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface JamReviewsListProps {
   reviews: DetailedReviewType[];
+  onEditReview?: (review: DetailedReviewType) => void;
 }
 
 // Critères d'évaluation pour l'affichage
@@ -19,7 +23,9 @@ const criteria = [
   { id: 'balance_rating', label: 'Équilibre sucre/fruit' }
 ];
 
-const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
+const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }) => {
+  const { user } = useAuth();
+  
   // Calculer la note moyenne globale
   const calculateAverageRating = (review: DetailedReviewType) => {
     const ratings = [
@@ -38,6 +44,7 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
     <div className="space-y-6">
       {reviews.map(review => {
         const avgRating = calculateAverageRating(review);
+        const isUserReview = user && review.reviewer_id === user.id;
         
         return (
           <Card key={review.id}>
@@ -64,8 +71,22 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
                     </div>
                   </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {format(new Date(review.created_at), 'dd MMMM yyyy', { locale: fr })}
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(review.created_at), 'dd MMMM yyyy', { locale: fr })}
+                  </div>
+                  
+                  {isUserReview && onEditReview && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => onEditReview(review)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Modifier
+                    </Button>
+                  )}
                 </div>
               </div>
               

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { toast } from '@/hooks/use-toast';
@@ -8,10 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { DetailedReviewType } from '@/types/supabase';
 
 interface JamReviewFormProps {
   jamId: string;
   onReviewSubmitted: () => void;
+  reviewToEdit?: DetailedReviewType;
+  onCancelEdit?: () => void;
 }
 
 // Critères d'évaluation
@@ -38,7 +41,12 @@ const reviewCriteria = [
   }
 ];
 
-const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted }) => {
+const JamReviewForm: React.FC<JamReviewFormProps> = ({ 
+  jamId, 
+  onReviewSubmitted, 
+  reviewToEdit,
+  onCancelEdit
+}) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comment, setComment] = useState('');
@@ -48,6 +56,21 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
     originality: 0,
     balance: 0
   });
+  
+  const isEditing = !!reviewToEdit;
+  
+  // Charger les données de l'avis à modifier
+  useEffect(() => {
+    if (reviewToEdit) {
+      setComment(reviewToEdit.comment || '');
+      setRatings({
+        taste: reviewToEdit.taste_rating || 0,
+        texture: reviewToEdit.texture_rating || 0,
+        originality: reviewToEdit.originality_rating || 0,
+        balance: reviewToEdit.balance_rating || 0
+      });
+    }
+  }, [reviewToEdit]);
   
   const handleRatingChange = (criteriaId: string, value: number) => {
     setRatings(prev => ({
@@ -80,7 +103,7 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
     try {
       setIsSubmitting(true);
       
-      const { error } = await supabaseDirect.insert('jam_reviews', {
+      const reviewData = {
         jam_id: jamId,
         reviewer_id: user.id,
         taste_rating: ratings.taste,
@@ -88,26 +111,52 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
         originality_rating: ratings.originality,
         balance_rating: ratings.balance,
         comment: comment.trim() || null
-      });
+      };
       
-      if (error) throw error;
-      
-      toast({
-        title: "Avis ajouté",
-        description: "Merci d'avoir partagé votre avis sur cette confiture !",
-      });
-      
-      setComment('');
-      setRatings({ taste: 0, texture: 0, originality: 0, balance: 0 });
+      if (isEditing && reviewToEdit) {
+        // Mise à jour d'un avis existant
+        const { error } = await supabaseDirect.update(
+          'jam_reviews',
+          reviewData,
+          { id: reviewToEdit.id }
+        );
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Avis modifié",
+          description: "Votre avis a été mis à jour avec succès !",
+        });
+      } else {
+        // Création d'un nouvel avis
+        const { error } = await supabaseDirect.insert('jam_reviews', reviewData);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Avis ajouté",
+          description: "Merci d'avoir partagé votre avis sur cette confiture !",
+        });
+        
+        setComment('');
+        setRatings({ taste: 0, texture: 0, originality: 0, balance: 0 });
+      }
       
       // Rafraîchir les avis
       onReviewSubmitted();
+      
+      // Si nous étions en mode édition, revenir au mode normal
+      if (isEditing && onCancelEdit) {
+        onCancelEdit();
+      }
       
     } catch (error: any) {
       console.error('Error submitting review:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter votre avis. Vous avez peut-être déjà noté cette confiture.",
+        description: isEditing 
+          ? "Impossible de modifier votre avis." 
+          : "Impossible d'ajouter votre avis. Vous avez peut-être déjà noté cette confiture.",
         variant: "destructive"
       });
     } finally {
@@ -120,9 +169,12 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Laisser un avis</CardTitle>
+        <CardTitle>{isEditing ? 'Modifier votre avis' : 'Laisser un avis'}</CardTitle>
         <CardDescription>
-          Partagez votre expérience avec cette confiture en évaluant ces 4 critères
+          {isEditing 
+            ? 'Modifiez votre évaluation de cette confiture'
+            : 'Partagez votre expérience avec cette confiture en évaluant ces 4 critères'
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -167,14 +219,24 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
           />
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end">
+      <CardFooter className="flex justify-between">
+        {isEditing && onCancelEdit && (
+          <Button 
+            variant="outline" 
+            onClick={onCancelEdit}
+            disabled={isSubmitting}
+          >
+            Annuler
+          </Button>
+        )}
+        
         <Button 
           onClick={handleSubmit}
           disabled={isSaveDisabled}
-          className="bg-jam-raspberry hover:bg-jam-raspberry/90"
+          className={`bg-jam-raspberry hover:bg-jam-raspberry/90 ${isEditing ? '' : 'w-full'}`}
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Soumettre mon avis
+          {isEditing ? 'Enregistrer les modifications' : 'Soumettre mon avis'}
         </Button>
       </CardFooter>
     </Card>
