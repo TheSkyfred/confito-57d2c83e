@@ -11,11 +11,15 @@ const AdminAds: React.FC = () => {
   const { isAdmin } = useUserRole();
   const { action, id } = useParams<{ action?: string; id?: string }>();
   
+  console.log('AdminAds - Route Params:', { action, id }); // Debug logging
+
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
   
   const renderContent = () => {
+    console.log('Rendering content with:', { action, id }); // Additional debug logging
+
     // Si action = new, afficher le formulaire de création
     if (action === 'new') {
       return (
@@ -62,3 +66,4 @@ const AdminAds: React.FC = () => {
 };
 
 export default AdminAds;
+
