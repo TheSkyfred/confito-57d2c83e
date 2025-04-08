@@ -29,10 +29,10 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
   // Calculer la note moyenne globale
   const calculateAverageRating = (review: DetailedReviewType) => {
     const ratings = [
-      review.taste_rating,
-      review.texture_rating,
-      review.originality_rating,
-      review.balance_rating
+      review.taste_rating || 0,
+      review.texture_rating || 0,
+      review.originality_rating || 0,
+      review.balance_rating || 0
     ];
     const validRatings = ratings.filter(r => r > 0);
     return validRatings.length > 0
@@ -40,21 +40,28 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
       : 0;
   };
   
+  if (!reviews || reviews.length === 0) {
+    return null;
+  }
+  
   return (
     <div className="space-y-6">
       {reviews.map(review => {
         const avgRating = calculateAverageRating(review);
         const isUserReview = user && review.reviewer_id === user.id;
+        const reviewer = review.reviewer || {};
         
         return (
           <Card key={review.id}>
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="flex items-center">
-                  <ProfileDisplay profile={review.reviewer} />
+                  {review.reviewer && (
+                    <ProfileDisplay profile={review.reviewer} />
+                  )}
                   <div className="ml-3">
                     <p className="font-medium">
-                      {review.reviewer?.full_name || review.reviewer?.username}
+                      {review.reviewer ? (reviewer.full_name || reviewer.username) : 'Utilisateur'}
                     </p>
                     <div className="flex items-center mt-1">
                       {[1, 2, 3, 4, 5].map((value) => (
@@ -92,7 +99,8 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
                 {criteria.map(criterion => {
-                  const ratingValue = review[criterion.id as keyof DetailedReviewType] as number;
+                  const ratingKey = criterion.id as keyof DetailedReviewType;
+                  const ratingValue = review[ratingKey] as number || 0;
                   return (
                     <div key={criterion.id} className="flex flex-col items-center">
                       <span className="text-xs text-muted-foreground mb-1">{criterion.label}</span>

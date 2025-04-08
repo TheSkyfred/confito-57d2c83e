@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -105,13 +104,31 @@ const JamDetails = () => {
   const { data: detailedReviews, refetch: refetchReviews } = useQuery({
     queryKey: ['jam-detailed-reviews', id],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select('jam_reviews', `
-        *,
-        reviewer:reviewer_id (id, username, avatar_url, full_name)
-      `);
-
-      if (error) throw error;
-      return data;
+      const { data: reviews, error: reviewsError } = await supabaseDirect.select('jam_reviews', `*`)
+        .eq('jam_id', id as string);
+      
+      if (reviewsError) throw reviewsError;
+      
+      const reviewerIds = reviews.map((review: any) => review.reviewer_id);
+      
+      if (reviewerIds.length > 0) {
+        const { data: reviewers, error: reviewersError } = await supabaseDirect.select('profiles', `*`)
+          .in('id', reviewerIds);
+        
+        if (reviewersError) throw reviewersError;
+        
+        const detailedReviews = reviews.map((review: any) => {
+          const reviewer = reviewers.find((r: any) => r.id === review.reviewer_id);
+          return {
+            ...review,
+            reviewer: reviewer || null
+          };
+        });
+        
+        return detailedReviews;
+      }
+      
+      return reviews.map((review: any) => ({ ...review, reviewer: null }));
     },
     enabled: !!id,
   });
