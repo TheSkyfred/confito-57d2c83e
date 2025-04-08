@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 import {
   Table,
@@ -47,18 +48,17 @@ const AdminRecipes = () => {
   const { data: recipes, isLoading, error, refetch } = useQuery({
     queryKey: ['adminRecipes', statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from('recipes')
-        .select(`
-          *,
-          author:profiles!recipes_author_id_fkey (username, avatar_url)
-        `);
-        
+      // Utiliser supabaseDirect pour éviter les erreurs de type avec les relations
+      let filter = '';
       if (statusFilter) {
-        query = query.eq('status', statusFilter);
+        filter = `status.eq.${statusFilter}`;
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await supabaseDirect.select(
+        'recipes',
+        `*, author:profiles!recipes_author_id_fkey (username, avatar_url)`,
+        filter
+      );
       
       if (error) throw error;
       return data || [];

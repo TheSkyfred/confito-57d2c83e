@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -56,50 +57,55 @@ const ProRegistration = () => {
     }
   });
   
-  const onSubmit = async (values: z.infer<typeof proFormSchema>) => {
-    if (!user) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour compléter votre profil professionnel",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setLoading(true);
+  const onSubmit = async (data: z.infer<typeof proFormSchema>) => {
+    setIsLoading(true);
     
     try {
-      // Créer le profil pro
-      const { error: profileError } = await supabaseDirect.insert('pro_profiles', {
+      if (!user) {
+        toast({
+          title: "Non connecté",
+          description: "Vous devez être connecté pour créer un profil professionnel",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const proProfileResult = await supabaseDirect.insertAndReturn('pro_profiles', {
         id: user.id,
-        ...values
+        company_name: data.company_name,
+        business_email: data.business_email,
+        description: data.description,
+        story: data.story,
+        phone: data.phone,
+        website: data.website,
+        facebook_url: data.facebook_url,
+        instagram_url: data.instagram_url,
+        linkedin_url: data.linkedin_url,
+        billing_address: data.billing_address,
+        vat_number: data.vat_number
       });
       
-      if (profileError) throw profileError;
+      if (proProfileResult.error) throw proProfileResult.error;
       
-      // Mettre à jour le rôle utilisateur en "pro"
-      const { error: roleError } = await supabaseDirect.update('profiles', { role: 'pro' }, {
-        id: user.id
-      });
+      const profileUpdateResult = await supabaseDirect.update('profiles', { role: 'pro' }, { id: user.id });
       
-      if (roleError) throw roleError;
+      if (profileUpdateResult.error) throw profileUpdateResult.error;
       
       toast({
-        title: "Profil professionnel créé",
-        description: "Votre compte a été mis à jour en tant que professionnel",
+        title: "Profil pro créé",
+        description: "Votre profil professionnel a été créé avec succès.",
       });
       
-      // Redirection vers la page d'accueil ou le tableau de bord pro
-      navigate('/user/profile');
-      
+      navigate('/dashboard');
     } catch (error: any) {
+      console.error('Erreur lors de la création du profil pro:', error);
       toast({
         title: "Erreur",
-        description: error.message || 'Une erreur est survenue lors de la création du profil professionnel',
-        variant: "destructive",
+        description: error.message || "Une erreur est survenue lors de la création du profil professionnel.",
+        variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
   

@@ -47,12 +47,19 @@ const BattleCandidateForm: React.FC<BattleCandidateFormProps> = ({ battle, onSuc
         if (user) {
           const { data, error } = await supabase
             .from('jams')
-            .select('*')
+            .select('*, jam_images(*)')
             .eq('creator_id', user.id)
             .eq('is_active', true);
             
           if (error) throw error;
-          setUserJams(data as JamType[]);
+          
+          // Convertir explicitement les données pour inclure jam_images
+          const jamsWithImages = data.map(jam => ({
+            ...jam,
+            jam_images: jam.jam_images || []
+          })) as JamType[];
+          
+          setUserJams(jamsWithImages);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des confitures:", error);

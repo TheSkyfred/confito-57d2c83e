@@ -19,7 +19,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       setLoading(true);
       
       try {
-        // Chercher une campagne active et visible
+        // Chercher une campagne active et visible en utilisant supabaseDirect
         const { data, error } = await supabaseDirect.select('ads_campaigns', `
           id,
           display_frequency,
@@ -67,9 +67,6 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
           imageUrl: selectedAd.jam?.jam_images?.find((img: any) => img.is_primary)?.url ||
                    selectedAd.jam?.jam_images?.[0]?.url
         });
-        
-        // Enregistrer une impression (si on voulait être précis)
-        // Dans un cas réel, on utiliserait une API dédiée pour le tracking des impressions
         
       } catch (error: any) {
         console.error('Erreur lors du chargement de la publicité:', error);
