@@ -72,6 +72,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [isPublished, setIsPublished] = useState(true);
 
   // Initialiser le formulaire
   const form = useForm<FruitFormValues>({
@@ -105,6 +106,9 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
           seasons: [],
           tags: [],
         });
+        
+        // Update the local state
+        setIsPublished(fruit.is_published ?? true);
 
         // Charger les saisons associées
         const { data: seasonData } = await supabase
@@ -158,6 +162,12 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
       }
       setTagInput('');
     }
+  };
+
+  // Handle publish status change
+  const handlePublishChange = (checked: boolean) => {
+    setIsPublished(checked);
+    form.setValue('is_published', checked);
   };
 
   // Supprimer un tag
@@ -326,7 +336,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Fix: Use a div with controlled Switch instead of FormField for is_published to avoid infinite loops */}
+              {/* Fixed Switch component implementation */}
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <StandaloneFormLabel>Publier</StandaloneFormLabel>
@@ -335,8 +345,8 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                   </StandaloneFormDescription>
                 </div>
                 <Switch
-                  checked={form.watch('is_published')}
-                  onCheckedChange={(checked) => form.setValue('is_published', checked)}
+                  checked={isPublished}
+                  onCheckedChange={handlePublishChange}
                 />
               </div>
             </div>
