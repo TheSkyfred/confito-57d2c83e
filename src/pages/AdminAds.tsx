@@ -8,12 +8,8 @@ import AdsCampaignDetails from '@/components/admin/AdsCampaignDetails';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const AdminAds: React.FC = () => {
-  const { isAdmin, isLoading } = useUserRole();
+  const { isAdmin } = useUserRole();
   const { action, id } = useParams<{ action?: string; id?: string }>();
-  
-  if (isLoading) {
-    return <div className="container p-6">Chargement...</div>;
-  }
   
   if (!isAdmin) {
     return <Navigate to="/" replace />;
