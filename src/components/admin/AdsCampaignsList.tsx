@@ -51,24 +51,14 @@ const AdsCampaignsList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
-  // Récupérer les campagnes
+  // Récupérer les campagnes - FIX: modification de la requête pour éviter le problème de relation
   const { data: campaigns, isLoading, error, refetch } = useQuery({
     queryKey: ['adsCampaigns'],
     queryFn: async () => {
       try {
         console.log("Fetching campaigns data...");
-        const { data, error } = await supabaseDirect.select('ads_campaigns', `
-          *,
-          jam:jam_id (
-            id,
-            name,
-            images:jam_images(url, is_primary)
-          ),
-          creator:created_by (
-            id, 
-            username, 
-            full_name
-          )`);
+        // Modifié : Ne plus utiliser la relation creator:created_by car elle n'existe pas
+        const { data, error } = await supabaseDirect.select('ads_campaigns', '*');
           
         if (error) {
           console.error("Error fetching campaigns:", error);
@@ -77,8 +67,44 @@ const AdsCampaignsList: React.FC = () => {
 
         console.log("Campaigns data received:", data);
 
+        // Récupérer les informations sur les confitures associées
+        const campaignsWithJams = await Promise.all((data || []).map(async (campaign: any) => {
+          try {
+            // Récupérer les infos de la confiture
+            const { data: jamData, error: jamError } = await supabaseDirect.select(
+              'jams',
+              'id, name, jam_images(url, is_primary)',
+              { id: campaign.jam_id }
+            );
+            
+            if (jamError) {
+              console.warn("Error fetching jam data:", jamError);
+            }
+            
+            // Récupérer les infos du créateur
+            const { data: creatorData, error: creatorError } = await supabaseDirect.select(
+              'profiles',
+              'id, username, full_name',
+              { id: campaign.created_by }
+            );
+            
+            if (creatorError) {
+              console.warn("Error fetching creator data:", creatorError);
+            }
+            
+            return {
+              ...campaign,
+              jam: jamData && jamData.length > 0 ? jamData[0] : null,
+              creator: creatorData && creatorData.length > 0 ? creatorData[0] : null
+            };
+          } catch (err) {
+            console.error("Error processing campaign data:", err);
+            return campaign;
+          }
+        }));
+        
         // Récupérer les statistiques pour chaque campagne
-        const campaignsWithStats = await Promise.all((data || []).map(async (campaign: any) => {
+        const campaignsWithStats = await Promise.all(campaignsWithJams.map(async (campaign: any) => {
           try {
             // Récupérer le nombre de clics
             const { data: clicksData, error: clicksError } = await supabaseDirect.select(
