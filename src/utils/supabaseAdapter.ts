@@ -1,13 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Utilitaire pour effectuer des requêtes directes aux nouvelles tables de Supabase
- * sans avoir à se soucier des erreurs de type.
- * 
- * Cette classe sert d'intermédiaire temporaire en attendant que les types générés par Supabase
- * soient mis à jour.
- */
 export const supabaseDirect = {
   from: (table: string) => supabase.from(table as any),
   
@@ -18,14 +11,22 @@ export const supabaseDirect = {
    * @param filter Filtre optionnel pour la clause WHERE
    * @returns Un objet contenant les données ou une erreur
    */
-  async select(table: string, query = '*', filter?: any) {
+  async select(table: string, query: string | Record<string, any> = '*', filter?: Record<string, any>) {
     try {
+      // If the second argument is an object and no third argument is provided, treat it as a filter
+      if (typeof query === 'object' && filter === undefined) {
+        filter = query;
+        query = '*';
+      }
+      
       let queryBuilder = supabase
         .from(table as any)
         .select(query);
         
       if (filter) {
-        queryBuilder = queryBuilder.filter(filter);
+        Object.entries(filter).forEach(([key, value]) => {
+          queryBuilder = queryBuilder.eq(key, value);
+        });
       }
       
       const { data, error } = await queryBuilder;
@@ -197,3 +198,4 @@ export const supabaseDirect = {
     }
   }
 };
+
