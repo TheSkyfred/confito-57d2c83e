@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,16 +39,16 @@ const AdminDashboard = () => {
   const { data: pendingJams, isLoading: isLoadingPendingJams } = useQuery({
     queryKey: ['admin', 'pendingJams'],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select(
-        'jams',
-        `
+      const { data, error } = await supabase
+        .from('jams')
+        .select(`
           id,
           name,
           created_at,
           status,
           profiles (username)
-        `
-      ).eq('status', 'pending');
+        `)
+        .eq('status', 'pending');
 
       if (error) throw error;
       return data || [];
@@ -59,16 +58,16 @@ const AdminDashboard = () => {
   const { data: activeBattles, isLoading: isLoadingBattles } = useQuery({
     queryKey: ['admin', 'battles'],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select(
-        'jam_battles_new',
-        `
+      const { data, error } = await supabase
+        .from('jam_battles_new')
+        .select(`
           id,
           theme,
           status,
           registration_start_date,
           voting_end_date
-        `
-      ).order('registration_start_date', { ascending: false });
+        `)
+        .order('registration_start_date', { ascending: false });
 
       if (error) throw error;
       return data || [];
