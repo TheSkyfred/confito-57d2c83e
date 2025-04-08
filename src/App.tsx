@@ -77,6 +77,9 @@ function App() {
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
+                  <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
+                  <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" id="id" />} />
+                  <Route path="/admin/ads/view/:id" element={<AdminAds action="view" id="id" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   <Route path="/admin/fruits" element={<AdminFruits />} />
                   <Route path="/rankings" element={<Rankings />} />

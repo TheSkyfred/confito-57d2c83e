@@ -7,9 +7,18 @@ import AdsCampaignForm from '@/components/admin/AdsCampaignForm';
 import AdsCampaignDetails from '@/components/admin/AdsCampaignDetails';
 import { useUserRole } from '@/hooks/useUserRole';
 
-const AdminAds: React.FC = () => {
+interface AdminAdsProps {
+  action?: string;
+  id?: string;
+}
+
+const AdminAds: React.FC<AdminAdsProps> = (props) => {
   const { isAdmin, isLoading } = useUserRole();
-  const { action, id } = useParams<{ action?: string; id?: string }>();
+  const params = useParams<{ id?: string }>();
+  
+  // Utiliser les props ou les paramètres d'URL
+  const action = props.action || useParams<{ action?: string }>().action;
+  const id = props.id || params.id;
   
   console.log('AdminAds - Route Params:', { action, id }); // Debug logging
 
@@ -59,7 +68,7 @@ const AdminAds: React.FC = () => {
     }
     
     // Si action = view et id existe, afficher les détails
-    if ((action === 'view' || !action) && id) {
+    if (action === 'view' && id) {
       return <AdsCampaignDetails campaignId={id} />;
     }
     
