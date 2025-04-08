@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import RecipeCard from '@/components/recipe/RecipeCard';
 import RecipeFilters from '@/components/recipe/RecipeFilters';
-import { RecipeType } from '@/types/recipes';
+import { RecipeFilters as RecipeFiltersType, RecipeType } from '@/types/recipes';
 import { adaptDbRecipeToRecipeType } from '@/utils/supabaseHelpers';
 
 const Recipes = () => {
@@ -21,7 +20,7 @@ const Recipes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<RecipeFiltersType>({
     difficulty: [],
     season: [],
     style: [],
@@ -30,6 +29,10 @@ const Recipes = () => {
     ingredients: [],
     allergens: false
   });
+
+  const handleFilterChange = (newFilters: RecipeFiltersType) => {
+    setFilters(newFilters);
+  };
 
   const { data: recipes, isLoading } = useQuery({
     queryKey: ['recipes', activeTab, filters],
@@ -59,23 +62,23 @@ const Recipes = () => {
         query = query.order('average_rating', { ascending: false });
       }
 
-      if (filters.difficulty.length > 0) {
+      if (filters.difficulty && filters.difficulty.length > 0) {
         query = query.in('difficulty', filters.difficulty);
       }
       
-      if (filters.season.length > 0) {
+      if (filters.season && filters.season.length > 0) {
         query = query.in('season', filters.season);
       }
       
-      if (filters.style.length > 0) {
+      if (filters.style && filters.style.length > 0) {
         query = query.in('style', filters.style);
       }
       
-      if (filters.maxPrepTime < 120) {
+      if (filters.maxPrepTime && filters.maxPrepTime < 120) {
         query = query.lte('prep_time_minutes', filters.maxPrepTime);
       }
       
-      if (filters.minRating > 0) {
+      if (filters.minRating && filters.minRating > 0) {
         query = query.gte('average_rating', filters.minRating);
       }
 
@@ -156,7 +159,7 @@ const Recipes = () => {
           </CardHeader>
           <CardContent>
             <RecipeFilters 
-              onFilterChange={setFilters} 
+              onFilterChange={handleFilterChange} 
               filters={filters} 
               setFilters={setFilters}
             />

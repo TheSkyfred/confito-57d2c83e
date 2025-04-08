@@ -67,7 +67,16 @@ const RecipeFilters: React.FC<RecipeFiltersProps> = ({ onFilterChange, filters: 
       ...filters,
       [key]: value
     };
-    setFilters(newFilters);
+    
+    if (externalSetFilters) {
+      externalSetFilters(prevFilters => ({
+        ...prevFilters,
+        [key]: value
+      }));
+    } else {
+      setInternalFilters(newFilters);
+    }
+    
     onFilterChange(newFilters);
   };
   
@@ -86,7 +95,13 @@ const RecipeFilters: React.FC<RecipeFiltersProps> = ({ onFilterChange, filters: 
       style: [],
       search: ''
     };
-    setFilters(resetFilters);
+    
+    if (externalSetFilters) {
+      externalSetFilters(resetFilters);
+    } else {
+      setInternalFilters(resetFilters);
+    }
+    
     setSearchTerm('');
     onFilterChange(resetFilters);
   };

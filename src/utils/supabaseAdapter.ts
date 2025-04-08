@@ -18,7 +18,7 @@ export const supabaseDirect = {
    * @param filter Filtre optionnel pour la clause WHERE
    * @returns Un objet contenant les données ou une erreur
    */
-  async select(table: string, query = '*', filter?: string) {
+  async select(table: string, query = '*', filter?: any) {
     try {
       let queryBuilder = supabase
         .from(table as any)
