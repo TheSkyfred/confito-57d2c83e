@@ -28,26 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const campaignFormSchema = z.object({
   name: z.string().min(3, 'Le nom doit avoir au moins 3 caractères'),
   campaign_type: z.enum(['pro', 'sponsored']),
-  jam_id: z.string().uuid('Veuillez sélectionner une confiture valide').optional()
-    .superRefine((val, ctx) => {
-      if (ctx.path[0] === 'jam_id' && ctx.data.campaign_type === 'sponsored' && (!val || val.length === 0)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "La confiture est requise pour les campagnes sponsorisées",
-          path: [],
-        });
-      }
-    }),
-  redirect_url: z.string().url('Veuillez entrer une URL valide').optional()
-    .superRefine((val, ctx) => {
-      if (ctx.path[0] === 'redirect_url' && ctx.data.campaign_type === 'pro' && (!val || val.length === 0)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "L'URL de redirection est requise pour les campagnes professionnelles",
-          path: [],
-        });
-      }
-    }),
+  jam_id: z.string().uuid('Veuillez sélectionner une confiture valide').optional(),
+  redirect_url: z.string().url('Veuillez entrer une URL valide').optional(),
   planned_impressions: z.coerce.number().min(100, 'Minimum 100 impressions'),
   display_frequency: z.coerce.number().min(1, 'La fréquence minimale est 1'),
   budget_euros: z.coerce.number().min(5, 'Le budget minimum est de 5€'),
@@ -62,7 +44,19 @@ const campaignFormSchema = z.object({
 }).refine(data => data.end_date > data.start_date, {
   message: "La date de fin doit être postérieure à la date de début",
   path: ["end_date"],
-});
+}).refine(
+  data => !(data.campaign_type === 'sponsored' && (!data.jam_id || data.jam_id.length === 0)),
+  {
+    message: "La confiture est requise pour les campagnes sponsorisées",
+    path: ["jam_id"],
+  }
+).refine(
+  data => !(data.campaign_type === 'pro' && (!data.redirect_url || data.redirect_url.length === 0)),
+  {
+    message: "L'URL de redirection est requise pour les campagnes professionnelles",
+    path: ["redirect_url"],
+  }
+);
 
 interface AdsCampaignFormProps {
   campaignId?: string;
