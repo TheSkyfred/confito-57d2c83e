@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Trash2, Plus, ArrowUp, ArrowDown, Image } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export interface RecipeStep {
   id: string;
@@ -23,6 +26,7 @@ interface RecipeFormProps {
 
 const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => {
   const [imageFiles, setImageFiles] = useState<{[key: string]: File | null}>({});
+  const [uploading, setUploading] = useState<{[key: string]: boolean}>({});
 
   // Create a new step with a unique ID
   const addNewStep = () => {
@@ -73,7 +77,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => 
   };
 
   // Handle image upload for a step
-  const handleImageChange = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
       
@@ -83,9 +87,45 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => 
         [id]: file
       });
       
-      // Create a URL for preview
-      const imageUrl = URL.createObjectURL(file);
-      updateStep(id, "image_url", imageUrl);
+      setUploading({...uploading, [id]: true});
+      
+      try {
+        // Upload to Supabase Storage
+        const filePath = `recipe-steps/${id}_${Date.now()}_${file.name}`;
+        
+        const { data, error } = await supabase.storage
+          .from('jam-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Get the public URL
+        const { data: publicUrlData } = supabase.storage
+          .from('jam-images')
+          .getPublicUrl(filePath);
+        
+        // Update the step with the image URL
+        updateStep(id, "image_url", publicUrlData.publicUrl);
+        
+        toast({
+          title: "Image téléchargée",
+          description: "L'image a été ajoutée à l'étape",
+        });
+      } catch (error: any) {
+        console.error("Error uploading image:", error);
+        toast({
+          title: "Erreur de téléchargement",
+          description: error.message || "Une erreur est survenue lors du téléchargement de l'image",
+          variant: "destructive"
+        });
+      } finally {
+        setUploading({...uploading, [id]: false});
+      }
     }
   };
 
@@ -187,6 +227,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => 
                         type="button"
                         variant="outline"
                         className="w-full"
+                        disabled={uploading[step.id]}
                         onClick={() => {
                           document
                             .getElementById(`step-image-${step.id}`)
@@ -194,7 +235,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ formData, updateFormData }) => 
                         }}
                       >
                         <Image className="w-4 h-4 mr-2" />
-                        {step.image_url ? "Changer l'image" : "Ajouter une image"}
+                        {uploading[step.id] ? "Téléchargement..." : 
+                          step.image_url ? "Changer l'image" : "Ajouter une image"}
                       </Button>
                     </div>
                   </div>
