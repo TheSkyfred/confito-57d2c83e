@@ -24,7 +24,11 @@ import {
   Trophy, 
   User, 
   ShieldCheck,
-  Info
+  Info,
+  Check,
+  UserCheck,
+  X,
+  UserX
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -32,25 +36,28 @@ import { NewBattleType, BattleCandidateType, BattleParticipantType, BattleJudgeT
 import BattleStatus from '@/components/battle/BattleStatus';
 import BattleCandidateForm from '@/components/battle/BattleCandidateForm';
 import { useEligibilityCheck } from '@/utils/battleHelpers';
+import { validateBattleCandidate, validateBattleJudge } from '@/utils/battleAdminHelpers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getProfileInitials } from '@/utils/supabaseHelpers';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const BattleDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { checkEligibility } = useEligibilityCheck();
+  const { isAdmin } = useUserRole();
   
   const [battle, setBattle] = useState<NewBattleType | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [isJudge, setIsJudge] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
   const [hasApplied, setHasApplied] = useState(false);
   const [showCandidateForm, setShowCandidateForm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [processingAction, setProcessingAction] = useState<string | null>(null);
   
   // Charger les données du battle
   useEffect(() => {
@@ -94,17 +101,6 @@ const BattleDetails = () => {
         
         if (currentUser) {
           setUser(currentUser);
-          
-          // Récupérer le rôle de l'utilisateur
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-            
-          if (profileData) {
-            setUserRole(profileData.role);
-          }
           
           // Vérifier si l'utilisateur est un juge
           const isUserJudge = typedBattleData.battle_judges?.some(
@@ -239,6 +235,69 @@ const BattleDetails = () => {
     window.location.reload();
   };
   
+  // Fonctions pour l'administrateur
+  const handleValidateCandidate = async (candidateId: string) => {
+    if (!id || !isAdmin) return;
+    
+    setProcessingAction(candidateId);
+    
+    try {
+      const success = await validateBattleCandidate(candidateId, id);
+      
+      if (success) {
+        toast({
+          title: "Candidat validé",
+          description: "Le candidat a été ajouté aux participants du battle.",
+        });
+        
+        // Rafraîchir les données
+        window.location.reload();
+      } else {
+        throw new Error("Erreur lors de la validation du candidat");
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la validation du candidat:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la validation du candidat.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+  
+  const handleValidateJudge = async (judgeId: string) => {
+    if (!isAdmin) return;
+    
+    setProcessingAction(judgeId);
+    
+    try {
+      const success = await validateBattleJudge(judgeId);
+      
+      if (success) {
+        toast({
+          title: "Juge validé",
+          description: "Le juge a été validé pour ce battle.",
+        });
+        
+        // Rafraîchir les données
+        window.location.reload();
+      } else {
+        throw new Error("Erreur lors de la validation du juge");
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la validation du juge:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de la validation du juge.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+  
   if (loading) {
     return (
       <div className="container py-12 flex flex-col items-center justify-center min-h-[60vh]">
@@ -269,7 +328,7 @@ const BattleDetails = () => {
           </Link>
         </Button>
         
-        {userRole === 'admin' && (
+        {isAdmin && (
           <Button size="sm" variant="outline" asChild>
             <Link to={`/battles/admin`}>
               <ShieldCheck className="h-4 w-4 mr-1" />
@@ -407,32 +466,44 @@ const BattleDetails = () => {
                       {battle.battle_candidates && battle.battle_candidates.length > 0 ? (
                         battle.battle_candidates.map((candidate: BattleCandidateType) => (
                           <div key={candidate.id} className="p-4 border rounded-md">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Avatar>
-                                <AvatarImage src={candidate.profile?.avatar_url || undefined} />
-                                <AvatarFallback>{getProfileInitials(candidate.profile?.username)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-medium">{candidate.profile?.username}</p>
-                                {candidate.is_selected && (
-                                  <Badge className="mt-1">Sélectionné</Badge>
-                                )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Avatar>
+                                  <AvatarImage src={candidate.profile?.avatar_url || undefined} />
+                                  <AvatarFallback>{getProfileInitials(candidate.profile?.username)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{candidate.profile?.username}</p>
+                                  {candidate.is_selected && (
+                                    <Badge className="mt-1">Sélectionné</Badge>
+                                  )}
+                                </div>
                               </div>
+                              
+                              {isAdmin && battle.status === 'selection' && !candidate.is_selected && (
+                                <Button 
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex items-center gap-1"
+                                  onClick={() => handleValidateCandidate(candidate.id)}
+                                  disabled={processingAction === candidate.id}
+                                >
+                                  {processingAction === candidate.id ? (
+                                    <span className="inline-block animate-spin">⏳</span>
+                                  ) : (
+                                    <UserCheck className="h-4 w-4" />
+                                  )}
+                                  <span>Valider</span>
+                                </Button>
+                              )}
                             </div>
+                            
                             <p className="text-sm text-muted-foreground mt-2">{candidate.motivation}</p>
                             
                             {candidate.reference_jam && (
                               <div className="mt-3 flex items-start gap-2">
                                 <span className="text-xs bg-muted px-2 py-1 rounded">Référence:</span>
                                 <span className="text-sm">{candidate.reference_jam.name}</span>
-                              </div>
-                            )}
-                            
-                            {userRole === 'admin' && battle.status === 'selection' && (
-                              <div className="mt-4 flex justify-end">
-                                <Button variant="outline" size="sm" className="text-xs">
-                                  Sélectionner ce candidat
-                                </Button>
                               </div>
                             )}
                           </div>
@@ -523,22 +594,44 @@ const BattleDetails = () => {
                   {battle.battle_judges && battle.battle_judges.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                       {battle.battle_judges.map((judge: BattleJudgeType) => (
-                        <div key={judge.id} className="flex items-center gap-3 p-3 border rounded-md">
-                          <Avatar>
-                            <AvatarImage src={judge.profile?.avatar_url || undefined} />
-                            <AvatarFallback>{getProfileInitials(judge.profile?.username)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{judge.profile?.username}</p>
-                            <div className="flex items-center gap-1 mt-1">
-                              {judge.has_ordered && (
-                                <Badge variant="outline" className="text-xs">A commandé</Badge>
-                              )}
-                              {judge.has_received && (
-                                <Badge variant="outline" className="text-xs">A reçu</Badge>
-                              )}
+                        <div key={judge.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={judge.profile?.avatar_url || undefined} />
+                              <AvatarFallback>{getProfileInitials(judge.profile?.username)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{judge.profile?.username}</p>
+                              <div className="flex items-center gap-1 mt-1">
+                                {judge.has_ordered && (
+                                  <Badge variant="outline" className="text-xs">A commandé</Badge>
+                                )}
+                                {judge.has_received && (
+                                  <Badge variant="outline" className="text-xs">A reçu</Badge>
+                                )}
+                                {judge.is_validated && (
+                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-800 border-green-200">Validé</Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          
+                          {isAdmin && !judge.is_validated && (
+                            <Button 
+                              size="sm"
+                              variant="outline"
+                              className="flex items-center gap-1"
+                              onClick={() => handleValidateJudge(judge.id)}
+                              disabled={processingAction === judge.id}
+                            >
+                              {processingAction === judge.id ? (
+                                <span className="inline-block animate-spin">⏳</span>
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                              <span>Valider</span>
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>

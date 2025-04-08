@@ -1,3 +1,4 @@
+
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -182,6 +183,7 @@ export type BattleJudgeType = {
   user_id: string;
   has_ordered: boolean;
   has_received: boolean;
+  is_validated?: boolean;
   created_at: string;
   profile?: ProfileType;
 };
