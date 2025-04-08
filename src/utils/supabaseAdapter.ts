@@ -21,7 +21,7 @@ export const supabaseDirect = {
       
       let queryBuilder = supabase
         .from(table as any)
-        .select(query);
+        .select(query as string); // Add type assertion here to fix the error
         
       if (filter) {
         if (typeof filter === 'string') {
