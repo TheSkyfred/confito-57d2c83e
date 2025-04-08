@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -154,7 +155,11 @@ const Recipes = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <RecipeFilters filters={filters} setFilters={setFilters} />
+            <RecipeFilters 
+              onFilterChange={setFilters} 
+              filters={filters} 
+              setFilters={setFilters}
+            />
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button 

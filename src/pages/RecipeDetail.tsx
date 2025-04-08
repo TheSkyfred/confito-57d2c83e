@@ -32,7 +32,6 @@ import RecipeComments from '@/components/recipe/RecipeComments';
 import RecipePDFGenerator from '@/components/recipe/RecipePDFGenerator';
 import { RecipeType } from '@/types/recipes';
 
-// Map difficulty to a human-readable format and color
 const difficultyConfig = {
   'facile': { label: 'Facile', color: 'bg-green-100 text-green-800' },
   'moyen': { label: 'Moyen', color: 'bg-yellow-100 text-yellow-800' },
@@ -47,19 +46,21 @@ const RecipeDetail = () => {
   const { isAdmin, isModerator } = useUserRole();
   const [isFavorite, setIsFavorite] = useState(false);
   
-  // Safe toFixed function to handle undefined/null values
   const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
     if (value === undefined || value === null) return '0.0';
     return value.toFixed(digits);
   };
   
-  // Fetch recipe data
+  const getAuthorProperty = (author: any, property: string, fallback: string = ''): string => {
+    if (!author) return fallback;
+    return author[property] || fallback;
+  };
+  
   const { data: recipe, isLoading, error, refetch } = useQuery({
     queryKey: ['recipeDetail', id],
     queryFn: async () => {
       if (!id) throw new Error('Recipe ID is required');
       
-      // Use supabaseDirect to avoid type errors
       const { data: recipeData, error } = await supabaseDirect.select(
         'recipes',
         `
@@ -85,12 +86,10 @@ const RecipeDetail = () => {
       
       const rawRecipe = recipeData[0];
       
-      // Calculate average rating
       const ratings = rawRecipe.ratings || [];
       const totalRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
       const average_rating = ratings.length > 0 ? totalRating / ratings.length : 0;
       
-      // Check if the user has favorited this recipe
       let is_favorite = false;
       if (session?.user) {
         const { data: favorites } = await supabase
@@ -103,7 +102,6 @@ const RecipeDetail = () => {
         setIsFavorite(is_favorite);
       }
       
-      // Convert the raw recipe to the proper RecipeType
       const typedRecipe = adaptDbRecipeToRecipeType({
         ...rawRecipe,
         average_rating,
@@ -115,7 +113,6 @@ const RecipeDetail = () => {
     enabled: !!id
   });
   
-  // Check if the user has already rated this recipe
   const { data: userRating } = useQuery({
     queryKey: ['userRecipeRating', id, session?.user?.id],
     queryFn: async () => {
@@ -133,7 +130,6 @@ const RecipeDetail = () => {
     enabled: !!id && !!session?.user
   });
   
-  // Check if the user has already commented on this recipe
   const { data: userComment } = useQuery({
     queryKey: ['userRecipeComment', id, session?.user?.id],
     queryFn: async () => {
@@ -151,16 +147,13 @@ const RecipeDetail = () => {
     enabled: !!id && !!session?.user
   });
   
-  // Get similar recipes based on tags
   const { data: similarRecipes } = useQuery({
     queryKey: ['similarRecipes', id, recipe?.tags],
     queryFn: async () => {
       if (!id || !recipe?.tags || recipe.tags.length === 0) return [];
       
-      // Extract tags from the current recipe
       const recipeTags = recipe.tags.map(tag => tag.tag);
       
-      // Find recipes with at least one matching tag, excluding the current recipe
       const { data } = await supabase
         .from('recipes')
         .select(`
@@ -174,7 +167,6 @@ const RecipeDetail = () => {
         
       if (!data) return [];
       
-      // Filter and sort recipes by relevance (number of matching tags)
       return data
         .map(r => {
           const matchingTags = r.tags
@@ -201,7 +193,6 @@ const RecipeDetail = () => {
     
     try {
       if (isFavorite) {
-        // Remove from favorites
         await supabase
           .from('recipe_favorites')
           .delete()
@@ -214,7 +205,6 @@ const RecipeDetail = () => {
           description: "La recette a été retirée de vos favoris",
         });
       } else {
-        // Add to favorites
         await supabase
           .from('recipe_favorites')
           .insert({
@@ -242,7 +232,6 @@ const RecipeDetail = () => {
     if (!session?.user || !recipe) return;
     
     try {
-      // Check if user is author, admin or moderator
       const canDelete = 
         recipe.author_id === session.user.id || 
         isAdmin || 
@@ -257,7 +246,6 @@ const RecipeDetail = () => {
         return;
       }
       
-      // Delete the recipe
       await supabase
         .from('recipes')
         .delete()
@@ -332,8 +320,8 @@ const RecipeDetail = () => {
   const renderAuthor = () => {
     if (!recipe?.author) return null;
     
-    const authorName = recipe.author.username || "Utilisateur anonyme";
-    const avatarUrl = recipe.author.avatar_url;
+    const authorName = getAuthorProperty(recipe.author, 'username', "Utilisateur anonyme");
+    const avatarUrl = getAuthorProperty(recipe.author, 'avatar_url', '');
     
     return (
       <Link to={`/profile/${recipe.author_id}`} className="flex items-center group">
@@ -359,6 +347,41 @@ const RecipeDetail = () => {
           </li>
         ))}
       </ol>
+    );
+  };
+  
+  const renderSimilarRecipes = () => {
+    if (!similarRecipes || similarRecipes.length === 0) {
+      return null;
+    }
+    
+    return (
+      <div className="mb-8">
+        <h3 className="text-xl font-medium mb-4">Recettes similaires</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {similarRecipes.map(similar => (
+            <Link 
+              key={similar.id} 
+              to={`/recipes/${similar.id}`} 
+              className="block border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="h-32 overflow-hidden">
+                <img 
+                  src={similar.image_url || '/placeholder.svg'} 
+                  alt={similar.title} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="p-4">
+                <h4 className="font-medium line-clamp-1">{similar.title}</h4>
+                <p className="text-sm text-muted-foreground">
+                  par {getAuthorProperty(similar.author, 'username', "Inconnu")}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
     );
   };
   
@@ -419,7 +442,6 @@ const RecipeDetail = () => {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left column with image and basic info */}
         <div className="lg:col-span-2">
           <div className="relative rounded-lg overflow-hidden h-72 md:h-96 mb-6">
             <img 
@@ -532,38 +554,9 @@ const RecipeDetail = () => {
             </Button>
           </div>
           
-          {/* Similar recipes */}
-          {similarRecipes && similarRecipes.length > 0 && (
-            <div className="mb-8">
-              <h3 className="text-xl font-medium mb-4">Recettes similaires</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {similarRecipes.map(similar => (
-                  <Link 
-                    key={similar.id} 
-                    to={`/recipes/${similar.id}`} 
-                    className="block border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    <div className="h-32 overflow-hidden">
-                      <img 
-                        src={similar.image_url || '/placeholder.svg'} 
-                        alt={similar.title} 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-medium line-clamp-1">{similar.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        par {similar.author?.username || "Inconnu"}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+          {renderSimilarRecipes()}
         </div>
         
-        {/* Right column with ratings and comments */}
         <div className="lg:col-span-1">
           <div className="sticky top-4">
             <div className="bg-gray-50 rounded-lg p-6 mb-6">

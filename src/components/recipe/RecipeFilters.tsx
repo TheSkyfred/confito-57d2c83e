@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Search, Filter, Tag, AlertTriangle, Clock, ChefHat } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -24,10 +23,12 @@ import { RecipeFilters as RecipeFiltersType } from '@/types/recipes';
 
 interface RecipeFiltersProps {
   onFilterChange: (filters: RecipeFiltersType) => void;
+  filters?: RecipeFiltersType;
+  setFilters?: React.Dispatch<React.SetStateAction<RecipeFiltersType>>;
 }
 
-const RecipeFilters: React.FC<RecipeFiltersProps> = ({ onFilterChange }) => {
-  const [filters, setFilters] = useState<RecipeFiltersType>({
+const RecipeFilters: React.FC<RecipeFiltersProps> = ({ onFilterChange, filters: externalFilters, setFilters: externalSetFilters }) => {
+  const [internalFilters, setInternalFilters] = useState<RecipeFiltersType>({
     ingredients: [],
     allergens: false,
     minRating: 0,
@@ -37,10 +38,12 @@ const RecipeFilters: React.FC<RecipeFiltersProps> = ({ onFilterChange }) => {
     style: []
   });
   
+  const filters = externalFilters || internalFilters;
+  const setFilters = externalSetFilters || setInternalFilters;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [ingredientInput, setIngredientInput] = useState('');
   
-  // Common ingredients suggestions
   const commonIngredients = [
     'Fraises', 'Framboises', 'Abricots', 'Pêches',
     'Pommes', 'Poires', 'Cerises', 'Rhubarbe'
