@@ -95,3 +95,104 @@ export type RecipeFilters = {
   style?: RecipeStyle[];
   search?: string;
 };
+
+// Nouvelles types pour la publicité
+export type AdsCampaignType = {
+  id: string;
+  name: string;
+  jam_id: string;
+  campaign_type: 'pro' | 'sponsored';
+  planned_impressions: number;
+  display_frequency: number;
+  budget_euros: number;
+  start_date: string;
+  end_date: string;
+  status: 'active' | 'pending' | 'completed';
+  is_visible: boolean;
+  billing_type: 'fixed' | 'cpc' | 'cpm';
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  
+  // Relations
+  jam?: any; // Using the existing jam type
+  creator?: ProfileType;
+  clicks?: AdsClickType[];
+  conversions?: AdsConversionType[];
+  invoices?: AdsInvoiceType[];
+  
+  // Métriques calculées
+  impressions_count?: number;
+  clicks_count?: number;
+  conversions_count?: number;
+  ctr?: number; // Click-through rate
+  conversion_rate?: number;
+};
+
+export type AdsClickType = {
+  id: string;
+  campaign_id: string;
+  user_id: string | null;
+  clicked_at: string;
+  source_page: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  
+  // Relations
+  campaign?: AdsCampaignType;
+  user?: ProfileType;
+};
+
+export type AdsConversionType = {
+  id: string;
+  click_id: string | null;
+  campaign_id: string;
+  user_id: string | null;
+  conversion_type: 'purchase' | 'profile_view' | 'external_click';
+  conversion_value: number | null;
+  converted_at: string;
+  
+  // Relations
+  campaign?: AdsCampaignType;
+  click?: AdsClickType;
+  user?: ProfileType;
+};
+
+export type AdsInvoiceType = {
+  id: string;
+  campaign_id: string;
+  amount_euros: number;
+  status: 'pending' | 'paid' | 'cancelled';
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  payment_date: string | null;
+  payment_method: string | null;
+  pdf_url: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  campaign?: AdsCampaignType;
+};
+
+export type ProProfileType = {
+  id: string;
+  company_name: string;
+  logo_url: string | null;
+  description: string | null;
+  story: string | null;
+  business_email: string;
+  phone: string | null;
+  website: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  linkedin_url: string | null;
+  billing_address: string | null;
+  vat_number: string | null;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  profile?: ProfileType;
+};

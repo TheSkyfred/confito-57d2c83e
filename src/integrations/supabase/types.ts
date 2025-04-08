@@ -9,6 +9,204 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ads_campaigns: {
+        Row: {
+          billing_type: string
+          budget_euros: number
+          campaign_type: string
+          created_at: string
+          created_by: string
+          display_frequency: number
+          end_date: string
+          id: string
+          is_visible: boolean
+          jam_id: string
+          name: string
+          planned_impressions: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          billing_type: string
+          budget_euros: number
+          campaign_type: string
+          created_at?: string
+          created_by: string
+          display_frequency?: number
+          end_date: string
+          id?: string
+          is_visible?: boolean
+          jam_id: string
+          name: string
+          planned_impressions: number
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          billing_type?: string
+          budget_euros?: number
+          campaign_type?: string
+          created_at?: string
+          created_by?: string
+          display_frequency?: number
+          end_date?: string
+          id?: string
+          is_visible?: boolean
+          jam_id?: string
+          name?: string
+          planned_impressions?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_campaigns_jam_id_fkey"
+            columns: ["jam_id"]
+            isOneToOne: false
+            referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_clicks: {
+        Row: {
+          campaign_id: string
+          clicked_at: string
+          id: string
+          ip_address: string | null
+          source_page: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          clicked_at?: string
+          id?: string
+          ip_address?: string | null
+          source_page: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          clicked_at?: string
+          id?: string
+          ip_address?: string | null
+          source_page?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_clicks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_conversions: {
+        Row: {
+          campaign_id: string
+          click_id: string | null
+          conversion_type: string
+          conversion_value: number | null
+          converted_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          click_id?: string | null
+          conversion_type: string
+          conversion_value?: number | null
+          converted_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          click_id?: string | null
+          conversion_type?: string
+          conversion_value?: number | null
+          converted_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_conversions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ads_conversions_click_id_fkey"
+            columns: ["click_id"]
+            isOneToOne: false
+            referencedRelation: "ads_clicks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ads_invoices: {
+        Row: {
+          amount_euros: number
+          campaign_id: string
+          created_at: string
+          due_date: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          payment_date: string | null
+          payment_method: string | null
+          pdf_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_euros: number
+          campaign_id: string
+          created_at?: string
+          due_date: string
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          payment_date?: string | null
+          payment_method?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_euros?: number
+          campaign_id?: string
+          created_at?: string
+          due_date?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          payment_date?: string | null
+          payment_method?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ads_invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ads_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allergens: {
         Row: {
           category: string | null
@@ -902,8 +1100,10 @@ export type Database = {
           id: string
           ingredients: string[]
           is_active: boolean
+          is_pro: boolean | null
           name: string
           price_credits: number
+          price_euros: number | null
           production_date: string | null
           recipe: string | null
           rejection_reason: string | null
@@ -925,8 +1125,10 @@ export type Database = {
           id?: string
           ingredients: string[]
           is_active?: boolean
+          is_pro?: boolean | null
           name: string
           price_credits: number
+          price_euros?: number | null
           production_date?: string | null
           recipe?: string | null
           rejection_reason?: string | null
@@ -948,8 +1150,10 @@ export type Database = {
           id?: string
           ingredients?: string[]
           is_active?: boolean
+          is_pro?: boolean | null
           name?: string
           price_credits?: number
+          price_euros?: number | null
           production_date?: string | null
           recipe?: string | null
           rejection_reason?: string | null
@@ -1072,6 +1276,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pro_profiles: {
+        Row: {
+          billing_address: string | null
+          business_email: string
+          company_name: string
+          created_at: string
+          description: string | null
+          facebook_url: string | null
+          id: string
+          instagram_url: string | null
+          linkedin_url: string | null
+          logo_url: string | null
+          phone: string | null
+          story: string | null
+          updated_at: string
+          vat_number: string | null
+          website: string | null
+        }
+        Insert: {
+          billing_address?: string | null
+          business_email: string
+          company_name: string
+          created_at?: string
+          description?: string | null
+          facebook_url?: string | null
+          id: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          story?: string | null
+          updated_at?: string
+          vat_number?: string | null
+          website?: string | null
+        }
+        Update: {
+          billing_address?: string | null
+          business_email?: string
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          facebook_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          linkedin_url?: string | null
+          logo_url?: string | null
+          phone?: string | null
+          story?: string | null
+          updated_at?: string
+          vat_number?: string | null
+          website?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -1595,7 +1853,7 @@ export type Database = {
         | "traditionnelle"
         | "exotique"
         | "bio"
-      user_role: "user" | "moderator" | "admin"
+      user_role: "user" | "pro" | "moderator" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1738,7 +1996,7 @@ export const Constants = {
         "exotique",
         "bio",
       ],
-      user_role: ["user", "moderator", "admin"],
+      user_role: ["user", "pro", "moderator", "admin"],
     },
   },
 } as const

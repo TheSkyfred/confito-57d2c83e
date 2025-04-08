@@ -1,15 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { RecipeType, RecipeStatus } from '@/types/recipes';
-
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,693 +15,334 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Trash, Plus, Save } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
-// Schema for validating the form data
-const formSchema = z.object({
-  title: z.string().min(3, { message: "Le titre doit contenir au moins 3 caractères" }),
-  jam_id: z.string().optional().nullable(),
-  prep_time_minutes: z.number().min(1, { message: "Le temps de préparation doit être au moins 1 minute" }),
-  difficulty: z.enum(["facile", "moyen", "avancé"]),
-  image_url: z.string().optional().nullable(),
-  instructions: z.array(z.object({
-    step: z.number(),
-    description: z.string().min(5, { message: "L'étape doit contenir au moins 5 caractères" })
-  })).min(1, { message: "Au moins une étape est requise" }),
-  season: z.enum(["printemps", "été", "automne", "hiver", "toutes_saisons"]),
-  style: z.enum(["fruitée", "épicée", "sans_sucre", "traditionnelle", "exotique", "bio"]),
-  ingredients: z.array(z.object({
-    name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
-    base_quantity: z.number().min(0, { message: "La quantité doit être positive" }),
-    unit: z.string().min(1, { message: "L'unité est requise" }),
-    is_allergen: z.boolean().default(false)
-  })).min(1, { message: "Au moins un ingrédient est requis" }),
-  tags: z.array(z.object({
-    tag: z.string().min(2, { message: "Le tag doit contenir au moins 2 caractères" })
-  })).default([]),
-  status: z.enum(["brouillon", "pending"]).default("brouillon")
+// Schema Zod pour la validation des données
+const recipeFormSchema = z.object({
+  title: z.string().min(5, 'Le titre doit avoir au moins 5 caractères'),
+  prep_time_minutes: z.coerce.number().min(1, 'Le temps de préparation est requis'),
+  difficulty: z.enum(['facile', 'moyen', 'avancé']),
+  season: z.enum(['printemps', 'été', 'automne', 'hiver', 'toutes_saisons']),
+  style: z.enum(['fruitée', 'épicée', 'sans_sucre', 'traditionnelle', 'exotique', 'bio']),
+  instructions: z.string().min(10, 'Les instructions doivent être détaillées'),
+  // Autres champs selon besoin
 });
 
-type FormValues = z.infer<typeof formSchema>;
-
 interface RecipeFormProps {
-  recipeId?: string;  // If editing an existing recipe
+  recipeId?: string;
 }
 
 const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
-  const { session } = useAuth();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { isAdmin, isModerator } = useUserRole();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isEditing = !!recipeId;
   
-  // Fetch jams for the dropdown
-  const { data: jams } = useQuery({
-    queryKey: ['userJams'],
-    queryFn: async () => {
-      if (!session?.user) return [];
-      
-      const { data } = await supabase
-        .from('jams')
-        .select('id, name')
-        .eq('creator_id', session.user.id)
-        .eq('is_active', true);
-        
-      return data || [];
+  const [loading, setLoading] = useState(false);
+  const [recipe, setRecipe] = useState<any>(null);
+  const [parsedInstructions, setParsedInstructions] = useState<string>('');
+  
+  const form = useForm<z.infer<typeof recipeFormSchema>>({
+    resolver: zodResolver(recipeFormSchema),
+    defaultValues: {
+      title: '',
+      prep_time_minutes: 15,
+      difficulty: 'facile' as const,
+      season: 'toutes_saisons' as const,
+      style: 'fruitée' as const,
+      instructions: '',
     },
-    enabled: !!session?.user
   });
   
-  // Fetch recipe data if editing
-  const { data: existingRecipe, isLoading: isLoadingRecipe } = useQuery({
-    queryKey: ['recipe', recipeId],
-    queryFn: async () => {
-      if (!recipeId) return null;
+  // Charger la recette existante si en mode édition
+  useEffect(() => {
+    const fetchRecipe = async () => {
+      if (!recipeId) return;
       
-      const { data: recipe } = await supabase
+      setLoading(true);
+      const { data, error } = await supabase
         .from('recipes')
-        .select(`
-          *,
-          ingredients:recipe_ingredients(*),
-          tags:recipe_tags(*)
-        `)
+        .select('*')
         .eq('id', recipeId)
         .single();
-        
-      return recipe;
-    },
-    enabled: !!recipeId
-  });
-  
-  // Initialize form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: "",
-      jam_id: null,
-      prep_time_minutes: 30,
-      difficulty: "facile" as const,
-      image_url: "",
-      instructions: [{ step: 1, description: "" }],
-      season: "toutes_saisons" as const,
-      style: "fruitée" as const,
-      ingredients: [{ name: "", base_quantity: 0, unit: "g", is_allergen: false }],
-      tags: [],
-      status: "brouillon" as const
-    },
-  });
-  
-  // Set up field arrays for instructions, ingredients and tags
-  const {
-    fields: instructionFields,
-    append: appendInstruction,
-    remove: removeInstruction
-  } = useFieldArray({
-    name: "instructions",
-    control: form.control
-  });
-  
-  const {
-    fields: ingredientFields,
-    append: appendIngredient,
-    remove: removeIngredient
-  } = useFieldArray({
-    name: "ingredients",
-    control: form.control
-  });
-  
-  const {
-    fields: tagFields,
-    append: appendTag,
-    remove: removeTag
-  } = useFieldArray({
-    name: "tags",
-    control: form.control
-  });
-  
-  // Update form values when editing an existing recipe
-  useEffect(() => {
-    if (existingRecipe) {
-      // Map the recipe data to the form values
-      const formData = {
-        ...existingRecipe,
-        instructions: existingRecipe.instructions || [{ step: 1, description: "" }],
-        ingredients: existingRecipe.ingredients || [{ name: "", base_quantity: 0, unit: "g", is_allergen: false }],
-        tags: existingRecipe.tags || []
-      };
       
-      // Reset the form with the existing recipe data
-      form.reset(formData);
-    }
-  }, [existingRecipe, form]);
+      if (error) {
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger cette recette",
+          variant: "destructive",
+        });
+        navigate('/recipes');
+        return;
+      }
+      
+      setRecipe(data);
+      
+      // Convertir les instructions JSON en texte pour l'affichage
+      const instructionsText = (data.instructions || [])
+        .map((step: any) => `${step.step}. ${step.description}`)
+        .join('\n');
+      setParsedInstructions(instructionsText);
+      
+      // Remplir le formulaire
+      form.reset({
+        title: data.title,
+        prep_time_minutes: data.prep_time_minutes,
+        difficulty: data.difficulty,
+        season: data.season,
+        style: data.style,
+        instructions: instructionsText,
+      });
+      
+      setLoading(false);
+    };
+    
+    fetchRecipe();
+  }, [recipeId, form, toast, navigate]);
   
-  const onSubmit = async (data: FormValues) => {
-    if (!session?.user) {
+  // Convertir le texte des instructions en format JSON pour la BD
+  const parseInstructions = (instructionsText: string) => {
+    // Diviser par lignes et créer des objets d'étapes
+    return instructionsText.split('\n')
+      .filter(line => line.trim())
+      .map((line, index) => {
+        // Si la ligne commence déjà par un nombre, l'utiliser comme numéro d'étape
+        const stepMatch = line.match(/^(\d+)\.\s*(.*)/);
+        
+        if (stepMatch) {
+          return {
+            step: parseInt(stepMatch[1]),
+            description: stepMatch[2].trim()
+          };
+        }
+        
+        // Sinon, générer un numéro d'étape automatiquement
+        return {
+          step: index + 1,
+          description: line.trim()
+        };
+      });
+  };
+  
+  const onSubmit = async (values: z.infer<typeof recipeFormSchema>) => {
+    if (!user) {
       toast({
         title: "Erreur",
-        description: "Vous devez être connecté pour créer ou modifier une recette",
+        description: "Vous devez être connecté pour publier une recette",
         variant: "destructive",
       });
       return;
     }
     
-    setIsSubmitting(true);
+    setLoading(true);
     
     try {
-      // Format the data for submission
+      const instructionsJson = parseInstructions(values.instructions);
+      
+      // Déterminer si la publication directe est autorisée (pour admin/modo)
+      const status = (isAdmin || isModerator) ? 'approved' : 'pending';
+      
       const recipeData = {
-        ...data,
-        author_id: session.user.id
+        title: values.title,
+        prep_time_minutes: values.prep_time_minutes,
+        difficulty: values.difficulty,
+        season: values.season,
+        style: values.style,
+        instructions: instructionsJson,
+        author_id: user.id,
+        status: isEditing ? recipe.status : status,
       };
       
-      let recipeId: string;
+      let result;
       
-      if (existingRecipe) {
-        // Update existing recipe
-        const { data: updatedRecipe, error } = await supabase
+      if (isEditing) {
+        // Mode édition
+        result = await supabase
           .from('recipes')
-          .update({
-            title: recipeData.title,
-            jam_id: recipeData.jam_id,
-            prep_time_minutes: recipeData.prep_time_minutes,
-            difficulty: recipeData.difficulty,
-            image_url: recipeData.image_url,
-            instructions: recipeData.instructions,
-            season: recipeData.season,
-            style: recipeData.style,
-            status: recipeData.status,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingRecipe.id)
-          .select('id')
-          .single();
-          
-        if (error) throw error;
-        recipeId = existingRecipe.id;
-        
-        // Delete existing ingredients and tags to replace them
-        await supabase.from('recipe_ingredients').delete().eq('recipe_id', recipeId);
-        await supabase.from('recipe_tags').delete().eq('recipe_id', recipeId);
+          .update(recipeData)
+          .eq('id', recipeId);
       } else {
-        // Insert new recipe
-        const { data: newRecipe, error } = await supabase
+        // Nouvelle recette
+        result = await supabase
           .from('recipes')
-          .insert({
-            title: recipeData.title,
-            jam_id: recipeData.jam_id,
-            author_id: session.user.id,
-            prep_time_minutes: recipeData.prep_time_minutes,
-            difficulty: recipeData.difficulty,
-            image_url: recipeData.image_url,
-            instructions: recipeData.instructions,
-            season: recipeData.season,
-            style: recipeData.style,
-            status: recipeData.status
-          })
-          .select('id')
-          .single();
-          
-        if (error) throw error;
-        recipeId = newRecipe.id;
+          .insert(recipeData)
+          .select();
       }
       
-      // Insert ingredients
-      if (recipeData.ingredients.length > 0) {
-        const ingredientsToInsert = recipeData.ingredients.map(ingredient => ({
-          recipe_id: recipeId,
-          name: ingredient.name,
-          base_quantity: ingredient.base_quantity,
-          unit: ingredient.unit,
-          is_allergen: ingredient.is_allergen
-        }));
-        
-        await supabase.from('recipe_ingredients').insert(ingredientsToInsert);
-      }
-      
-      // Insert tags
-      if (recipeData.tags.length > 0) {
-        const tagsToInsert = recipeData.tags.map(tag => ({
-          recipe_id: recipeId,
-          tag: tag.tag
-        }));
-        
-        await supabase.from('recipe_tags').insert(tagsToInsert);
-      }
+      if (result.error) throw result.error;
       
       toast({
-        title: "Succès",
-        description: existingRecipe 
-          ? "La recette a été mise à jour avec succès"
-          : "La recette a été créée avec succès",
+        title: isEditing ? "Recette mise à jour" : "Recette créée",
+        description: isEditing 
+          ? "Votre recette a été mise à jour avec succès" 
+          : (isAdmin || isModerator)
+            ? "Votre recette a été publiée"
+            : "Votre recette a été soumise pour approbation",
       });
       
-      // Redirect to the recipe page if submitted for review, otherwise stay on the form
-      if (data.status === 'pending') {
-        navigate(`/recipes/${recipeId}`);
+      // Rediriger vers la page des recettes ou la page de détail
+      if (!isEditing && result.data && result.data[0]?.id) {
+        navigate(`/recipes/${result.data[0].id}`);
       } else {
-        // If saving as draft, reset the form if it's a new recipe, or show a toast if editing
-        if (!existingRecipe) {
-          form.reset();
-        }
+        navigate('/recipes');
       }
-      
-    } catch (error) {
-      console.error('Error saving recipe:', error);
+    } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de l'enregistrement de la recette",
+        description: error.message || "Une erreur s'est produite",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
-  
-  const [newTag, setNewTag] = useState('');
-  
-  const handleAddTag = () => {
-    if (newTag.trim()) {
-      appendTag({ tag: newTag.trim() });
-      setNewTag('');
-    }
-  };
-  
-  if (!session?.user) {
-    return (
-      <div className="p-6 text-center">
-        <p className="text-lg">Vous devez être connecté pour créer ou modifier une recette.</p>
-        <Button className="mt-4" onClick={() => navigate('/auth')}>Se connecter</Button>
-      </div>
-    );
-  }
-  
-  if (recipeId && isLoadingRecipe) {
-    return <div className="p-6 text-center">Chargement de la recette...</div>;
-  }
   
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Left column */}
-          <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Titre de la recette*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Confiture de fraises maison" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="jam_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Basée sur une confiture (optionnel)</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une confiture" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">Aucune</SelectItem>
-                      {jams?.map((jam: any) => (
-                        <SelectItem key={jam.id} value={jam.id}>{jam.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="prep_time_minutes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Temps de préparation (minutes)*</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min={1} 
-                        {...field} 
-                        onChange={(e) => field.onChange(parseInt(e.target.value, 10))} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="difficulty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Difficulté*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="facile">Facile</SelectItem>
-                        <SelectItem value="moyen">Moyen</SelectItem>
-                        <SelectItem value="avancé">Avancé</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="season"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Saison*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="printemps">Printemps</SelectItem>
-                        <SelectItem value="été">Été</SelectItem>
-                        <SelectItem value="automne">Automne</SelectItem>
-                        <SelectItem value="hiver">Hiver</SelectItem>
-                        <SelectItem value="toutes_saisons">Toutes saisons</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="style"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Style*</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="fruitée">Fruitée</SelectItem>
-                        <SelectItem value="épicée">Épicée</SelectItem>
-                        <SelectItem value="sans_sucre">Sans sucre</SelectItem>
-                        <SelectItem value="traditionnelle">Traditionnelle</SelectItem>
-                        <SelectItem value="exotique">Exotique</SelectItem>
-                        <SelectItem value="bio">Bio</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="image_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de l'image (optionnel)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/image.jpg" {...field} value={field.value || ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Tags section */}
-            <div className="space-y-2">
-              <FormLabel>Tags (ingrédients principaux)</FormLabel>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ajouter un tag"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
-                  className="flex-1"
-                />
-                <Button type="button" onClick={handleAddTag} size="sm">
-                  <Plus className="h-4 w-4 mr-1" /> Ajouter
-                </Button>
-              </div>
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tagFields.map((field, index) => (
-                  <div key={field.id} className="flex items-center bg-secondary rounded-full px-3 py-1">
-                    <span className="text-sm">{form.watch(`tags.${index}.tag`)}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeTag(index)}
-                      className="ml-2 rounded-full h-4 w-4 flex items-center justify-center bg-secondary-foreground text-secondary hover:bg-red-500"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Titre de la recette</FormLabel>
+              <FormControl>
+                <Input placeholder="Une délicieuse confiture de..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="prep_time_minutes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Temps de préparation (minutes)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...field}
+                    onChange={e => field.onChange(parseInt(e.target.value))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           
-          {/* Right column */}
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Ingrédients*</h3>
-              <div className="space-y-4">
-                {ingredientFields.map((field, index) => (
-                  <div key={field.id} className="grid grid-cols-8 gap-2 items-center">
-                    <div className="col-span-3">
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Nom" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="col-span-2">
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.base_quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                placeholder="Quantité" 
-                                min="0" 
-                                step="0.1"
-                                {...field} 
-                                onChange={(e) => field.onChange(parseFloat(e.target.value))} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="col-span-1">
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.unit`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Unité" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="col-span-1 flex items-center justify-center">
-                      <FormField
-                        control={form.control}
-                        name={`ingredients.${index}.is_allergen`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="flex items-center">
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  id={`allergen-${index}`}
-                                />
-                                <label htmlFor={`allergen-${index}`} className="ml-1 text-xs">
-                                  Allergène
-                                </label>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <div className="col-span-1">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => removeIngredient(index)}
-                        className="h-8 w-8 p-0"
-                        disabled={ingredientFields.length <= 1}
-                      >
-                        <Trash className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => appendIngredient({ name: "", base_quantity: 0, unit: "g", is_allergen: false })}
-                  className="mt-2"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Ajouter un ingrédient
-                </Button>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-medium mb-2">Étapes de préparation*</h3>
-              <div className="space-y-4">
-                {instructionFields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2 items-start">
-                    <div className="flex-shrink-0 bg-primary text-primary-foreground rounded-full h-6 w-6 flex items-center justify-center">
-                      {index + 1}
-                    </div>
-                    
-                    <div className="flex-grow">
-                      <FormField
-                        control={form.control}
-                        name={`instructions.${index}.description`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Textarea 
-                                placeholder={`Étape ${index + 1}`} 
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => removeInstruction(index)}
-                      className="h-8 w-8 p-0 flex-shrink-0"
-                      disabled={instructionFields.length <= 1}
-                    >
-                      <Trash className="h-4 w-4 text-red-500" />
-                    </Button>
-                    
-                    <input 
-                      type="hidden" 
-                      {...form.register(`instructions.${index}.step`)} 
-                      value={index + 1} 
-                    />
-                  </div>
-                ))}
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => appendInstruction({ step: instructionFields.length + 1, description: "" })}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Ajouter une étape
-                </Button>
-              </div>
-            </div>
-          </div>
+          <FormField
+            control={form.control}
+            name="difficulty"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Difficulté</FormLabel>
+                <FormControl>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    {...field}
+                  >
+                    <option value="facile">Facile</option>
+                    <option value="moyen">Moyen</option>
+                    <option value="avancé">Avancé</option>
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="season"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Saison</FormLabel>
+                <FormControl>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    {...field}
+                  >
+                    <option value="printemps">Printemps</option>
+                    <option value="été">Été</option>
+                    <option value="automne">Automne</option>
+                    <option value="hiver">Hiver</option>
+                    <option value="toutes_saisons">Toutes saisons</option>
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         
-        {/* Form actions */}
-        <Card className="mt-8">
-          <CardContent className="py-4 flex justify-between items-center">
-            <div>
-              <h4 className="font-medium">Statut de la recette</h4>
-              <p className="text-sm text-muted-foreground">
-                Enregistrez comme brouillon ou soumettez pour approbation
+        <FormField
+          control={form.control}
+          name="style"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Style</FormLabel>
+              <FormControl>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  {...field}
+                >
+                  <option value="fruitée">Fruitée</option>
+                  <option value="épicée">Épicée</option>
+                  <option value="sans_sucre">Sans sucre</option>
+                  <option value="traditionnelle">Traditionnelle</option>
+                  <option value="exotique">Exotique</option>
+                  <option value="bio">Bio</option>
+                </select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="instructions"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Instructions</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Détaillez les étapes de préparation..."
+                  className="min-h-[200px]"
+                  {...field}
+                />
+              </FormControl>
+              <p className="text-sm text-muted-foreground mt-1">
+                Écrivez une instruction par ligne. Vous pouvez numéroter les étapes (exemple: "1. Préparer les fruits").
               </p>
-            </div>
-            <div className="space-x-3">
-              <Button 
-                type="button"
-                variant="outline"
-                disabled={isSubmitting}
-                onClick={() => {
-                  form.setValue("status", "brouillon");
-                  form.handleSubmit(onSubmit)();
-                }}
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Enregistrer comme brouillon
-              </Button>
-              
-              <Button 
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => {
-                  form.setValue("status", "pending");
-                  form.handleSubmit(onSubmit)();
-                }}
-              >
-                Soumettre pour approbation
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div className="flex justify-end space-x-4">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => navigate(-1)}
+          >
+            Annuler
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={loading}
+          >
+            {loading ? 'Chargement...' : isEditing ? 'Mettre à jour' : 'Publier'}
+          </Button>
+        </div>
       </form>
     </Form>
   );
