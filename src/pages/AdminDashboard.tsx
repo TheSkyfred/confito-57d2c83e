@@ -15,6 +15,47 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const { isAdmin, isModerator } = useUserRole();
   const [activeTab, setActiveTab] = useState('jams');
+  
+  // Always call hooks at the top level, regardless of user role
+  const { data: pendingJams, isLoading: isLoadingPendingJams } = useQuery({
+    queryKey: ['admin', 'pendingJams'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('jams')
+        .select(`
+          id,
+          name,
+          created_at,
+          status,
+          profiles (username)
+        `)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user && isModerator // Only fetch data if user is moderator
+  });
+
+  const { data: activeBattles, isLoading: isLoadingBattles } = useQuery({
+    queryKey: ['admin', 'battles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('jam_battles_new')
+        .select(`
+          id,
+          theme,
+          status,
+          registration_start_date,
+          voting_end_date
+        `)
+        .order('registration_start_date', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user && isModerator // Only fetch data if user is moderator
+  });
 
   // Rediriger l'utilisateur s'il n'est pas administrateur ou modérateur
   if (!user || !isModerator) {
@@ -36,44 +77,6 @@ const AdminDashboard = () => {
       </div>
     );
   }
-
-  const { data: pendingJams, isLoading: isLoadingPendingJams } = useQuery({
-    queryKey: ['admin', 'pendingJams'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jams')
-        .select(`
-          id,
-          name,
-          created_at,
-          status,
-          profiles (username)
-        `)
-        .eq('status', 'pending');
-
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  const { data: activeBattles, isLoading: isLoadingBattles } = useQuery({
-    queryKey: ['admin', 'battles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jam_battles_new')
-        .select(`
-          id,
-          theme,
-          status,
-          registration_start_date,
-          voting_end_date
-        `)
-        .order('registration_start_date', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    }
-  });
 
   return (
     <div className="container py-8 max-w-5xl">
