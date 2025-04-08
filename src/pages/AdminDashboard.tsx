@@ -57,7 +57,7 @@ const AdminDashboard = () => {
     enabled: !!user && isModerator // Only fetch data if user is moderator
   });
 
-  // Rediriger l'utilisateur s'il n'est pas administrateur ou modérateur
+  // Early return if not authorized - AFTER all hooks are called
   if (!user || !isModerator) {
     return (
       <div className="container py-10 max-w-5xl">
@@ -78,6 +78,7 @@ const AdminDashboard = () => {
     );
   }
 
+  // Rest of component only renders if user is authorized
   return (
     <div className="container py-8 max-w-5xl">
       <div className="space-y-2 mb-8">

@@ -6,8 +6,12 @@ type UserRole = 'admin' | 'moderator' | 'user';
 export const useUserRole = () => {
   const { profile } = useAuth();
   
-  const isAdmin = profile?.role === 'admin';
-  const isModerator = profile?.role === 'moderator' || isAdmin;
+  // Ensure profile?.role is a valid role or default to 'user'
+  const role: UserRole = profile?.role as UserRole || 'user';
   
-  return { isAdmin, isModerator };
+  // Always compute these values consistently
+  const isAdmin = role === 'admin';
+  const isModerator = role === 'moderator' || isAdmin;
+  
+  return { isAdmin, isModerator, role };
 };
