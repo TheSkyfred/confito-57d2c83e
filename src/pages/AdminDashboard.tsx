@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +9,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Separator } from '@/components/ui/separator';
 import { PlusCircle, Swords, Utensils } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
