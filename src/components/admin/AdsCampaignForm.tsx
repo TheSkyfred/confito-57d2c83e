@@ -30,27 +30,23 @@ const campaignFormSchema = z.object({
   campaign_type: z.enum(['pro', 'sponsored']),
   jam_id: z.string().uuid('Veuillez sélectionner une confiture valide').optional()
     .superRefine((val, ctx) => {
-      if (ctx.data.campaign_type === 'sponsored' && (!val || val.length === 0)) {
+      if (ctx.path[0] === 'jam_id' && ctx.data.campaign_type === 'sponsored' && (!val || val.length === 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "La confiture est requise pour les campagnes sponsorisées",
           path: [],
         });
-        return false;
       }
-      return true;
     }),
   redirect_url: z.string().url('Veuillez entrer une URL valide').optional()
     .superRefine((val, ctx) => {
-      if (ctx.data.campaign_type === 'pro' && (!val || val.length === 0)) {
+      if (ctx.path[0] === 'redirect_url' && ctx.data.campaign_type === 'pro' && (!val || val.length === 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "L'URL de redirection est requise pour les campagnes professionnelles",
           path: [],
         });
-        return false;
       }
-      return true;
     }),
   planned_impressions: z.coerce.number().min(100, 'Minimum 100 impressions'),
   display_frequency: z.coerce.number().min(1, 'La fréquence minimale est 1'),
