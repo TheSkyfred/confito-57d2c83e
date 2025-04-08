@@ -56,12 +56,13 @@ const AdsCampaignsList: React.FC = () => {
     queryKey: ['adsCampaigns'],
     queryFn: async () => {
       try {
+        console.log("Fetching campaigns data...");
         const { data, error } = await supabaseDirect.select('ads_campaigns', `
           *,
           jam:jam_id (
             id,
             name,
-            image_url: jam_images(url, is_primary)
+            images:jam_images(url, is_primary)
           ),
           creator:created_by (
             id, 
@@ -69,42 +70,66 @@ const AdsCampaignsList: React.FC = () => {
             full_name
           )`);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching campaigns:", error);
+          throw error;
+        }
+
+        console.log("Campaigns data received:", data);
 
         // Récupérer les statistiques pour chaque campagne
         const campaignsWithStats = await Promise.all((data || []).map(async (campaign: any) => {
-          // Récupérer le nombre de clics
-          const { data: clicksData } = await supabaseDirect.select(
-            'ads_clicks',
-            'id',
-            { campaign_id: campaign.id }
-          );
-          
-          // Récupérer le nombre de conversions
-          const { data: conversionsData } = await supabaseDirect.select(
-            'ads_conversions',
-            'id',
-            { campaign_id: campaign.id }
-          );
-          
-          const clicks_count = clicksData?.length || 0;
-          const conversions_count = conversionsData?.length || 0;
-          
-          // Calculer les métriques
-          return {
-            ...campaign,
-            clicks_count,
-            conversions_count,
-            ctr: campaign.planned_impressions ? 
-              (clicks_count / campaign.planned_impressions) * 100 : 0,
-            conversion_rate: clicks_count ? 
-              (conversions_count / clicks_count) * 100 : 0
-          };
+          try {
+            // Récupérer le nombre de clics
+            const { data: clicksData, error: clicksError } = await supabaseDirect.select(
+              'ads_clicks',
+              'id',
+              { campaign_id: campaign.id }
+            );
+            
+            if (clicksError) {
+              console.warn("Error fetching clicks:", clicksError);
+            }
+            
+            // Récupérer le nombre de conversions
+            const { data: conversionsData, error: conversionsError } = await supabaseDirect.select(
+              'ads_conversions',
+              'id',
+              { campaign_id: campaign.id }
+            );
+            
+            if (conversionsError) {
+              console.warn("Error fetching conversions:", conversionsError);
+            }
+            
+            const clicks_count = clicksData?.length || 0;
+            const conversions_count = conversionsData?.length || 0;
+            
+            // Calculer les métriques
+            return {
+              ...campaign,
+              clicks_count,
+              conversions_count,
+              ctr: campaign.planned_impressions ? 
+                (clicks_count / campaign.planned_impressions) * 100 : 0,
+              conversion_rate: clicks_count ? 
+                (conversions_count / clicks_count) * 100 : 0
+            };
+          } catch (err) {
+            console.error("Error processing campaign metrics:", err);
+            return {
+              ...campaign,
+              clicks_count: 0,
+              conversions_count: 0,
+              ctr: 0,
+              conversion_rate: 0
+            };
+          }
         }));
         
         return campaignsWithStats as AdsCampaignType[];
       } catch (error) {
-        console.error("Error fetching campaigns:", error);
+        console.error("Error in queryFn:", error);
         throw error;
       }
     }
@@ -168,7 +193,7 @@ const AdsCampaignsList: React.FC = () => {
   const filteredCampaigns = campaigns?.filter(campaign => {
     const matchesSearch = 
       campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      campaign.jam?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      (campaign.jam?.name && campaign.jam.name.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesStatus = !statusFilter || campaign.status === statusFilter;
     
