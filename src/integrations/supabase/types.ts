@@ -1118,6 +1118,288 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_badge_assignments: {
+        Row: {
+          badge_id: string
+          created_at: string
+          id: string
+          recipe_id: string
+        }
+        Insert: {
+          badge_id: string
+          created_at?: string
+          id?: string
+          recipe_id: string
+        }
+        Update: {
+          badge_id?: string
+          created_at?: string
+          id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_badge_assignments_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_badge_assignments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_badges: {
+        Row: {
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      recipe_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_helpful: boolean | null
+          recipe_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_helpful?: boolean | null
+          recipe_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_helpful?: boolean | null
+          recipe_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_comments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          recipe_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recipe_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recipe_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_favorites_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_ingredients: {
+        Row: {
+          base_quantity: number
+          created_at: string
+          id: string
+          is_allergen: boolean
+          name: string
+          recipe_id: string
+          unit: string
+        }
+        Insert: {
+          base_quantity: number
+          created_at?: string
+          id?: string
+          is_allergen?: boolean
+          name: string
+          recipe_id: string
+          unit: string
+        }
+        Update: {
+          base_quantity?: number
+          created_at?: string
+          id?: string
+          is_allergen?: boolean
+          name?: string
+          recipe_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          rating: number
+          recipe_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rating: number
+          recipe_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rating?: number
+          recipe_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ratings_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_tags: {
+        Row: {
+          created_at: string
+          id: string
+          recipe_id: string
+          tag: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recipe_id: string
+          tag: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recipe_id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_tags_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          author_id: string
+          created_at: string
+          difficulty: Database["public"]["Enums"]["recipe_difficulty"]
+          id: string
+          image_url: string | null
+          instructions: Json
+          jam_id: string | null
+          prep_time_minutes: number
+          rejection_reason: string | null
+          season: Database["public"]["Enums"]["recipe_season"]
+          status: Database["public"]["Enums"]["recipe_status"]
+          style: Database["public"]["Enums"]["recipe_style"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["recipe_difficulty"]
+          id?: string
+          image_url?: string | null
+          instructions: Json
+          jam_id?: string | null
+          prep_time_minutes: number
+          rejection_reason?: string | null
+          season?: Database["public"]["Enums"]["recipe_season"]
+          status?: Database["public"]["Enums"]["recipe_status"]
+          style?: Database["public"]["Enums"]["recipe_style"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["recipe_difficulty"]
+          id?: string
+          image_url?: string | null
+          instructions?: Json
+          jam_id?: string | null
+          prep_time_minutes?: number
+          rejection_reason?: string | null
+          season?: Database["public"]["Enums"]["recipe_season"]
+          status?: Database["public"]["Enums"]["recipe_status"]
+          style?: Database["public"]["Enums"]["recipe_style"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_jam_id_fkey"
+            columns: ["jam_id"]
+            isOneToOne: false
+            referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -1274,6 +1556,10 @@ export type Database = {
         Args: { jam_uuid: string }
         Returns: number
       }
+      calculate_recipe_average_rating: {
+        Args: { recipe_uuid: string }
+        Returns: number
+      }
       random_date_last_6months: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1294,6 +1580,21 @@ export type Database = {
         | "shipped"
         | "delivered"
         | "cancelled"
+      recipe_difficulty: "facile" | "moyen" | "avancé"
+      recipe_season:
+        | "printemps"
+        | "été"
+        | "automne"
+        | "hiver"
+        | "toutes_saisons"
+      recipe_status: "brouillon" | "pending" | "approved" | "rejected"
+      recipe_style:
+        | "fruitée"
+        | "épicée"
+        | "sans_sucre"
+        | "traditionnelle"
+        | "exotique"
+        | "bio"
       user_role: "user" | "moderator" | "admin"
     }
     CompositeTypes: {
@@ -1425,6 +1726,17 @@ export const Constants = {
         "shipped",
         "delivered",
         "cancelled",
+      ],
+      recipe_difficulty: ["facile", "moyen", "avancé"],
+      recipe_season: ["printemps", "été", "automne", "hiver", "toutes_saisons"],
+      recipe_status: ["brouillon", "pending", "approved", "rejected"],
+      recipe_style: [
+        "fruitée",
+        "épicée",
+        "sans_sucre",
+        "traditionnelle",
+        "exotique",
+        "bio",
       ],
       user_role: ["user", "moderator", "admin"],
     },

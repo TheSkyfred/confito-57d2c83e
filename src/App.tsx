@@ -26,6 +26,12 @@ import Checkout from "./pages/Checkout";
 import BattlesList from "./pages/BattlesList";
 import BattleDetails from "./pages/BattleDetails";
 import BattleAdmin from "./pages/BattleAdmin";
+import Recipes from "./pages/Recipes";
+import RecipeDetail from "./pages/RecipeDetail";
+import RecipeCreate from "./pages/RecipeCreate";
+import RecipeEdit from "./pages/RecipeEdit";
+import AdminRecipes from "./pages/AdminRecipes";
+import UserRecipes from "./pages/UserRecipes";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +64,15 @@ const App = () => (
                 <Route path="/jam/edit/:id" element={<JamEditor />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                
+                {/* New Recipe Routes */}
+                <Route path="/recipes" element={<Recipes />} />
+                <Route path="/recipes/:id" element={<RecipeDetail />} />
+                <Route path="/recipes/create" element={<RecipeCreate />} />
+                <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
+                <Route path="/my-recipes" element={<UserRecipes />} />
+                <Route path="/admin/recipes" element={<AdminRecipes />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
