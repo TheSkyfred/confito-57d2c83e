@@ -21,7 +21,8 @@ import {
   Search,
   ShoppingBag,
   Shield,
-  Layout
+  Layout,
+  Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,12 +39,14 @@ import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { useCartStore } from '@/stores/useCartStore';
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile } = useAuth();
   const { isAdmin } = useUserRole();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const totalCartItems = useCartStore((state) => state.getTotalItems());
+  
+  const isPro = profile?.role === 'pro';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -139,6 +142,16 @@ const Header = () => {
                     Tableau de bord
                   </Link>
                 </DropdownMenuItem>
+                
+                {isPro && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/pro-dashboard" onClick={closeMenu}>
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      Dashboard Pro
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                
                 <DropdownMenuItem asChild>
                   <Link to="/cart" onClick={closeMenu}>
                     <ShoppingBag className="mr-2 h-4 w-4" />
@@ -218,6 +231,11 @@ const Header = () => {
             {user ? (
               <>
                 <NavItemMobile to="/dashboard" label="Tableau de bord" icon={User} onClick={closeMenu} />
+                
+                {isPro && (
+                  <NavItemMobile to="/pro-dashboard" label="Dashboard Pro" icon={Briefcase} onClick={closeMenu} />
+                )}
+                
                 <NavItemMobile 
                   to="/cart" 
                   label={`Mon panier${totalCartItems > 0 ? ` (${totalCartItems})` : ''}`} 

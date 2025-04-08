@@ -54,6 +54,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           localStorage.removeItem('redirect_to_pro_registration');
           window.location.href = '/pro-registration';
         }
+        // Redirect new pros to the pro dashboard after registration is complete
+        else if (data.role === 'pro' && localStorage.getItem('pro_registration_complete') === 'true') {
+          localStorage.removeItem('pro_registration_complete');
+          window.location.href = '/pro-dashboard';
+        }
         
         return data as ProfileType;
       }

@@ -33,6 +33,8 @@ import RecipeCreate from "./pages/RecipeCreate";
 import RecipeEdit from "./pages/RecipeEdit";
 import AdminRecipes from "./pages/AdminRecipes";
 import UserRecipes from "./pages/UserRecipes";
+import ProRegistration from "./pages/ProRegistration";
+import ProDashboard from "./pages/ProDashboard";
 
 const queryClient = new QueryClient();
 
@@ -69,13 +71,17 @@ const App = () => (
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 
-                {/* New Recipe Routes */}
+                {/* Recipe Routes */}
                 <Route path="/recipes" element={<Recipes />} />
                 <Route path="/recipes/:id" element={<RecipeDetail />} />
                 <Route path="/recipes/create" element={<RecipeCreate />} />
                 <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                 <Route path="/my-recipes" element={<UserRecipes />} />
                 <Route path="/admin/recipes" element={<AdminRecipes />} />
+                
+                {/* Professional Routes */}
+                <Route path="/pro-registration" element={<ProRegistration />} />
+                <Route path="/pro-dashboard" element={<ProDashboard />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>

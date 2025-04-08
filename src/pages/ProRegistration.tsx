@@ -97,7 +97,10 @@ const ProRegistration = () => {
         description: "Votre profil professionnel a été créé avec succès.",
       });
       
-      navigate('/dashboard');
+      // Définir le flag pour rediriger vers le dashboard pro
+      localStorage.setItem("pro_registration_complete", "true");
+      
+      navigate('/pro-dashboard');
     } catch (error: any) {
       console.error('Erreur lors de la création du profil pro:', error);
       toast({
