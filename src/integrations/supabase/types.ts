@@ -1106,6 +1106,175 @@ export type Database = {
           },
         ]
       }
+      fruit_advice_links: {
+        Row: {
+          advice_id: string | null
+          created_at: string | null
+          fruit_id: string | null
+          id: string
+          is_suggested: boolean | null
+        }
+        Insert: {
+          advice_id?: string | null
+          created_at?: string | null
+          fruit_id?: string | null
+          id?: string
+          is_suggested?: boolean | null
+        }
+        Update: {
+          advice_id?: string | null
+          created_at?: string | null
+          fruit_id?: string | null
+          id?: string
+          is_suggested?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fruit_advice_links_advice_id_fkey"
+            columns: ["advice_id"]
+            isOneToOne: false
+            referencedRelation: "advice_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fruit_advice_links_fruit_id_fkey"
+            columns: ["fruit_id"]
+            isOneToOne: false
+            referencedRelation: "fruits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fruit_recipe_links: {
+        Row: {
+          created_at: string | null
+          fruit_id: string | null
+          id: string
+          is_primary: boolean | null
+          recipe_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fruit_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          recipe_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fruit_id?: string | null
+          id?: string
+          is_primary?: boolean | null
+          recipe_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fruit_recipe_links_fruit_id_fkey"
+            columns: ["fruit_id"]
+            isOneToOne: false
+            referencedRelation: "fruits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fruit_recipe_links_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fruit_seasons: {
+        Row: {
+          fruit_id: string | null
+          id: string
+          month: number
+        }
+        Insert: {
+          fruit_id?: string | null
+          id?: string
+          month: number
+        }
+        Update: {
+          fruit_id?: string | null
+          id?: string
+          month?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fruit_seasons_fruit_id_fkey"
+            columns: ["fruit_id"]
+            isOneToOne: false
+            referencedRelation: "fruits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fruit_tags: {
+        Row: {
+          fruit_id: string | null
+          id: string
+          tag: string
+        }
+        Insert: {
+          fruit_id?: string | null
+          id?: string
+          tag: string
+        }
+        Update: {
+          fruit_id?: string | null
+          id?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fruit_tags_fruit_id_fkey"
+            columns: ["fruit_id"]
+            isOneToOne: false
+            referencedRelation: "fruits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fruits: {
+        Row: {
+          conservation_tips: string | null
+          cooking_tips: string | null
+          created_at: string | null
+          description: string | null
+          family: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          conservation_tips?: string | null
+          cooking_tips?: string | null
+          created_at?: string | null
+          description?: string | null
+          family?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          conservation_tips?: string | null
+          cooking_tips?: string | null
+          created_at?: string | null
+          description?: string | null
+          family?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       jam_battles: {
         Row: {
           end_date: string
@@ -1813,6 +1982,7 @@ export type Database = {
           instructions: Json
           jam_id: string | null
           prep_time_minutes: number
+          primary_fruit_id: string | null
           rejection_reason: string | null
           season: Database["public"]["Enums"]["recipe_season"]
           status: Database["public"]["Enums"]["recipe_status"]
@@ -1829,6 +1999,7 @@ export type Database = {
           instructions: Json
           jam_id?: string | null
           prep_time_minutes: number
+          primary_fruit_id?: string | null
           rejection_reason?: string | null
           season?: Database["public"]["Enums"]["recipe_season"]
           status?: Database["public"]["Enums"]["recipe_status"]
@@ -1845,6 +2016,7 @@ export type Database = {
           instructions?: Json
           jam_id?: string | null
           prep_time_minutes?: number
+          primary_fruit_id?: string | null
           rejection_reason?: string | null
           season?: Database["public"]["Enums"]["recipe_season"]
           status?: Database["public"]["Enums"]["recipe_status"]
@@ -1858,6 +2030,13 @@ export type Database = {
             columns: ["jam_id"]
             isOneToOne: false
             referencedRelation: "jams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_primary_fruit_id_fkey"
+            columns: ["primary_fruit_id"]
+            isOneToOne: false
+            referencedRelation: "fruits"
             referencedColumns: ["id"]
           },
         ]

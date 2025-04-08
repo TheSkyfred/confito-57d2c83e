@@ -37,6 +37,8 @@ import RecipeCreate from './pages/RecipeCreate';
 import RecipeEdit from './pages/RecipeEdit';
 import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
+import AdminFruits from './pages/AdminFruits';
+import FruitDetail from './pages/FruitDetail';
 
 // Nouvelles pages pour les conseils
 import Conseils from './pages/Conseils';
@@ -76,10 +78,12 @@ function App() {
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
+                  <Route path="/admin/fruits" element={<AdminFruits />} />
                   <Route path="/rankings" element={<Rankings />} />
                   <Route path="/pro-dashboard" element={<ProDashboard />} />
                   <Route path="/pro-registration" element={<ProRegistration />} />
                   <Route path="/seasonal" element={<SeasonalCalendar />} />
+                  <Route path="/fruits/:id" element={<FruitDetail />} />
                   <Route path="/user/recipes" element={<UserRecipes />} />
                   <Route path="/recipes" element={<Recipes />} />
                   <Route path="/recipes/:id" element={<RecipeDetail />} />
