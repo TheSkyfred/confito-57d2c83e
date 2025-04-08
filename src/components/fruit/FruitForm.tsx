@@ -14,6 +14,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  StandaloneFormLabel,
+  StandaloneFormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -324,26 +326,19 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="is_published"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <FormLabel>Publier</FormLabel>
-                      <FormDescription>
-                        Rendre ce fruit visible dans le calendrier
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {/* Fix: Use a div with controlled Switch instead of FormField for is_published to avoid infinite loops */}
+              <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <StandaloneFormLabel>Publier</StandaloneFormLabel>
+                  <StandaloneFormDescription>
+                    Rendre ce fruit visible dans le calendrier
+                  </StandaloneFormDescription>
+                </div>
+                <Switch
+                  checked={form.watch('is_published')}
+                  onCheckedChange={(checked) => form.setValue('is_published', checked)}
+                />
+              </div>
             </div>
 
             <div className="space-y-6">
