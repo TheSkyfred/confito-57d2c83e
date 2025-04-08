@@ -20,6 +20,7 @@ import UserDashboard from "./pages/UserDashboard";
 import UserProfile from "./pages/UserProfile";
 import Credits from "./pages/Credits";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAds from "./pages/AdminAds";
 import JamEditor from "./pages/JamEditor";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -60,6 +61,9 @@ const App = () => (
                 <Route path="/profile/:id" element={<UserProfile />} />
                 <Route path="/credits" element={<Credits />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/ads" element={<AdminAds />} />
+                <Route path="/admin/ads/:action" element={<AdminAds />} />
+                <Route path="/admin/ads/:action/:id" element={<AdminAds />} />
                 <Route path="/jam/create" element={<JamEditor />} />
                 <Route path="/jam/edit/:id" element={<JamEditor />} />
                 <Route path="/cart" element={<Cart />} />
