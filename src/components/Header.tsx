@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +20,8 @@ import {
   Home,
   Search,
   ShoppingBag,
-  Shield
+  Shield,
+  Layout
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -170,6 +170,12 @@ const Header = () => {
                       <Link to="/admin" onClick={closeMenu}>
                         <Shield className="mr-2 h-4 w-4" />
                         Administration
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/ads">
+                        <Layout className="mr-2 h-4 w-4" />
+                        Gestion des publicités
                       </Link>
                     </DropdownMenuItem>
                   </>
