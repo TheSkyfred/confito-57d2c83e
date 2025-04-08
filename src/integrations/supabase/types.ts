@@ -207,6 +207,210 @@ export type Database = {
           },
         ]
       }
+      advice_articles: {
+        Row: {
+          author_id: string
+          content: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          id: string
+          published_at: string | null
+          tags: string[] | null
+          title: string
+          type: Database["public"]["Enums"]["advice_type"]
+          updated_at: string | null
+          video_url: string | null
+          visible: boolean | null
+        }
+        Insert: {
+          author_id: string
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          published_at?: string | null
+          tags?: string[] | null
+          title: string
+          type: Database["public"]["Enums"]["advice_type"]
+          updated_at?: string | null
+          video_url?: string | null
+          visible?: boolean | null
+        }
+        Update: {
+          author_id?: string
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          id?: string
+          published_at?: string | null
+          tags?: string[] | null
+          title?: string
+          type?: Database["public"]["Enums"]["advice_type"]
+          updated_at?: string | null
+          video_url?: string | null
+          visible?: boolean | null
+        }
+        Relationships: []
+      }
+      advice_comment_likes: {
+        Row: {
+          comment_id: string | null
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          comment_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          comment_id?: string | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advice_comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "advice_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advice_comments: {
+        Row: {
+          article_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          likes_count: number | null
+          parent_comment_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          likes_count?: number | null
+          parent_comment_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          likes_count?: number | null
+          parent_comment_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advice_comments_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "advice_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advice_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "advice_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advice_images: {
+        Row: {
+          article_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string
+        }
+        Insert: {
+          article_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+        }
+        Update: {
+          article_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advice_images_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "advice_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advice_products: {
+        Row: {
+          article_id: string | null
+          click_count: number | null
+          conversion_count: number | null
+          created_at: string | null
+          description: string | null
+          external_url: string | null
+          id: string
+          image_url: string | null
+          is_sponsored: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          article_id?: string | null
+          click_count?: number | null
+          conversion_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_sponsored?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          article_id?: string | null
+          click_count?: number | null
+          conversion_count?: number | null
+          created_at?: string | null
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_sponsored?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advice_products_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "advice_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       allergens: {
         Row: {
           category: string | null
@@ -1824,6 +2028,13 @@ export type Database = {
       }
     }
     Enums: {
+      advice_type:
+        | "fruits"
+        | "cuisson"
+        | "recette"
+        | "conditionnement"
+        | "sterilisation"
+        | "materiel"
       badge_category: "achievement" | "specialty" | "community"
       battle_status:
         | "inscription"
@@ -1969,6 +2180,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      advice_type: [
+        "fruits",
+        "cuisson",
+        "recette",
+        "conditionnement",
+        "sterilisation",
+        "materiel",
+      ],
       badge_category: ["achievement", "specialty", "community"],
       battle_status: [
         "inscription",

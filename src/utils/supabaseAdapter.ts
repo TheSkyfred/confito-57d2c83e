@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const supabaseDirect = {
@@ -223,6 +222,42 @@ export const supabaseDirect = {
       return { data, error: null };
     } catch (error: any) {
       console.error(`Erreur lors de la requête DELETE sur ${table}:`, error);
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Incrémente le compteur de clics d'un produit
+   * @param productId L'ID du produit
+   */
+  async incrementProductClick(productId: string) {
+    try {
+      const { data, error } = await supabase.rpc('increment_product_clicks', {
+        p_product_id: productId
+      });
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error: any) {
+      console.error(`Erreur lors de l'incrémentation du compteur de clics:`, error);
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Met à jour le compteur de likes d'un commentaire
+   * @param commentId L'ID du commentaire
+   */
+  async updateCommentLikesCount(commentId: string) {
+    try {
+      const { data, error } = await supabase.rpc('update_comment_likes_count', {
+        p_comment_id: commentId
+      });
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error: any) {
+      console.error(`Erreur lors de la mise à jour du compteur de likes:`, error);
       return { data: null, error };
     }
   }

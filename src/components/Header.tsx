@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +24,8 @@ import {
   Shield,
   Layout,
   Briefcase,
-  Book
+  Book,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -119,6 +121,7 @@ const Header = () => {
           <NavItem to="/explore" label="Explorer" icon={Search} isCurrent={isCurrentPage('/explore')} />
           <NavItem to="/battles" label="Battles" icon={Swords} isCurrent={isCurrentPage('/battles')} />
           <NavItem to="/recipes" label="Recettes" icon={Book} isCurrent={isCurrentPage('/recipes')} />
+          <NavItem to="/conseils" label="Conseils" icon={Lightbulb} isCurrent={isCurrentPage('/conseils')} />
           <NavItem to="/seasonal" label="Saisonnier" icon={Calendar} isCurrent={isCurrentPage('/seasonal')} />
           <NavItem to="/rankings" label="Classement" icon={Trophy} isCurrent={isCurrentPage('/rankings')} />
         </nav>
@@ -228,6 +231,7 @@ const Header = () => {
             <NavItemMobile to="/explore" label="Explorer" icon={Search} onClick={closeMenu} />
             <NavItemMobile to="/battles" label="Battles" icon={Swords} onClick={closeMenu} />
             <NavItemMobile to="/recipes" label="Recettes" icon={Book} onClick={closeMenu} />
+            <NavItemMobile to="/conseils" label="Conseils" icon={Lightbulb} onClick={closeMenu} />
             <NavItemMobile to="/seasonal" label="Saisonnier" icon={Calendar} onClick={closeMenu} />
             <NavItemMobile to="/rankings" label="Classement" icon={Trophy} onClick={closeMenu} />
             
