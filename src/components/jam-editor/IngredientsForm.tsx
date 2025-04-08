@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { 
   StandaloneFormLabel as FormLabel, 
   StandaloneFormDescription as FormDescription 
@@ -7,8 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Minus, AlertCircle } from 'lucide-react';
+import { Plus, Minus, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { useQuery } from '@tanstack/react-query';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { AllergenType } from '@/types/supabase';
+import { toast } from '@/hooks/use-toast';
 
 // Common ingredients for autocomplete
 const commonIngredients = [
@@ -19,11 +24,6 @@ const commonIngredients = [
   'Carotte', 'Poivron', 'Tomate', 'Potimarron', 'Oignon',
   'Sucre', 'Pectine', 'Agar-agar', 'Miel', 'Sirop d\'érable',
   'Vanille', 'Cannelle', 'Gingembre', 'Cardamome', 'Anis étoilé'
-];
-
-// Common allergens
-const commonAllergens = [
-  'Fruits à coque', 'Sulfites', 'Lait', 'Œuf', 'Soja', 'Gluten'
 ];
 
 interface Ingredient {
@@ -42,8 +42,30 @@ interface IngredientsFormProps {
 }
 
 const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormData }) => {
-  const [suggestions, setSuggestions] = React.useState<string[]>([]);
-  const [focusedIngredientIndex, setFocusedIngredientIndex] = React.useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [focusedIngredientIndex, setFocusedIngredientIndex] = useState<number | null>(null);
+  const [detectedAllergens, setDetectedAllergens] = useState<string[]>([]);
+  
+  // Fetch all allergens from database
+  const { data: allergens, isLoading: loadingAllergens } = useQuery({
+    queryKey: ['allergens'],
+    queryFn: async () => {
+      const { data, error } = await supabaseDirect.select(
+        'allergens',
+        '*'
+      );
+      
+      if (error) {
+        toast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger les allergènes",
+          variant: "destructive",
+        });
+        throw error;
+      }
+      return data as AllergenType[];
+    },
+  });
   
   // Add a new ingredient
   const addIngredient = () => {
@@ -89,12 +111,48 @@ const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormD
   };
 
   // Add a common allergen as checked ingredient
-  const addAllergen = (allergen: string) => {
-    updateFormData('ingredients', [
-      ...formData.ingredients, 
-      { name: allergen, quantity: '', is_allergen: true }
-    ]);
+  const addAllergen = (allergenName: string) => {
+    // Check if allergen is already in the ingredients list
+    const exists = formData.ingredients.some(ing => 
+      ing.name.toLowerCase() === allergenName.toLowerCase()
+    );
+
+    if (!exists) {
+      updateFormData('ingredients', [
+        ...formData.ingredients, 
+        { name: allergenName, quantity: '', is_allergen: true }
+      ]);
+    }
   };
+  
+  // Check for allergens in ingredients and update detected allergens
+  useEffect(() => {
+    if (!allergens || allergens.length === 0) return;
+    
+    const detected: string[] = [];
+    
+    formData.ingredients.forEach(ingredient => {
+      if (!ingredient.name) return;
+      
+      // Check if ingredient name matches any known allergen
+      const matchingAllergen = allergens.find(allergen => 
+        ingredient.name.toLowerCase().includes(allergen.name.toLowerCase()) ||
+        allergen.name.toLowerCase().includes(ingredient.name.toLowerCase())
+      );
+      
+      if (matchingAllergen && !detected.includes(matchingAllergen.name)) {
+        detected.push(matchingAllergen.name);
+      }
+    });
+    
+    setDetectedAllergens(detected);
+    updateFormData('allergens', detected);
+  }, [formData.ingredients, allergens]);
+  
+  // Common allergens badges to display
+  const commonAllergensToShow = allergens?.filter(a => a.severity >= 4)
+    .slice(0, 10)
+    .sort(() => 0.5 - Math.random()) || [];
   
   return (
     <div className="space-y-6">
@@ -102,26 +160,54 @@ const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormD
         <div className="flex items-start">
           <AlertCircle className="h-5 w-5 text-amber-600 mr-2 mt-0.5" />
           <div>
-            <h4 className="font-medium text-amber-800">Allergens importants</h4>
+            <h4 className="font-medium text-amber-800">Allergènes importants</h4>
             <p className="text-sm text-amber-700 mt-1">
               Pour la sécurité de tous, assurez-vous d'identifier correctement tous les allergènes potentiels dans votre confiture.
             </p>
             
             <div className="flex flex-wrap gap-2 mt-3">
-              {commonAllergens.map((allergen) => (
+              {loadingAllergens ? (
+                <p className="text-sm text-amber-700">Chargement des allergènes...</p>
+              ) : commonAllergensToShow.map((allergen) => (
                 <Badge 
-                  key={allergen} 
+                  key={allergen.id} 
                   variant="outline"
                   className="cursor-pointer border-amber-300 text-amber-800 hover:bg-amber-100"
-                  onClick={() => addAllergen(allergen)}
+                  onClick={() => addAllergen(allergen.name)}
                 >
-                  + {allergen}
+                  + {allergen.name}
                 </Badge>
               ))}
             </div>
           </div>
         </div>
       </div>
+      
+      {detectedAllergens.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-2 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-red-800">Allergènes détectés</h4>
+              <p className="text-sm text-red-700 mt-1">
+                Les allergènes suivants ont été détectés dans votre liste d'ingrédients :
+              </p>
+              
+              <div className="flex flex-wrap gap-2 mt-3">
+                {detectedAllergens.map((allergen) => (
+                  <Badge 
+                    key={allergen} 
+                    variant="outline"
+                    className="border-red-300 bg-red-100 text-red-800"
+                  >
+                    {allergen}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -152,6 +238,7 @@ const IngredientsForm: React.FC<IngredientsFormProps> = ({ formData, updateFormD
                     onBlur={() => {
                       setTimeout(() => setSuggestions([]), 200);
                     }}
+                    className={ingredient.is_allergen ? "border-red-300" : ""}
                   />
                   
                   {suggestions.length > 0 && focusedIngredientIndex === index && (

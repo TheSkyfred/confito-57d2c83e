@@ -1,4 +1,3 @@
-
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -246,4 +245,14 @@ export type BattleStarsType = {
   created_at: string;
   updated_at: string;
   profile?: ProfileType;
+};
+
+export type AllergenType = {
+  id: string;
+  name: string;
+  category: string;
+  severity: number;
+  description: string;
+  created_at: string;
+  updated_at: string;
 };

@@ -8,7 +8,7 @@ import HeroSection from "@/components/HeroSection";
 import FeatureSection from "@/components/FeatureSection";
 import TopJamsSection from "@/components/TopJamsSection";
 import SeasonalSection from "@/components/SeasonalSection";
-import { PlusCircle, Swords, Trophy } from 'lucide-react';
+import { AlertCircle, PlusCircle, Swords, Trophy } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -17,6 +17,8 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { NewBattleType } from '@/types/supabase';
 
 const Index = () => {
@@ -33,6 +35,43 @@ const Index = () => {
       return data as unknown as NewBattleType[];
     },
   });
+  
+  // Helper function to format constraint values
+  const formatConstraints = (constraints: Record<string, any>) => {
+    return Object.entries(constraints).map(([key, value]) => {
+      // Check if value contains allergenic ingredients
+      const allergenKeywords = ['fruits à coque', 'gluten', 'lait', 'œufs', 'soja'];
+      
+      const containsAllergen = typeof value === 'string' && 
+        allergenKeywords.some(allergen => 
+          value.toLowerCase().includes(allergen.toLowerCase())
+        );
+      
+      return (
+        <Badge 
+          key={key} 
+          variant="outline" 
+          className={`mr-2 mb-2 ${containsAllergen ? 'bg-red-100 border-red-300 text-red-800' : ''}`}
+        >
+          {containsAllergen ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger className="flex items-center">
+                  <AlertCircle className="h-3 w-3 mr-1 text-red-600" /> 
+                  {key}: {value}
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs text-center">Contient des allergènes potentiels</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <span>{key}: {value}</span>
+          )}
+        </Badge>
+      );
+    });
+  };
   
   return (
     <div>
@@ -63,11 +102,9 @@ const Index = () => {
                 <CardHeader>
                   <CardTitle>{battle.theme}</CardTitle>
                   <CardDescription>
-                    {Object.entries(battle.constraints).map(([key, value]) => (
-                      <span key={key} className="mr-2">
-                        {key}: {value}
-                      </span>
-                    ))}
+                    <div className="flex flex-wrap mt-2">
+                      {battle.constraints && formatConstraints(battle.constraints)}
+                    </div>
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
