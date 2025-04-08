@@ -71,9 +71,10 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
           </div>
           <div className="flex flex-col items-end">
             <div className="font-medium flex items-center gap-2">
-              <CreditBadge amount={jam.price_credits} size="sm" />
-              {jam.is_pro && jam.price_euros && (
-                <span className="text-sm text-muted-foreground">{jam.price_euros.toFixed(2)} €</span>
+              {jam.is_pro && jam.price_euros ? (
+                <span className="text-sm font-medium">{jam.price_euros.toFixed(2)} €</span>
+              ) : (
+                <CreditBadge amount={jam.price_credits} size="sm" />
               )}
             </div>
           </div>
