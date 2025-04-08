@@ -6,6 +6,7 @@ import { Star, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { getProfileUsername } from '@/utils/profileTypeGuards';
 
 const TopJamsSection = () => {
   const { data: topJams, isLoading } = useQuery({
@@ -18,9 +19,8 @@ const TopJamsSection = () => {
           name,
           price_credits,
           creator_id,
-          profiles:creator_id (username),
-          jam_images!inner (url, is_primary),
-          reviews!left (rating)
+          profiles (username),
+          jam_images (url, is_primary)
         `
       );
       
@@ -28,15 +28,21 @@ const TopJamsSection = () => {
       
       // Calculer la note moyenne pour chaque confiture
       const jamsWithRatings = data.map(jam => {
+        // Safely handle ratings calculation
         const ratings = jam.reviews ? jam.reviews.map(r => r.rating).filter(Boolean) : [];
         const avgRating = ratings.length 
           ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
           : 0;
         
+        // Find primary image or use the first one
+        const primaryImage = jam.jam_images && jam.jam_images.length > 0
+          ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url)
+          : null;
+        
         return {
           ...jam,
           avgRating,
-          primaryImage: jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url
+          primaryImage
         };
       });
       
@@ -81,7 +87,9 @@ const TopJamsSection = () => {
                 </div>
                 <CardContent className="pt-4">
                   <h3 className="font-medium">{jam.name}</h3>
-                  <p className="text-sm text-muted-foreground">par {jam.profiles.username}</p>
+                  <p className="text-sm text-muted-foreground">
+                    par {getProfileUsername(jam.profiles)}
+                  </p>
                   <div className="flex items-center mt-2">
                     {[1, 2, 3, 4, 5].map(star => (
                       <Star 

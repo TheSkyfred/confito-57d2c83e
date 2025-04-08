@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import JamCard from '@/components/JamCard';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { JamType } from '@/types/supabase';
+import { getProfileUsername } from '@/utils/profileTypeGuards';
 
 const AvailableJamsSection = () => {
   const { data: availableJams, isLoading } = useQuery({
@@ -24,9 +24,8 @@ const AvailableJamsSection = () => {
           ingredients,
           available_quantity,
           creator_id,
-          profiles:creator_id (username),
-          jam_images!left (url, is_primary),
-          reviews:jam_reviews!left (rating:((taste_rating + texture_rating + originality_rating + balance_rating)/4))
+          profiles (username),
+          jam_images (url, is_primary)
         `
       );
       
