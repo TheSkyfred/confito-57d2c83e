@@ -1,32 +1,41 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
-import { AdsCampaignType } from '@/types/recipes';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useToast } from '@/hooks/use-toast';
+import { AdsCampaignType, AdsInvoiceType } from '@/types/recipes';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  ArrowLeft,
-  BarChart3,
+  BarChart,
   Calendar,
-  Download,
+  Clock,
+  DollarSign,
   Edit,
-  Eye,
   EyeOff,
   FileText,
+  MousePointer,
+  Percent,
+  ShoppingCart,
+  Target,
   Trash2,
-  Users
+  TrendingUp,
+  User,
+  Users,
+  Activity,
+  ArrowLeft,
+  Eye,
 } from 'lucide-react';
 import {
   Table,
@@ -42,91 +51,93 @@ interface AdsCampaignDetailsProps {
 }
 
 const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) => {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<string>('overview');
-  
-  // Récupérer les données de la campagne
-  const { data: campaign, isLoading, error, refetch } = useQuery({
-    queryKey: ['adsCampaign', campaignId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ads_campaigns')
-        .select(`
+  const { toast } = useToast();
+  const [campaign, setCampaign] = useState<AdsCampaignType | null>(null);
+  const [invoices, setInvoices] = useState<AdsInvoiceType[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingInvoices, setLoadingInvoices] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchCampaign = async () => {
+      setLoading(true);
+      
+      try {
+        const { data, error } = await supabaseDirect.getById('ads_campaigns', campaignId, `
           *,
           jam:jam_id (
             id,
             name,
+            price_euros,
             creator_id,
-            description,
-            image_url: jam_images(url, is_primary)
+            profiles:creator_id (username, full_name)
           ),
           creator:created_by (
             id, 
             username, 
             full_name
           ),
-          clicks:ads_clicks (
-            id,
-            user_id,
-            clicked_at,
-            source_page,
-            user:user_id (username, full_name)
-          ),
-          conversions:ads_conversions (
-            id,
-            conversion_type,
-            conversion_value,
-            converted_at,
-            user:user_id (username, full_name)
-          )
-        `)
-        .eq('id', campaignId)
-        .single();
+          clicks:ads_clicks (id),
+          conversions:ads_conversions (id)
+        `);
+          
+        if (error) throw error;
+        
+        if (!data) {
+          throw new Error('Campagne non trouvée');
+        }
+
+        // Calculer les métriques
+        const campaignData = {
+          ...data,
+          clicks_count: data.clicks?.length || 0,
+          conversions_count: data.conversions?.length || 0,
+          ctr: data.clicks?.length ? 
+            (data.clicks.length / data.planned_impressions) * 100 : 0,
+          conversion_rate: data.clicks?.length && data.conversions?.length ? 
+            (data.conversions.length / data.clicks.length) * 100 : 0
+        };
+        
+        setCampaign(campaignData as AdsCampaignType);
+      } catch (error: any) {
+        toast({
+          title: 'Erreur',
+          description: error.message || 'Impossible de charger les détails de la campagne',
+          variant: 'destructive',
+        });
+        navigate('/admin/campaigns');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    const fetchInvoices = async () => {
+      setLoadingInvoices(true);
       
-      if (error) throw error;
-      
-      // Calculer les métriques
-      const calculatedData = {
-        ...data,
-        clicks_count: data.clicks?.length || 0,
-        conversions_count: data.conversions?.length || 0,
-        ctr: data.clicks?.length ? 
-          (data.clicks.length / data.planned_impressions) * 100 : 0,
-        conversion_rate: data.clicks?.length && data.conversions?.length ? 
-          (data.conversions.length / data.clicks.length) * 100 : 0
-      };
-      
-      return calculatedData as AdsCampaignType;
-    }
-  });
+      try {
+        const { data, error } = await supabaseDirect.selectWhere('ads_invoices', 'campaign_id', campaignId);
+          
+        if (error) throw error;
+        
+        setInvoices(data || []);
+      } catch (error: any) {
+        console.error('Erreur lors du chargement des factures:', error);
+      } finally {
+        setLoadingInvoices(false);
+      }
+    };
+    
+    fetchCampaign();
+    fetchInvoices();
+  }, [campaignId, navigate, toast]);
   
-  // Récupérer les factures pour cette campagne
-  const { data: invoices, isLoading: isLoadingInvoices } = useQuery({
-    queryKey: ['adsInvoices', campaignId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ads_invoices')
-        .select('*')
-        .eq('campaign_id', campaignId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    }
-  });
-  
-  // Supprimer une campagne
   const handleDelete = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
       return;
     }
     
     try {
-      const { error } = await supabase
-        .from('ads_campaigns')
-        .delete()
-        .eq('id', campaignId);
+      const { error } = await supabaseDirect.delete('ads_campaigns', { id: campaignId });
       
       if (error) throw error;
       
@@ -145,15 +156,15 @@ const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) =
     }
   };
   
-  // Changer la visibilité d'une campagne
   const toggleVisibility = async () => {
     if (!campaign) return;
     
     try {
-      const { error } = await supabase
-        .from('ads_campaigns')
-        .update({ is_visible: !campaign.is_visible })
-        .eq('id', campaignId);
+      const { error } = await supabaseDirect.update(
+        'ads_campaigns',
+        { is_visible: !campaign.is_visible },
+        { id: campaign.id }
+      );
       
       if (error) throw error;
       
@@ -164,7 +175,10 @@ const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) =
           : 'La campagne est maintenant visible',
       });
       
-      refetch();
+      setCampaign({
+        ...campaign,
+        is_visible: !campaign.is_visible
+      });
     } catch (error: any) {
       toast({
         title: 'Erreur',
@@ -174,11 +188,33 @@ const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) =
     }
   };
   
-  // Badge de statut avec couleur appropriée
-  const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  if (loading) {
+    return <div className="text-center py-8">Chargement des détails...</div>;
+  }
+  
+  if (!campaign) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-red-500">Erreur</CardTitle>
+          <CardDescription>Campagne non trouvée</CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button asChild>
+            <Link to="/admin/campaigns">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Retour aux campagnes
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+  
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge variant="default" className="bg-green-600">Active</Badge>;
+        return <Badge className="bg-green-600">Active</Badge>;
       case 'pending':
         return <Badge variant="outline" className="border-amber-500 text-amber-500">En attente</Badge>;
       case 'completed':
@@ -188,429 +224,308 @@ const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) =
     }
   };
   
-  if (isLoading) {
-    return <div className="text-center py-8">Chargement des détails de la campagne...</div>;
-  }
-  
-  if (error || !campaign) {
-    return (
-      <Card className="mx-auto my-8">
-        <CardHeader>
-          <CardTitle className="text-red-500">Erreur</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p>Une erreur est survenue lors du chargement des détails de la campagne</p>
-          <Button 
-            variant="outline"
-            className="mt-4"
-            onClick={() => navigate('/admin/campaigns')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour à la liste
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-  
+  const getInvoiceStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-600">Payée</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="border-amber-500 text-amber-500">En attente</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Annulée</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-        <div>
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/admin/campaigns')}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour aux campagnes
+      <div className="flex justify-between items-center">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => navigate('/admin/campaigns')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+        
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to={`/admin/campaigns/edit/${campaign.id}`}>
+              <Edit className="mr-2 h-4 w-4" />
+              Modifier
+            </Link>
           </Button>
           
-          <h1 className="text-2xl font-bold">{campaign.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <StatusBadge status={campaign.status} />
-            {!campaign.is_visible && (
-              <Badge variant="outline" className="border-gray-500 text-gray-500">
-                Masquée
-              </Badge>
-            )}
-            <Badge variant="secondary" className="capitalize">
-              {campaign.campaign_type === 'pro' ? 'Pro' : 'Sponsorisé'}
-            </Badge>
-          </div>
-        </div>
-        
-        <div className="flex gap-2 w-full sm:w-auto">
           <Button 
-            variant="outline"
-            size="sm"
+            size="sm" 
+            variant="outline" 
             onClick={toggleVisibility}
           >
             {campaign.is_visible ? (
               <>
-                <EyeOff className="mr-2 h-4 w-4" /> Masquer
+                <EyeOff className="mr-2 h-4 w-4" />
+                Masquer
               </>
             ) : (
               <>
-                <Eye className="mr-2 h-4 w-4" /> Rendre visible
+                <Eye className="mr-2 h-4 w-4" />
+                Rendre visible
               </>
             )}
           </Button>
+          
           <Button 
-            asChild
-            size="sm"
-          >
-            <Link to={`/admin/campaigns/edit/${campaign.id}`}>
-              <Edit className="mr-2 h-4 w-4" /> Modifier
-            </Link>
-          </Button>
-          <Button 
-            variant="destructive"
-            size="sm"
+            size="sm" 
+            variant="destructive" 
             onClick={handleDelete}
           >
-            <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+            <Trash2 className="mr-2 h-4 w-4" />
+            Supprimer
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Budget
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{campaign.budget_euros} €</p>
-            <p className="text-sm text-muted-foreground">
-              Facturation: {campaign.billing_type === 'fixed' 
-                ? 'Forfaitaire' 
-                : campaign.billing_type === 'cpc' 
-                  ? 'Coût par clic' 
-                  : 'Coût par mille impressions'}
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Période
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p>Début: {format(new Date(campaign.start_date), 'dd MMM yyyy', { locale: fr })}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-2xl font-bold">{campaign.name}</CardTitle>
+                <CardDescription>
+                  Campagne {campaign.campaign_type === 'pro' ? 'professionnelle' : 'sponsorisée'}
+                </CardDescription>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <p>Fin: {format(new Date(campaign.end_date), 'dd MMM yyyy', { locale: fr })}</p>
+              <div className="flex flex-col items-end gap-1">
+                {getStatusBadge(campaign.status)}
+                {!campaign.is_visible && (
+                  <Badge variant="outline" className="border-gray-500 text-gray-500">
+                    Masquée
+                  </Badge>
+                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Performances
-            </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="grid grid-cols-2 gap-x-4">
-              <div>
-                <p className="text-2xl font-bold">{campaign.clicks_count}</p>
-                <p className="text-sm text-muted-foreground">Clics</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{campaign.ctr.toFixed(2)}%</p>
-                <p className="text-sm text-muted-foreground">CTR</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Produit promu
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded bg-gray-100 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium">{campaign.jam?.name || 'Inconnu'}</p>
-                <p className="text-sm text-muted-foreground truncate max-w-[200px]">
-                  {campaign.jam?.description?.substring(0, 30) || 'Aucune description'}
-                  {campaign.jam?.description?.length > 30 ? '...' : ''}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="overview" onValueChange={setActiveTab} value={activeTab}>
-        <TabsList>
-          <TabsTrigger value="overview">
-            <BarChart3 className="mr-2 h-4 w-4" /> Vue d'ensemble
-          </TabsTrigger>
-          <TabsTrigger value="clicks">
-            <Users className="mr-2 h-4 w-4" /> Clics ({campaign.clicks?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="invoices">
-            <FileText className="mr-2 h-4 w-4" /> Factures ({invoices?.length || 0})
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview">
-          <Card>
-            <CardHeader>
-              <CardTitle>Détails de la campagne</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Informations générales</h3>
-                  <dl className="grid grid-cols-2 gap-2">
-                    <dt className="text-sm font-medium text-muted-foreground">Nom:</dt>
-                    <dd>{campaign.name}</dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Créée par:</dt>
-                    <dd>{campaign.creator?.full_name || campaign.creator?.username || 'Inconnu'}</dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Date de création:</dt>
-                    <dd>{format(new Date(campaign.created_at), 'PPP', { locale: fr })}</dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Date de mise à jour:</dt>
-                    <dd>{format(new Date(campaign.updated_at), 'PPP', { locale: fr })}</dd>
-                  </dl>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Période</span>
                 </div>
-                
                 <div>
-                  <h3 className="text-lg font-medium mb-2">Paramètres d'affichage</h3>
-                  <dl className="grid grid-cols-2 gap-2">
-                    <dt className="text-sm font-medium text-muted-foreground">Impressions prévues:</dt>
-                    <dd>{campaign.planned_impressions}</dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Fréquence d'affichage:</dt>
-                    <dd>Toutes les {campaign.display_frequency} cartes</dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Statut:</dt>
-                    <dd>
-                      <StatusBadge status={campaign.status} />
-                    </dd>
-                    
-                    <dt className="text-sm font-medium text-muted-foreground">Visibilité:</dt>
-                    <dd>
-                      {campaign.is_visible ? (
-                        <Badge variant="outline" className="border-green-500 text-green-500">
-                          Visible
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-gray-500 text-gray-500">
-                          Masquée
-                        </Badge>
-                      )}
-                    </dd>
-                  </dl>
+                  <div className="text-sm">
+                    Du {format(new Date(campaign.start_date), 'dd/MM/yyyy', { locale: fr })}
+                  </div>
+                  <div className="text-sm">
+                    Au {format(new Date(campaign.end_date), 'dd/MM/yyyy', { locale: fr })}
+                  </div>
                 </div>
               </div>
               
-              <h3 className="text-lg font-medium mt-8 mb-2">Métriques de performance</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Clics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-2xl font-bold">{campaign.clicks_count}</p>
-                  </CardContent>
-                </Card>
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Budget</span>
+                </div>
+                <div className="font-semibold">{campaign.budget_euros} €</div>
+                <div className="text-xs text-muted-foreground">
+                  Mode: {campaign.billing_type === 'fixed' ? 'Forfait' : 
+                         campaign.billing_type === 'cpc' ? 'Coût par clic' : 
+                         'Coût par mille impressions'}
+                </div>
+              </div>
+              
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <Target className="h-4 w-4" />
+                  <span>Performance</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold">{campaign.clicks_count}</span> clics
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  CTR: {campaign.ctr.toFixed(2)}%
+                </div>
+              </div>
+              
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Conversions</span>
+                </div>
+                <div className="text-sm">
+                  <span className="font-semibold">{campaign.conversions_count}</span> conversions
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Taux: {campaign.conversion_rate.toFixed(2)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+              <div>
+                <h3 className="text-sm font-medium mb-2">Confiture promue</h3>
+                <div className="bg-muted/50 p-3 rounded-md">
+                  {campaign.jam ? (
+                    <Link to={`/jams/${campaign.jam.id}`} className="hover:underline flex items-center justify-between">
+                      <span>{campaign.jam.name}</span>
+                      <Badge variant="outline">
+                        {campaign.jam.price_euros?.toFixed(2)} €
+                      </Badge>
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">Confiture non disponible</span>
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium mb-2">Configuration</h3>
+                <div className="bg-muted/50 p-3 rounded-md space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Impressions planifiées:</span>
+                    <span>{campaign.planned_impressions}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Fréquence d'affichage:</span>
+                    <span>Toutes les {campaign.display_frequency} cartes</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Factures</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingInvoices ? (
+              <div className="text-center py-2 text-sm text-muted-foreground">
+                Chargement...
+              </div>
+            ) : invoices.length === 0 ? (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                Aucune facture disponible
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {invoices.map((invoice) => (
+                  <div 
+                    key={invoice.id} 
+                    className="p-3 border rounded-md flex justify-between items-center"
+                  >
+                    <div>
+                      <div className="font-semibold">{invoice.invoice_number}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {format(new Date(invoice.invoice_date), 'dd/MM/yyyy', { locale: fr })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold">{invoice.amount_euros} €</div>
+                      <div className="mt-1">{getInvoiceStatusBadge(invoice.status)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button asChild variant="outline" className="w-full">
+              <Link to={`/admin/campaigns/${campaign.id}/invoices`}>
+                <FileText className="mr-2 h-4 w-4" />
+                Toutes les factures
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+      
+      <Tabs defaultValue="statistics">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="statistics">
+            <BarChart className="h-4 w-4 mr-2" />
+            Statistiques
+          </TabsTrigger>
+          <TabsTrigger value="clicks">
+            <MousePointer className="h-4 w-4 mr-2" />
+            Clics
+          </TabsTrigger>
+          <TabsTrigger value="conversions">
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Conversions
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="statistics">
+          <Card className="border-t-0 rounded-t-none">
+            <CardContent className="py-6">
+              <div className="mb-4 text-sm text-muted-foreground">
+                Statistiques de la campagne du {format(new Date(campaign.start_date), 'dd/MM/yyyy', { locale: fr })}
+                {' '}au {format(new Date(campaign.end_date), 'dd/MM/yyyy', { locale: fr })}
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="border rounded-md p-4">
+                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
+                    <Activity className="h-4 w-4" /> 
+                    <span className="text-xs">Impressions</span>
+                  </div>
+                  <div className="text-2xl font-bold">{campaign.planned_impressions}</div>
+                </div>
                 
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Taux de clics (CTR)
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-2xl font-bold">{campaign.ctr.toFixed(2)}%</p>
-                  </CardContent>
-                </Card>
+                <div className="border rounded-md p-4">
+                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
+                    <MousePointer className="h-4 w-4" /> 
+                    <span className="text-xs">Clics</span>
+                  </div>
+                  <div className="text-2xl font-bold">{campaign.clicks_count}</div>
+                </div>
                 
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Conversions
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-2xl font-bold">{campaign.conversions_count}</p>
-                  </CardContent>
-                </Card>
+                <div className="border rounded-md p-4">
+                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
+                    <Percent className="h-4 w-4" /> 
+                    <span className="text-xs">CTR</span>
+                  </div>
+                  <div className="text-2xl font-bold">{campaign.ctr.toFixed(2)}%</div>
+                </div>
                 
-                <Card>
-                  <CardHeader className="p-4">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Taux de conversion
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-2xl font-bold">{campaign.conversion_rate.toFixed(2)}%</p>
-                  </CardContent>
-                </Card>
+                <div className="border rounded-md p-4">
+                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
+                    <TrendingUp className="h-4 w-4" /> 
+                    <span className="text-xs">Conv. Rate</span>
+                  </div>
+                  <div className="text-2xl font-bold">{campaign.conversion_rate.toFixed(2)}%</div>
+                </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="clicks">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historique des clics</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Utilisateur</TableHead>
-                      <TableHead>Source</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {campaign.clicks && campaign.clicks.length > 0 ? (
-                      campaign.clicks.map((click: any) => (
-                        <TableRow key={click.id}>
-                          <TableCell>
-                            {format(new Date(click.clicked_at), 'Pp', { locale: fr })}
-                          </TableCell>
-                          <TableCell>
-                            {click.user?.full_name || click.user?.username || 'Utilisateur anonyme'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {click.source_page}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
-                          Aucun clic enregistré pour cette campagne
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+          <Card className="border-t-0 rounded-t-none">
+            <CardContent className="py-6">
+              <div className="text-center py-8 text-muted-foreground">
+                Les données détaillées des clics seront disponibles prochainement
               </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="invoices">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Factures</span>
-                <Button size="sm">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Nouvelle facture
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingInvoices ? (
-                <div className="text-center py-4">Chargement des factures...</div>
-              ) : (
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>N° Facture</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Montant</TableHead>
-                        <TableHead>Échéance</TableHead>
-                        <TableHead>Statut</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invoices && invoices.length > 0 ? (
-                        invoices.map((invoice: any) => (
-                          <TableRow key={invoice.id}>
-                            <TableCell className="font-medium">
-                              {invoice.invoice_number}
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(invoice.invoice_date), 'P', { locale: fr })}
-                            </TableCell>
-                            <TableCell>
-                              {invoice.amount_euros} €
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(invoice.due_date), 'P', { locale: fr })}
-                            </TableCell>
-                            <TableCell>
-                              {invoice.status === 'pending' && (
-                                <Badge variant="outline" className="border-amber-500 text-amber-500">
-                                  En attente
-                                </Badge>
-                              )}
-                              {invoice.status === 'paid' && (
-                                <Badge variant="default" className="bg-green-600">
-                                  Payée
-                                </Badge>
-                              )}
-                              {invoice.status === 'cancelled' && (
-                                <Badge variant="destructive">
-                                  Annulée
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" asChild>
-                                <Link to={`/admin/invoices/${invoice.id}`}>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  Voir
-                                </Link>
-                              </Button>
-                              {invoice.pdf_url && (
-                                <Button variant="ghost" size="sm" asChild>
-                                  <a href={invoice.pdf_url} target="_blank" rel="noreferrer">
-                                    <Download className="mr-2 h-4 w-4" />
-                                    PDF
-                                  </a>
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="h-24 text-center">
-                            Aucune facture trouvée pour cette campagne
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+        <TabsContent value="conversions">
+          <Card className="border-t-0 rounded-t-none">
+            <CardContent className="py-6">
+              <div className="text-center py-8 text-muted-foreground">
+                Les données détaillées des conversions seront disponibles prochainement
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+      
     </div>
   );
 };

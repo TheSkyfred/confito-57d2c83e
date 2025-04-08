@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import ProJamCard from '@/components/ProJamCard';
 
 interface AdBannerProps {
@@ -19,25 +20,20 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       
       try {
         // Chercher une campagne active et visible
-        const { data, error } = await supabase
-          .from('ads_campaigns')
-          .select(`
+        const { data, error } = await supabaseDirect.select('ads_campaigns', `
+          id,
+          display_frequency,
+          jam_id,
+          campaign_type,
+          jam:jam_id (
             id,
-            display_frequency,
-            jam_id,
-            campaign_type,
-            jam:jam_id (
-              id,
-              name,
-              price_euros,
-              is_pro,
-              available_quantity,
-              jam_images(url, is_primary)
-            )
-          `)
-          .eq('status', 'active')
-          .eq('is_visible', true)
-          .order('created_at', { ascending: false });
+            name,
+            price_euros,
+            is_pro,
+            available_quantity,
+            jam_images(url, is_primary)
+          )
+        `, `status='active' AND is_visible=true`);
           
         if (error) throw error;
         
@@ -47,7 +43,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
         }
         
         // Choisir une pub qui correspond à la fréquence d'affichage
-        const matchingAds = data.filter(ad => {
+        const matchingAds = data.filter((ad: any) => {
           return cardIndex % ad.display_frequency === 0;
         });
         
@@ -91,7 +87,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     if (!adData) return;
     
     try {
-      await supabase.from('ads_clicks').insert({
+      await supabaseDirect.insert('ads_clicks', {
         campaign_id: adData.id,
         source_page: location.pathname,
       });

@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { AdsCampaignType } from '@/types/recipes';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,29 +54,26 @@ const AdsCampaignsList: React.FC = () => {
   const { data: campaigns, isLoading, error, refetch } = useQuery({
     queryKey: ['adsCampaigns'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ads_campaigns')
-        .select(`
-          *,
-          jam:jam_id (
-            id,
-            name,
-            image_url: jam_images(url, is_primary)
-          ),
-          creator:created_by (
-            id, 
-            username, 
-            full_name
-          ),
-          clicks:ads_clicks (id),
-          conversions:ads_conversions (id)
-        `)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabaseDirect.select('ads_campaigns', `
+        *,
+        jam:jam_id (
+          id,
+          name,
+          image_url: jam_images(url, is_primary)
+        ),
+        creator:created_by (
+          id, 
+          username, 
+          full_name
+        ),
+        clicks:ads_clicks (id),
+        conversions:ads_conversions (id)
+      `);
         
       if (error) throw error;
       
       // Calculer les métriques
-      return (data || []).map(campaign => ({
+      return (data || []).map((campaign: any) => ({
         ...campaign,
         clicks_count: campaign.clicks?.length || 0,
         conversions_count: campaign.conversions?.length || 0,
@@ -96,10 +92,7 @@ const AdsCampaignsList: React.FC = () => {
     }
     
     try {
-      const { error } = await supabase
-        .from('ads_campaigns')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabaseDirect.delete('ads_campaigns', { id });
       
       if (error) throw error;
       
@@ -121,10 +114,11 @@ const AdsCampaignsList: React.FC = () => {
   // Changer la visibilité d'une campagne
   const toggleVisibility = async (campaign: AdsCampaignType) => {
     try {
-      const { error } = await supabase
-        .from('ads_campaigns')
-        .update({ is_visible: !campaign.is_visible })
-        .eq('id', campaign.id);
+      const { error } = await supabaseDirect.update(
+        'ads_campaigns',
+        { is_visible: !campaign.is_visible },
+        { id: campaign.id }
+      );
       
       if (error) throw error;
       
@@ -144,6 +138,7 @@ const AdsCampaignsList: React.FC = () => {
       });
     }
   };
+  
   
   // Filtrer les campagnes
   const filteredCampaigns = campaigns?.filter(campaign => {
@@ -298,7 +293,7 @@ const AdsCampaignsList: React.FC = () => {
                     <div className="flex flex-col">
                       <span>{campaign.clicks_count} clics</span>
                       <span className="text-xs text-muted-foreground">
-                        {campaign.ctr.toFixed(2)}% CTR
+                        {campaign.ctr?.toFixed(2)}% CTR
                       </span>
                     </div>
                   </TableCell>

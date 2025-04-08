@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -71,20 +70,17 @@ const ProRegistration = () => {
     
     try {
       // Créer le profil pro
-      const { error: profileError } = await supabase
-        .from('pro_profiles')
-        .insert({
-          id: user.id,
-          ...values
-        });
+      const { error: profileError } = await supabaseDirect.insert('pro_profiles', {
+        id: user.id,
+        ...values
+      });
       
       if (profileError) throw profileError;
       
       // Mettre à jour le rôle utilisateur en "pro"
-      const { error: roleError } = await supabase
-        .from('profiles')
-        .update({ role: 'pro' })
-        .eq('id', user.id);
+      const { error: roleError } = await supabaseDirect.update('profiles', { role: 'pro' }, {
+        id: user.id
+      });
       
       if (roleError) throw roleError;
       

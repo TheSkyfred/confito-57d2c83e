@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -14,13 +15,20 @@ export const supabaseDirect = {
    * Récupère les données d'une table en contournant les vérifications de type
    * @param table Le nom de la table
    * @param query La requête (par défaut: '*')
+   * @param filter Filtre optionnel pour la clause WHERE
    * @returns Un objet contenant les données ou une erreur
    */
-  async select(table: string, query = '*') {
+  async select(table: string, query = '*', filter?: string) {
     try {
-      const { data, error } = await supabase
+      let queryBuilder = supabase
         .from(table as any)
         .select(query);
+        
+      if (filter) {
+        queryBuilder = queryBuilder.filter(filter);
+      }
+      
+      const { data, error } = await queryBuilder;
       
       if (error) throw error;
       return { data, error: null };
@@ -75,13 +83,38 @@ export const supabaseDirect = {
   },
   
   /**
-   * Insère des données dans une table en contournant les vérifications de type
+   * Récupère un élément par son ID
+   * @param table Le nom de la table
+   * @param id L'identifiant unique
+   * @param query La requête (par défaut: '*')
    */
-  async insert(table: string, values: any) {
+  async getById(table: string, id: string, query = '*') {
     try {
       const { data, error } = await supabase
         .from(table as any)
-        .insert(values);
+        .select(query)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error: any) {
+      console.error(`Erreur lors de la requête GET BY ID sur ${table}:`, error);
+      return { data: null, error };
+    }
+  },
+  
+  /**
+   * Insère des données dans une table en contournant les vérifications de type
+   * @param table Le nom de la table
+   * @param values Les valeurs à insérer
+   * @param options Options supplémentaires
+   */
+  async insert(table: string, values: any, options = {}) {
+    try {
+      const { data, error } = await supabase
+        .from(table as any)
+        .insert(values, { returning: 'minimal', ...options } as any);
         
       if (error) throw error;
       return { data, error: null };
@@ -92,17 +125,40 @@ export const supabaseDirect = {
   },
   
   /**
+   * Insère des données dans une table et retourne les données insérées
+   * @param table Le nom de la table
+   * @param values Les valeurs à insérer
+   */
+  async insertAndReturn(table: string, values: any) {
+    try {
+      const { data, error } = await supabase
+        .from(table as any)
+        .insert(values)
+        .select();
+        
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error: any) {
+      console.error(`Erreur lors de la requête INSERT AND RETURN sur ${table}:`, error);
+      return { data: null, error };
+    }
+  },
+  
+  /**
    * Met à jour des données dans une table en contournant les vérifications de type
+   * @param table Le nom de la table
+   * @param values Les valeurs à mettre à jour
+   * @param match Les conditions de correspondance (WHERE)
    */
   async update(table: string, values: any, match: Record<string, any>) {
     try {
-      const query = supabase
+      let query = supabase
         .from(table as any)
         .update(values);
         
       // Appliquer les conditions
       Object.entries(match).forEach(([key, value]) => {
-        query.eq(key, value);
+        query = query.eq(key, value);
       });
         
       const { data, error } = await query;
@@ -117,16 +173,18 @@ export const supabaseDirect = {
   
   /**
    * Supprime des données dans une table en contournant les vérifications de type
+   * @param table Le nom de la table
+   * @param match Les conditions de correspondance (WHERE)
    */
   async delete(table: string, match: Record<string, any>) {
     try {
-      const query = supabase
+      let query = supabase
         .from(table as any)
         .delete();
         
       // Appliquer les conditions
       Object.entries(match).forEach(([key, value]) => {
-        query.eq(key, value);
+        query = query.eq(key, value);
       });
         
       const { data, error } = await query;

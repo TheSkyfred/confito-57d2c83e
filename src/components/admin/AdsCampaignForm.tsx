@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -6,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
@@ -115,11 +114,7 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
       
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from('ads_campaigns')
-        .select('*')
-        .eq('id', campaignId)
-        .single();
+      const { data, error } = await supabaseDirect.getById('ads_campaigns', campaignId);
         
       if (error) {
         toast({
@@ -184,16 +179,10 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
       if (isEditing) {
         // Mode édition
         const { created_by, ...updateData } = campaignData;
-        result = await supabase
-          .from('ads_campaigns')
-          .update(updateData)
-          .eq('id', campaignId);
+        result = await supabaseDirect.update('ads_campaigns', updateData, { id: campaignId });
       } else {
         // Nouvelle campagne
-        result = await supabase
-          .from('ads_campaigns')
-          .insert(campaignData)
-          .select();
+        result = await supabaseDirect.insertAndReturn('ads_campaigns', campaignData);
       }
 
       if (result.error) throw result.error;
@@ -206,9 +195,7 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
           due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Échéance : +30 jours
         };
 
-        const invoiceResult = await supabase
-          .from('ads_invoices')
-          .insert(invoiceData);
+        const invoiceResult = await supabaseDirect.insert('ads_invoices', invoiceData);
 
         if (invoiceResult.error) {
           console.error("Erreur lors de la création de la facture:", invoiceResult.error);
