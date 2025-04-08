@@ -92,8 +92,10 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
   // Charger les données du fruit existant si en mode édition
   useEffect(() => {
+    if (!fruit) return;
+
     const loadFruitData = async () => {
-      if (fruit) {
+      try {
         // Mise à jour des valeurs de base du formulaire
         form.reset({
           name: fruit.name || '',
@@ -107,14 +109,16 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
           tags: [],
         });
         
-        // Update the local state
+        // Update the local state separately from form
         setIsPublished(fruit.is_published ?? true);
 
         // Charger les saisons associées
-        const { data: seasonData } = await supabase
+        const { data: seasonData, error: seasonError } = await supabase
           .from('fruit_seasons')
           .select('month')
           .eq('fruit_id', fruit.id);
+
+        if (seasonError) throw seasonError;
 
         if (seasonData && seasonData.length > 0) {
           const seasons = seasonData.map(s => s.month);
@@ -123,21 +127,30 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
         }
 
         // Charger les tags associés
-        const { data: tagData } = await supabase
+        const { data: tagData, error: tagError } = await supabase
           .from('fruit_tags')
           .select('tag')
           .eq('fruit_id', fruit.id);
+
+        if (tagError) throw tagError;
 
         if (tagData && tagData.length > 0) {
           const tags = tagData.map(t => t.tag);
           setTags(tags);
           form.setValue('tags', tags);
         }
+      } catch (error) {
+        console.error('Error loading fruit data:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données du fruit.",
+          variant: "destructive",
+        });
       }
     };
 
     loadFruitData();
-  }, [fruit, form]);
+  }, [fruit, form, toast]);
 
   // Gérer les changements de saisons sélectionnées
   const handleSeasonToggle = (month: number) => {
@@ -164,7 +177,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     }
   };
 
-  // Handle publish status change
+  // Handle publish status change - completely separate from form state
   const handlePublishChange = (checked: boolean) => {
     setIsPublished(checked);
     form.setValue('is_published', checked);
@@ -182,6 +195,9 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     setIsLoading(true);
     try {
       let fruitId = fruit?.id;
+
+      // Ensure is_published value is taken from our local state
+      values.is_published = isPublished;
 
       // Insérer ou mettre à jour le fruit
       if (fruitId) {
@@ -336,7 +352,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Fixed Switch component implementation */}
+              {/* Manually rendered Switch control - completely detached from form control flow */}
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <StandaloneFormLabel>Publier</StandaloneFormLabel>
@@ -344,6 +360,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                     Rendre ce fruit visible dans le calendrier
                   </StandaloneFormDescription>
                 </div>
+                {/* Use the local state variable only */}
                 <Switch
                   checked={isPublished}
                   onCheckedChange={handlePublishChange}
