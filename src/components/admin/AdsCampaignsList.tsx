@@ -67,23 +67,42 @@ const AdsCampaignsList: React.FC = () => {
             id, 
             username, 
             full_name
-          ),
-          clicks:ads_clicks (id),
-          conversions:ads_conversions (id)
-        `);
+          )`);
           
         if (error) throw error;
+
+        // Récupérer les statistiques pour chaque campagne
+        const campaignsWithStats = await Promise.all((data || []).map(async (campaign: any) => {
+          // Récupérer le nombre de clics
+          const { data: clicksData } = await supabaseDirect.select(
+            'ads_clicks',
+            'id',
+            { campaign_id: campaign.id }
+          );
+          
+          // Récupérer le nombre de conversions
+          const { data: conversionsData } = await supabaseDirect.select(
+            'ads_conversions',
+            'id',
+            { campaign_id: campaign.id }
+          );
+          
+          const clicks_count = clicksData?.length || 0;
+          const conversions_count = conversionsData?.length || 0;
+          
+          // Calculer les métriques
+          return {
+            ...campaign,
+            clicks_count,
+            conversions_count,
+            ctr: campaign.planned_impressions ? 
+              (clicks_count / campaign.planned_impressions) * 100 : 0,
+            conversion_rate: clicks_count ? 
+              (conversions_count / clicks_count) * 100 : 0
+          };
+        }));
         
-        // Calculer les métriques
-        return (data || []).map((campaign: any) => ({
-          ...campaign,
-          clicks_count: campaign.clicks?.length || 0,
-          conversions_count: campaign.conversions?.length || 0,
-          ctr: campaign.clicks?.length ? 
-            (campaign.clicks.length / campaign.planned_impressions) * 100 : 0,
-          conversion_rate: campaign.clicks?.length && campaign.conversions?.length ? 
-            (campaign.conversions.length / campaign.clicks.length) * 100 : 0
-        })) as AdsCampaignType[];
+        return campaignsWithStats as AdsCampaignType[];
       } catch (error) {
         console.error("Error fetching campaigns:", error);
         throw error;
@@ -145,7 +164,6 @@ const AdsCampaignsList: React.FC = () => {
     }
   };
   
-  
   // Filtrer les campagnes
   const filteredCampaigns = campaigns?.filter(campaign => {
     const matchesSearch = 
@@ -176,6 +194,7 @@ const AdsCampaignsList: React.FC = () => {
   }
   
   if (error) {
+    console.error("Error details:", error);
     return (
       <Card className="mx-auto max-w-4xl my-8">
         <CardHeader>
@@ -184,6 +203,18 @@ const AdsCampaignsList: React.FC = () => {
             Une erreur est survenue lors du chargement des campagnes
           </CardDescription>
         </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Détails: {error instanceof Error ? error.message : 'Erreur inconnue'}
+          </p>
+          <Button 
+            variant="outline" 
+            onClick={() => refetch()} 
+            className="mt-4"
+          >
+            Réessayer
+          </Button>
+        </CardContent>
       </Card>
     );
   }

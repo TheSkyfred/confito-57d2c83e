@@ -8,11 +8,21 @@ import AdsCampaignDetails from '@/components/admin/AdsCampaignDetails';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const AdminAds: React.FC = () => {
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading } = useUserRole();
   const { action, id } = useParams<{ action?: string; id?: string }>();
   
   console.log('AdminAds - Route Params:', { action, id }); // Debug logging
 
+  // Afficher un indicateur de chargement pendant la vérification du rôle
+  if (isLoading) {
+    return (
+      <div className="container p-6">
+        <div className="text-center py-8">Vérification des permissions...</div>
+      </div>
+    );
+  }
+
+  // Rediriger si l'utilisateur n'est pas admin
   if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
@@ -66,4 +76,3 @@ const AdminAds: React.FC = () => {
 };
 
 export default AdminAds;
-
