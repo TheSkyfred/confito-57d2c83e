@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,8 +27,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const campaignFormSchema = z.object({
   name: z.string().min(3, 'Le nom doit avoir au moins 3 caractères'),
-  jam_id: z.string().uuid('Veuillez sélectionner une confiture valide'),
   campaign_type: z.enum(['pro', 'sponsored']),
+  jam_id: z.string().uuid('Veuillez sélectionner une confiture valide').optional()
+    .refine(
+      (val, ctx) => {
+        return ctx.data.campaign_type !== 'sponsored' || (val && val.length > 0);
+      },
+      {
+        message: "La confiture est requise pour les campagnes sponsorisées",
+        path: ["jam_id"],
+      }
+    ),
+  redirect_url: z.string().url('Veuillez entrer une URL valide').optional()
+    .refine(
+      (val, ctx) => {
+        return ctx.data.campaign_type !== 'pro' || (val && val.length > 0);
+      },
+      {
+        message: "L'URL de redirection est requise pour les campagnes professionnelles",
+        path: ["redirect_url"],
+      }
+    ),
   planned_impressions: z.coerce.number().min(100, 'Minimum 100 impressions'),
   display_frequency: z.coerce.number().min(1, 'La fréquence minimale est 1'),
   budget_euros: z.coerce.number().min(5, 'Le budget minimum est de 5€'),
@@ -60,13 +78,15 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
   const [campaign, setCampaign] = useState<any>(null);
   const [jams, setJams] = useState<any[]>([]);
   const [loadingJams, setLoadingJams] = useState(false);
+  const [campaignType, setCampaignType] = useState<'pro' | 'sponsored'>('sponsored');
 
   const form = useForm<z.infer<typeof campaignFormSchema>>({
     resolver: zodResolver(campaignFormSchema),
     defaultValues: {
       name: '',
-      jam_id: '',
       campaign_type: 'sponsored',
+      jam_id: undefined,
+      redirect_url: '',
       planned_impressions: 1000,
       display_frequency: 6,
       budget_euros: 50,
@@ -77,9 +97,25 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
     },
   });
 
-  // Charger les confitures professionnelles disponibles
+  const handleCampaignTypeChange = (value: 'pro' | 'sponsored') => {
+    setCampaignType(value);
+    form.setValue('campaign_type', value);
+    
+    if (value === 'pro') {
+      form.setValue('jam_id', undefined);
+    }
+    
+    if (value === 'sponsored') {
+      form.setValue('redirect_url', '');
+    }
+    
+    form.trigger();
+  };
+
   useEffect(() => {
     const fetchJams = async () => {
+      if (campaignType === 'pro') return;
+      
       setLoadingJams(true);
       const { data, error } = await supabase
         .from('jams')
@@ -107,9 +143,8 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
     };
 
     fetchJams();
-  }, [toast]);
+  }, [toast, campaignType]);
 
-  // Charger les données d'une campagne existante si on est en mode édition
   useEffect(() => {
     const fetchCampaign = async () => {
       if (!campaignId) return;
@@ -129,11 +164,13 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
       }
       
       setCampaign(data);
+      setCampaignType(data.campaign_type);
       
       form.reset({
         name: data.name,
-        jam_id: data.jam_id,
         campaign_type: data.campaign_type,
+        jam_id: data.jam_id || undefined,
+        redirect_url: data.redirect_url || '',
         planned_impressions: data.planned_impressions,
         display_frequency: data.display_frequency,
         budget_euros: data.budget_euros,
@@ -164,8 +201,9 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
     try {
       const campaignData = {
         name: values.name,
-        jam_id: values.jam_id,
         campaign_type: values.campaign_type,
+        jam_id: values.campaign_type === 'sponsored' ? values.jam_id : null,
+        redirect_url: values.campaign_type === 'pro' ? values.redirect_url : null,
         planned_impressions: values.planned_impressions,
         display_frequency: values.display_frequency,
         budget_euros: values.budget_euros,
@@ -179,22 +217,19 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
       let result;
       
       if (isEditing) {
-        // Mode édition
         const { created_by, ...updateData } = campaignData;
         result = await supabaseDirect.update('ads_campaigns', updateData, { id: campaignId });
       } else {
-        // Nouvelle campagne
         result = await supabaseDirect.insertAndReturn('ads_campaigns', campaignData);
       }
 
       if (result.error) throw result.error;
 
-      // Créer une facture pour la campagne
       if (!isEditing && result.data && result.data[0]?.id) {
         const invoiceData = {
           campaign_id: result.data[0].id,
           amount_euros: values.budget_euros,
-          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Échéance : +30 jours
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         };
 
         const invoiceResult = await supabaseDirect.insert('ads_invoices', invoiceData);
@@ -211,7 +246,6 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
           : "La campagne a été créée et une facture a été générée",
       });
 
-      // Redirection vers la liste des campagnes
       navigate('/admin/campaigns');
       
     } catch (error: any) {
@@ -244,79 +278,81 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
 
         <FormField
           control={form.control}
-          name="jam_id"
+          name="campaign_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confiture à promouvoir</FormLabel>
+              <FormLabel>Type de campagne</FormLabel>
               <Select 
-                onValueChange={field.onChange} 
+                onValueChange={(value) => handleCampaignTypeChange(value as 'pro' | 'sponsored')} 
                 defaultValue={field.value}
-                disabled={loadingJams}
               >
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une confiture" />
+                    <SelectValue placeholder="Sélectionnez un type" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {jams.map(jam => (
-                    <SelectItem key={jam.id} value={jam.id}>
-                      {jam.name} - {jam.profiles?.full_name || jam.profiles?.username}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="pro">Professionnel</SelectItem>
+                  <SelectItem value="sponsored">Sponsorisé classique</SelectItem>
                 </SelectContent>
               </Select>
+              <FormDescription>
+                {campaignType === 'pro' ? 
+                  "Campagne professionnelle avec redirection vers une URL externe" : 
+                  "Campagne liée à une confiture spécifique"}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {campaignType === 'sponsored' ? (
           <FormField
             control={form.control}
-            name="campaign_type"
+            name="jam_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type de campagne</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormLabel>Confiture à promouvoir</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value}
+                  disabled={loadingJams}
+                >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un type" />
+                      <SelectValue placeholder="Sélectionnez une confiture" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="pro">Professionnel</SelectItem>
-                    <SelectItem value="sponsored">Sponsorisé classique</SelectItem>
+                    {jams.map(jam => (
+                      <SelectItem key={jam.id} value={jam.id}>
+                        {jam.name} - {jam.profiles?.full_name || jam.profiles?.username}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
-
+        ) : (
           <FormField
             control={form.control}
-            name="billing_type"
+            name="redirect_url"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Type de facturation</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez un type de facturation" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="fixed">Forfaitaire</SelectItem>
-                    <SelectItem value="cpc">Coût par clic (CPC)</SelectItem>
-                    <SelectItem value="cpm">Coût par mille impressions (CPM)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormLabel>URL de redirection</FormLabel>
+                <FormControl>
+                  <Input placeholder="https://..." {...field} />
+                </FormControl>
+                <FormDescription>
+                  URL vers laquelle les utilisateurs seront redirigés en cliquant sur la publicité
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <FormField
@@ -466,6 +502,29 @@ const AdsCampaignForm: React.FC<AdsCampaignFormProps> = ({ campaignId }) => {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="billing_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Type de facturation</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez un type de facturation" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="fixed">Forfaitaire</SelectItem>
+                  <SelectItem value="cpc">Coût par clic (CPC)</SelectItem>
+                  <SelectItem value="cpm">Coût par mille impressions (CPM)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

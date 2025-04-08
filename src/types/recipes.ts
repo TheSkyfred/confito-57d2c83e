@@ -1,4 +1,3 @@
-
 import { ProfileType } from './supabase';
 
 export type RecipeDifficulty = 'facile' | 'moyen' | 'avancé';
@@ -100,8 +99,9 @@ export type RecipeFilters = {
 export type AdsCampaignType = {
   id: string;
   name: string;
-  jam_id: string;
+  jam_id: string | null;
   campaign_type: 'pro' | 'sponsored';
+  redirect_url: string | null;
   planned_impressions: number;
   display_frequency: number;
   budget_euros: number;

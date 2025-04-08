@@ -14,10 +14,10 @@ interface AdminAdsProps {
 
 const AdminAds: React.FC<AdminAdsProps> = (props) => {
   const { isAdmin, isLoading } = useUserRole();
-  const params = useParams<{ id?: string }>();
+  const params = useParams<{ action?: string; id?: string }>();
   
   // Utiliser les props ou les paramètres d'URL
-  const action = props.action || useParams<{ action?: string }>().action;
+  const action = props.action || params.action;
   const id = props.id || params.id;
   
   console.log('AdminAds - Route Params:', { action, id }); // Debug logging

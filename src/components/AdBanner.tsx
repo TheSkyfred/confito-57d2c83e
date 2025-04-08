@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import ProJamCard from '@/components/ProJamCard';
+import { Badge } from '@/components/ui/badge';
 
 interface AdBannerProps {
   cardIndex: number;
@@ -11,6 +12,7 @@ interface AdBannerProps {
 
 const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [adData, setAdData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -22,9 +24,11 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
         // Chercher une campagne active et visible en utilisant supabaseDirect
         const { data, error } = await supabaseDirect.select('ads_campaigns', `
           id,
+          name,
           display_frequency,
           jam_id,
           campaign_type,
+          redirect_url,
           jam:jam_id (
             id,
             name,
@@ -56,16 +60,22 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
         const selectedAd = matchingAds[Math.floor(Math.random() * matchingAds.length)];
         
         // Préparer les données pour l'affichage
+        const isPro = selectedAd.campaign_type === 'pro';
+        
         setAdData({
           id: selectedAd.id,
-          jamId: selectedAd.jam_id,
-          name: selectedAd.jam?.name || 'Confiture',
-          isPro: selectedAd.jam?.is_pro || selectedAd.campaign_type === 'pro',
-          isSponsored: selectedAd.campaign_type === 'sponsored',
-          priceEuros: selectedAd.jam?.price_euros || 0,
-          isAvailable: selectedAd.jam?.available_quantity > 0,
-          imageUrl: selectedAd.jam?.jam_images?.find((img: any) => img.is_primary)?.url ||
-                   selectedAd.jam?.jam_images?.[0]?.url
+          name: isPro ? selectedAd.name : selectedAd.jam?.name || 'Confiture',
+          campaignType: selectedAd.campaign_type,
+          redirectUrl: isPro ? selectedAd.redirect_url : null,
+          jamId: !isPro ? selectedAd.jam_id : null,
+          isPro: isPro || (selectedAd.jam?.is_pro || false),
+          isSponsored: true,
+          priceEuros: !isPro ? (selectedAd.jam?.price_euros || 0) : 0,
+          isAvailable: !isPro ? (selectedAd.jam?.available_quantity > 0) : true,
+          imageUrl: !isPro 
+            ? (selectedAd.jam?.jam_images?.find((img: any) => img.is_primary)?.url ||
+               selectedAd.jam?.jam_images?.[0]?.url) 
+            : null
         });
         
       } catch (error: any) {
@@ -88,13 +98,45 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
         campaign_id: adData.id,
         source_page: location.pathname,
       });
+
+      if (adData.redirectUrl) {
+        // Open external URL for pro campaigns in a new tab
+        window.open(adData.redirectUrl, '_blank', 'noopener,noreferrer');
+      } else if (adData.jamId) {
+        // Navigate to jam page for sponsored campaigns
+        navigate(`/jam/${adData.jamId}`);
+      }
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement du clic:', error);
     }
   };
   
   if (loading || !adData) return null;
+
+  // Professional ad without jam
+  if (adData.campaignType === 'pro') {
+    return (
+      <div onClick={handleAdClick} className="cursor-pointer">
+        <div className="relative rounded-lg border border-muted overflow-hidden hover:shadow-md transition-shadow">
+          <div className="aspect-square bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
+            <div className="text-center">
+              <Badge variant="outline" className="mb-4 bg-white">Publicité</Badge>
+              <h3 className="text-xl font-semibold mb-2">{adData.name}</h3>
+              <p className="text-muted-foreground text-sm">Cliquez pour en savoir plus</p>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Contenu sponsorisé</span>
+              <Badge variant="secondary">Pro</Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
+  // Regular sponsored jam
   return (
     <div onClick={handleAdClick}>
       <ProJamCard

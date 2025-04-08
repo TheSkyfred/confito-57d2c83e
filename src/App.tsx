@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -79,8 +78,8 @@ function App() {
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
-                  <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" id="id" />} />
-                  <Route path="/admin/ads/view/:id" element={<AdminAds action="view" id="id" />} />
+                  <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" />} />
+                  <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   <Route path="/admin/fruits" element={<AdminFruits />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
