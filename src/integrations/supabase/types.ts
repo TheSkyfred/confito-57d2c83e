@@ -149,6 +149,7 @@ export type Database = {
           has_ordered: boolean
           has_received: boolean
           id: string
+          is_validated: boolean
           user_id: string
         }
         Insert: {
@@ -157,6 +158,7 @@ export type Database = {
           has_ordered?: boolean
           has_received?: boolean
           id?: string
+          is_validated?: boolean
           user_id: string
         }
         Update: {
@@ -165,6 +167,7 @@ export type Database = {
           has_ordered?: boolean
           has_received?: boolean
           id?: string
+          is_validated?: boolean
           user_id?: string
         }
         Relationships: [
