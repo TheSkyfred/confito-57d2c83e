@@ -9,6 +9,9 @@ export const useAdvice = (filters?: AdviceFilters) => {
   const [filteredAdvice, setFilteredAdvice] = useState<AdviceArticle[]>([]);
 
   const fetchAdviceArticles = async () => {
+    // Vérifier la requête pour voir s'il y a une erreur
+    console.log('Fetching advice articles...');
+    
     const { data, error } = await supabaseDirect.select('advice_articles', `
         *,
         author:profiles(*),
@@ -22,6 +25,8 @@ export const useAdvice = (filters?: AdviceFilters) => {
       throw error;
     }
     
+    console.log('Advice articles received:', data);
+    
     // Transformer les données pour ajouter des champs calculés
     return data?.map((article: any): AdviceArticle => ({
       ...article,
@@ -31,7 +36,7 @@ export const useAdvice = (filters?: AdviceFilters) => {
     })) || [];
   };
   
-  const { data: advice, isLoading, error } = useQuery({
+  const { data: advice, isLoading, error, refetch } = useQuery({
     queryKey: ['advice'],
     queryFn: fetchAdviceArticles,
   });
@@ -63,7 +68,7 @@ export const useAdvice = (filters?: AdviceFilters) => {
         result = result.filter(item => 
           item.title.toLowerCase().includes(searchLower) || 
           (item.content && item.content.toLowerCase().includes(searchLower)) ||
-          item.tags.some(tag => tag.toLowerCase().includes(searchLower))
+          (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchLower)))
         );
       }
       
@@ -89,7 +94,8 @@ export const useAdvice = (filters?: AdviceFilters) => {
   return {
     advice: filteredAdvice,
     isLoading,
-    error
+    error,
+    refetch
   };
 };
 

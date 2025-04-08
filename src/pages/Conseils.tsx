@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdvice } from '@/hooks/useAdvice';
 import { useAuth } from '@/contexts/AuthContext';
 import { AdviceFilters } from '@/types/advice';
@@ -8,6 +8,7 @@ import AdviceSearch from '@/components/advice/AdviceSearch';
 import AdviceFilterCard from '@/components/advice/AdviceFilterCard';
 import AdviceCard from '@/components/advice/AdviceCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from "@/components/ui/use-toast";
 
 const Conseils = () => {
   const { user } = useAuth();
@@ -30,7 +31,24 @@ const Conseils = () => {
     setFilters(newFilters);
   };
 
-  const { advice, isLoading } = useAdvice(filters);
+  const { advice, isLoading, error, refetch } = useAdvice(filters);
+  
+  // Afficher une alerte en cas d'erreur
+  useEffect(() => {
+    if (error) {
+      console.error("Erreur lors du chargement des conseils:", error);
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les conseils. Veuillez réessayer plus tard.",
+        variant: "destructive"
+      });
+    }
+  }, [error]);
+
+  // Recharger les données au premier rendu
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <div className="container py-8">
@@ -51,6 +69,21 @@ const Conseils = () => {
           onFilterChange={handleFilterChange}
           onClose={() => setShowFilters(false)}
         />
+      )}
+      
+      {error && (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-destructive">Erreur de chargement</h3>
+          <p className="text-muted-foreground">
+            Une erreur s'est produite lors du chargement des conseils
+          </p>
+          <button 
+            onClick={() => refetch()} 
+            className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
+          >
+            Réessayer
+          </button>
+        </div>
       )}
       
       {isLoading ? (

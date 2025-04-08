@@ -32,7 +32,7 @@ export interface AdviceArticle {
 export interface AdviceImage {
   id: string;
   article_id: string;
-  image_url: string;
+  image_url: string;  // Utiliser image_url au lieu de url
   description: string | null;
   created_at: string;
 }
