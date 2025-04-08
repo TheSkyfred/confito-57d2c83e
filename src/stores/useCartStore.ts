@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { JamType } from '@/types/supabase';
@@ -413,7 +414,7 @@ export const useCartStore = create<CartStore>()(
                 ...item.jams,
                 profiles: item.jams.profiles,
                 jam_images: item.jams.jam_images || [],
-                status: item.jams.status || 'pending'
+                status: (item.jams.status || 'pending') as 'pending' | 'approved' | 'rejected'
               },
               quantity: item.quantity
             }));

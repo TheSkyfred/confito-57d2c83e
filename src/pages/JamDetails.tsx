@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ import {
 import { JamType, ProfileType, ReviewType, DetailedReviewType } from '@/types/supabase';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { useCartStore } from '@/stores/useCartStore';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import {
   getProfileUsername,
   getProfileAvatarUrl,
