@@ -78,10 +78,10 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
         judge_discount_percent: data.judge_discount_percent,
         reward_credits: data.reward_credits,
         reward_description: data.reward_description,
-        registration_start_date: new Date(),
-        registration_end_date: data.registration_end_date,
-        production_end_date: data.production_end_date,
-        voting_end_date: data.voting_end_date,
+        registration_start_date: new Date().toISOString(), // Conversion en chaîne ISO
+        registration_end_date: data.registration_end_date.toISOString(), // Conversion en chaîne ISO
+        production_end_date: data.production_end_date.toISOString(), // Conversion en chaîne ISO
+        voting_end_date: data.voting_end_date.toISOString(), // Conversion en chaîne ISO
         is_featured: data.is_featured,
         status: 'inscription' as const
       };

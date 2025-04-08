@@ -4,10 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import HeroSection from "@/components/home/HeroSection";
-import FeatureSection from "@/components/home/FeatureSection";
-import TopJamsSection from "@/components/home/TopJamsSection";
-import SeasonalSection from "@/components/home/SeasonalSection";
+import HeroSection from "@/components/HeroSection";
+import FeatureSection from "@/components/FeatureSection";
+import TopJamsSection from "@/components/TopJamsSection";
+import SeasonalSection from "@/components/SeasonalSection";
 import { PlusCircle, Swords, Trophy } from 'lucide-react';
 import { 
   Card, 
