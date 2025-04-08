@@ -8,7 +8,7 @@ import HeroSection from "@/components/HeroSection";
 import FeatureSection from "@/components/FeatureSection";
 import TopJamsSection from "@/components/TopJamsSection";
 import SeasonalSection from "@/components/SeasonalSection";
-import { AlertCircle, PlusCircle, Swords, Trophy } from 'lucide-react';
+import { PlusCircle, Swords, Trophy } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
@@ -18,8 +18,8 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { NewBattleType } from '@/types/supabase';
+import { NewBattleType, AllergenType } from '@/types/supabase';
+import AllergensBadges from '@/components/AllergensBadges';
 
 const Index = () => {
   // Récupérer les battles à venir
@@ -36,38 +36,71 @@ const Index = () => {
     },
   });
   
-  // Helper function to format constraint values
+  // Récupérer la liste des allergènes pour la détection
+  const { data: allergensData } = useQuery({
+    queryKey: ['allergens'],
+    queryFn: async () => {
+      const { data, error } = await supabaseDirect.select(
+        'allergens',
+        'name, category, severity'
+      );
+      
+      if (error) throw error;
+      return data as AllergenType[];
+    },
+  });
+  
+  // Helper function pour détecter les allergènes dans une valeur de contrainte
+  const detectAllergens = (value: string): string[] => {
+    if (!allergensData || !value) return [];
+    
+    // Convertir la valeur en minuscules pour la comparaison
+    const lowerValue = value.toLowerCase();
+    
+    // Rechercher les allergènes qui pourraient être mentionnés dans la valeur
+    const detectedAllergens = allergensData.filter(allergen => 
+      lowerValue.includes(allergen.name.toLowerCase())
+    ).map(allergen => allergen.name);
+    
+    return detectedAllergens;
+  };
+  
+  // Helper function pour formater les contraintes
   const formatConstraints = (constraints: Record<string, any>) => {
+    if (!constraints) return null;
+
     return Object.entries(constraints).map(([key, value]) => {
-      // Check if value contains allergenic ingredients
-      const allergenKeywords = ['fruits à coque', 'gluten', 'lait', 'œufs', 'soja'];
-      
-      const containsAllergen = typeof value === 'string' && 
-        allergenKeywords.some(allergen => 
-          value.toLowerCase().includes(allergen.toLowerCase())
+      // Vérifier si la valeur est une chaîne
+      if (typeof value !== 'string') {
+        return (
+          <Badge key={key} variant="outline" className="mr-2 mb-2">
+            {key}: {String(value)}
+          </Badge>
         );
+      }
       
+      // Détecter les allergènes dans la valeur
+      const allergens = detectAllergens(value);
+      
+      // Si des allergènes sont détectés, les afficher avec le composant spécifique
+      if (allergens.length > 0) {
+        return (
+          <div key={key} className="mb-2">
+            <Badge variant="outline" className="mr-2 mb-1">
+              {key}:
+            </Badge>
+            <span className="text-sm">{value}</span>
+            <div className="mt-1">
+              <AllergensBadges allergens={allergens} size="sm" />
+            </div>
+          </div>
+        );
+      }
+      
+      // Sinon, afficher la contrainte normalement
       return (
-        <Badge 
-          key={key} 
-          variant="outline" 
-          className={`mr-2 mb-2 ${containsAllergen ? 'bg-red-100 border-red-300 text-red-800' : ''}`}
-        >
-          {containsAllergen ? (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger className="flex items-center">
-                  <AlertCircle className="h-3 w-3 mr-1 text-red-600" /> 
-                  {key}: {value}
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs text-center">Contient des allergènes potentiels</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            <span>{key}: {value}</span>
-          )}
+        <Badge key={key} variant="outline" className="mr-2 mb-2">
+          {key}: {value}
         </Badge>
       );
     });
