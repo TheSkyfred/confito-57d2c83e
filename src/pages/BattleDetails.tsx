@@ -192,12 +192,23 @@ const BattleDetails = () => {
         return;
       }
       
-      // S'inscrire comme juge
+      // S'inscrire comme juge avec l'ID utilisateur explicitement défini
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user?.id) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Impossible de vous identifier. Veuillez vous reconnecter.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const { error } = await supabase
         .from('battle_judges')
         .insert({
           battle_id: id,
-          user_id: user.id
+          user_id: session.user.id
         });
         
       if (error) throw error;
