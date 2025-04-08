@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -20,6 +19,9 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: "Mot de passe d'au moins 6 caractères" }),
 });
 
+const accountTypeEnum = z.enum(["standard", "professional"]);
+type AccountType = z.infer<typeof accountTypeEnum>;
+
 const registerSchema = z.object({
   email: z.string().email({ message: "Email invalide" }),
   password: z.string().min(6, { message: "Mot de passe d'au moins 6 caractères" }),
@@ -27,13 +29,13 @@ const registerSchema = z.object({
   fullName: z.string().min(2, { message: "Nom complet requis" }),
   username: z.string().min(3, { message: "Nom d'utilisateur d'au moins 3 caractères" })
     .regex(/^[a-zA-Z0-9_]+$/, { message: "Uniquement lettres, chiffres et underscore" }),
-  accountType: z.enum(["standard", "professional"], {
-    required_error: "Veuillez choisir un type de compte"
-  })
+  accountType: accountTypeEnum
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
 });
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -42,7 +44,6 @@ const Auth = () => {
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
 
-  // Login form
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -51,8 +52,7 @@ const Auth = () => {
     },
   });
 
-  // Register form
-  const registerForm = useForm({
+  const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       email: "",
@@ -95,7 +95,7 @@ const Auth = () => {
     }
   };
 
-  const handleRegister = async (values: z.infer<typeof registerSchema>) => {
+  const handleRegister = async (values: RegisterFormValues) => {
     try {
       setIsLoading(true);
       
@@ -120,7 +120,6 @@ const Auth = () => {
       });
       
       if (values.accountType === "professional") {
-        // Rediriger vers la page de création de profil professionnel après connexion
         localStorage.setItem("redirect_to_pro_registration", "true");
         toast({
           title: "Compte professionnel",
@@ -194,7 +193,6 @@ const Auth = () => {
           <TabsTrigger value="register">Inscription</TabsTrigger>
         </TabsList>
         
-        {/* Connexion */}
         <TabsContent value="login">
           <Card>
             <CardHeader>
@@ -272,7 +270,6 @@ const Auth = () => {
           </Card>
         </TabsContent>
         
-        {/* Inscription */}
         <TabsContent value="register">
           <Card>
             <CardHeader>
