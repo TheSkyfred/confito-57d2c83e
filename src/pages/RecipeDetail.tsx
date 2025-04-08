@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -76,7 +77,7 @@ const RecipeDetail = () => {
           ),
           jam:jams!recipes_jam_id_fkey (*)
         `,
-        `id.eq.${id}`
+        { id: id }
       );
       
       if (error) throw error;

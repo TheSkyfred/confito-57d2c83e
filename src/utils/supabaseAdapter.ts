@@ -11,7 +11,7 @@ export const supabaseDirect = {
    * @param filter Filtre optionnel pour la clause WHERE
    * @returns Un objet contenant les données ou une erreur
    */
-  async select(table: string, query: string | Record<string, any> = '*', filter?: Record<string, any>) {
+  async select(table: string, query: string | Record<string, any> = '*', filter?: Record<string, any> | string) {
     try {
       // If the second argument is an object and no third argument is provided, treat it as a filter
       if (typeof query === 'object' && filter === undefined) {
@@ -24,9 +24,38 @@ export const supabaseDirect = {
         .select(query);
         
       if (filter) {
-        Object.entries(filter).forEach(([key, value]) => {
-          queryBuilder = queryBuilder.eq(key, value);
-        });
+        if (typeof filter === 'string') {
+          // Handle string filter (raw filter string like "status=eq.active")
+          const parts = filter.split(',');
+          for (const part of parts) {
+            if (part.includes('=')) {
+              const [key, value] = part.split('=');
+              if (value.includes('.')) {
+                const [operator, operand] = value.split('.');
+                if (operator === 'eq') {
+                  queryBuilder = queryBuilder.eq(key, operand);
+                } else if (operator === 'neq') {
+                  queryBuilder = queryBuilder.neq(key, operand);
+                } else if (operator === 'gt') {
+                  queryBuilder = queryBuilder.gt(key, operand);
+                } else if (operator === 'lt') {
+                  queryBuilder = queryBuilder.lt(key, operand);
+                } else if (operator === 'gte') {
+                  queryBuilder = queryBuilder.gte(key, operand);
+                } else if (operator === 'lte') {
+                  queryBuilder = queryBuilder.lte(key, operand);
+                } else if (operator === 'in') {
+                  queryBuilder = queryBuilder.in(key, operand.split('|'));
+                }
+              }
+            }
+          }
+        } else {
+          // Handle object filter
+          Object.entries(filter).forEach(([key, value]) => {
+            queryBuilder = queryBuilder.eq(key, value);
+          });
+        }
       }
       
       const { data, error } = await queryBuilder;
@@ -198,4 +227,3 @@ export const supabaseDirect = {
     }
   }
 };
-

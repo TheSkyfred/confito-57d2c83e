@@ -33,7 +33,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
             available_quantity,
             jam_images(url, is_primary)
           )
-        `, `status='active' AND is_visible=true`);
+        `, { status: 'active', is_visible: true });
           
         if (error) throw error;
         

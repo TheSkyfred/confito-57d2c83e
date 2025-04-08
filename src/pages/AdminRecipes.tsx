@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,9 +48,9 @@ const AdminRecipes = () => {
     queryKey: ['adminRecipes', statusFilter],
     queryFn: async () => {
       // Utiliser supabaseDirect pour éviter les erreurs de type avec les relations
-      let filter = '';
+      let filter: Record<string, any> = {};
       if (statusFilter) {
-        filter = `status.eq.${statusFilter}`;
+        filter = { status: statusFilter };
       }
       
       const { data, error } = await supabaseDirect.select(
@@ -138,7 +137,6 @@ const AdminRecipes = () => {
     }
   };
   
-  // Filter recipes by title if search term is provided
   const filteredRecipes = searchTerm && recipes ? 
     recipes.filter(recipe => 
       recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

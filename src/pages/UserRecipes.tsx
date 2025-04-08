@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,14 +27,14 @@ const UserRecipes = () => {
       if (!user) return [];
       
       // Use supabaseDirect to avoid type errors
-      let filter = `author_id.eq.${user.id}`;
+      let filter: Record<string, any> = { author_id: user.id };
       
       if (activeTab === 'published') {
-        filter += `,status.eq.approved`;
+        filter.status = 'approved';
       } else if (activeTab === 'pending') {
-        filter += `,status.eq.pending`;
+        filter.status = 'pending';
       } else if (activeTab === 'drafts') {
-        filter += `,status.eq.brouillon`;
+        filter.status = 'brouillon';
       }
       
       const { data, error } = await supabaseDirect.select(
