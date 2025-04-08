@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, MessageSquare } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import AdminActionButtons from '@/components/AdminActionButtons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 
@@ -20,12 +21,13 @@ dayjs.locale('fr');
 const ConseilDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { isAdmin, isModerator } = useUserRole();
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMounted, setIsMounted] = useState(false); // État pour vérifier si le composant est monté
+  const [isMounted, setIsMounted] = useState(false); 
 
-  const { data: article, isLoading, error } = useQuery({
+  const { data: article, isLoading, error, refetch } = useQuery({
     queryKey: ['conseil', id],
     queryFn: () => supabaseDirect.getById('advice_articles', id as string, `
       *,
@@ -41,8 +43,8 @@ const ConseilDetail: React.FC = () => {
   });
 
   useEffect(() => {
-    setIsMounted(true); // Marquer le composant comme monté
-    return () => setIsMounted(false); // Nettoyer lors du démontage
+    setIsMounted(true);
+    return () => setIsMounted(false);
   }, []);
 
   useEffect(() => {
@@ -116,20 +118,15 @@ const ConseilDetail: React.FC = () => {
     }
   };
   
-  // Handle product click tracking
   const handleProductClick = async (productId: string, externalUrl: string) => {
     try {
-      // Track the click
       await supabaseDirect.incrementProductClick(productId);
-      
-      // Open the external URL in a new tab
       window.open(externalUrl, '_blank');
     } catch (error) {
       console.error("Error tracking product click:", error);
     }
   };
 
-  // Handle like/unlike for comments
   const toggleCommentLike = async (commentId: string, currentlyLiked: boolean) => {
     if (!user) {
       toast({
@@ -142,14 +139,12 @@ const ConseilDetail: React.FC = () => {
 
     try {
       if (currentlyLiked) {
-        // Remove like
         await supabase
           .from('advice_comment_likes' as any)
           .delete()
           .eq('user_id', user.id)
           .eq('comment_id', commentId);
       } else {
-        // Add like
         await supabase
           .from('advice_comment_likes' as any)
           .insert({
@@ -158,10 +153,7 @@ const ConseilDetail: React.FC = () => {
           });
       }
 
-      // Update the likes count
       await supabaseDirect.updateCommentLikesCount(commentId);
-      
-      // Refresh the comments
       await fetchComments();
     } catch (error) {
       console.error("Error toggling comment like:", error);
@@ -173,6 +165,21 @@ const ConseilDetail: React.FC = () => {
 
   return (
     <div className="container mx-auto py-8">
+      {isModerator && (
+        <div className="mb-6">
+          <AdminActionButtons 
+            itemId={article.id}
+            itemType="advice"
+            status={article.visible ? 'approved' : 'rejected'}
+            onStatusChange={refetch}
+            canEdit={true}
+            canDelete={isAdmin}
+            editRoute={`/conseils/edit/${article.id}`}
+            redirectAfterDelete="/conseils"
+          />
+        </div>
+      )}
+
       <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
       <div className="mb-4">
         <p className="text-gray-600">Publié le {dayjs(article.published_at).format('D MMMM YYYY')} par {article.author?.full_name}</p>
@@ -220,7 +227,7 @@ const ConseilDetail: React.FC = () => {
               <Button 
                 variant="ghost"
                 onClick={() => toggleCommentLike(comment.id, !!comment.isLiked)}
-                disabled={!isMounted} // Désactiver si le composant n'est pas encore monté
+                disabled={!isMounted}
               >
                 <Heart className="h-4 w-4 mr-2" fill={comment.isLiked ? 'currentColor' : 'none'} />
                 {comment.likes_count || 0} J'aime

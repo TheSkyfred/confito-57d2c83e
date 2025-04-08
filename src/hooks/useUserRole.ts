@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type UserRole = 'admin' | 'moderator' | 'user';
+export type UserRole = 'admin' | 'moderator' | 'user' | 'pro';
 
 export const useUserRole = () => {
   const { profile, loading: authLoading } = useAuth();
@@ -16,13 +16,14 @@ export const useUserRole = () => {
   }, [authLoading]);
   
   // Ensure profile?.role is a valid role or default to 'user'
-  const role: UserRole = profile?.role && ['admin', 'moderator', 'user'].includes(profile.role as string) 
+  const role: UserRole = profile?.role && ['admin', 'moderator', 'user', 'pro'].includes(profile.role as string) 
     ? profile.role as UserRole 
     : 'user';
   
   // Always compute these values consistently
   const isAdmin = role === 'admin';
   const isModerator = role === 'moderator' || isAdmin;
+  const isPro = role === 'pro';
   
-  return { isAdmin, isModerator, role, isLoading };
+  return { isAdmin, isModerator, isPro, role, isLoading };
 };

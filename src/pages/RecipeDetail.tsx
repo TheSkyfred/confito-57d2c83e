@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { parseRecipeInstructions, adaptDbRecipeToRecipeType, getProfileInitials } from '@/utils/supabaseHelpers';
+import AdminActionButtons from '@/components/AdminActionButtons';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -388,6 +388,21 @@ const RecipeDetail = () => {
   
   return (
     <div className="container mx-auto py-8">
+      {isModerator && recipe && (
+        <div className="mb-6">
+          <AdminActionButtons 
+            itemId={recipe.id}
+            itemType="recipe"
+            status={recipe.status}
+            onStatusChange={refetch}
+            canEdit={true}
+            canDelete={isAdmin}
+            editRoute={`/recipes/edit/${recipe.id}`}
+            redirectAfterDelete="/recipes"
+          />
+        </div>
+      )}
+      
       <div className="mb-6 flex items-center justify-between">
         <Button variant="outline" asChild>
           <Link to="/recipes">

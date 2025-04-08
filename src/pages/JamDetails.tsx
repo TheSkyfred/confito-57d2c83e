@@ -61,6 +61,8 @@ import { RecipeStep } from '@/components/jam-editor/RecipeForm';
 import JamReviewForm from '@/components/jam-review/JamReviewForm';
 import JamReviewsList from '@/components/jam-review/JamReviewsList';
 import AllergensBadges from '@/components/AllergensBadges';
+import { useUserRole } from '@/hooks/useUserRole';
+import AdminActionButtons from '@/components/AdminActionButtons';
 
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -68,6 +70,7 @@ const JamDetails = () => {
   const [favorited, setFavorited] = useState(false);
   const { addItem } = useCartStore();
   const [reviewToEdit, setReviewToEdit] = useState<DetailedReviewType | undefined>();
+  const { isAdmin, isModerator } = useUserRole();
   
   const { data: jam, isLoading, error, refetch } = useQuery({
     queryKey: ['jam', id],
@@ -143,8 +146,6 @@ const JamDetails = () => {
 
   const isCreator = user && jam && user.id === jam.creator_id;
   
-  const isModerator = user && jam?.profiles?.role && ['admin', 'moderator'].includes(jam.profiles.role);
-
   const refreshReviews = () => {
     refetchReviews();
     setReviewToEdit(undefined);
@@ -224,63 +225,6 @@ const JamDetails = () => {
     }
   };
 
-  const approveJam = async () => {
-    if (!user || !jam) return;
-    
-    try {
-      const { error } = await supabaseDirect.update('jams', 
-        { status: 'approved' },
-        { id: jam.id }
-      );
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Confiture approuvée",
-        description: "La confiture est maintenant visible pour tous les utilisateurs",
-      });
-      
-      refetch();
-    } catch (error: any) {
-      console.error('Error approving jam:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'approuver cette confiture",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const rejectJam = async () => {
-    if (!user || !jam) return;
-    
-    try {
-      const { error } = await supabaseDirect.update('jams', 
-        { 
-          status: 'rejected',
-          rejection_reason: "Cette confiture ne répond pas à nos critères de qualité."
-        },
-        { id: jam.id }
-      );
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Confiture rejetée",
-        description: "La confiture a été rejetée",
-      });
-      
-      refetch();
-    } catch (error: any) {
-      console.error('Error rejecting jam:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de rejeter cette confiture",
-        variant: "destructive"
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -348,19 +292,6 @@ const JamDetails = () => {
           <p className="mt-1 text-sm text-yellow-600">
             Cette confiture est visible uniquement par son créateur et les modérateurs jusqu'à son approbation.
           </p>
-          
-          {isModerator && (
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={approveJam}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Approuver
-              </Button>
-              <Button variant="outline" size="sm" className="text-destructive" onClick={rejectJam}>
-                <XCircle className="mr-2 h-4 w-4" />
-                Rejeter
-              </Button>
-            </div>
-          )}
         </div>
       )}
       
@@ -373,13 +304,17 @@ const JamDetails = () => {
           <p className="mt-1 text-sm text-red-600">
             {jam.rejection_reason || "Cette confiture a été rejetée par un modérateur."}
           </p>
-          
-          {isModerator && (
-            <Button variant="outline" size="sm" className="mt-2" onClick={approveJam}>
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Approuver malgré tout
-            </Button>
-          )}
+        </div>
+      )}
+      
+      {isModerator && (
+        <div className="mb-6">
+          <AdminActionButtons 
+            itemId={jam.id} 
+            itemType="jam" 
+            status={jam.status} 
+            onStatusChange={refetch}
+          />
         </div>
       )}
       
