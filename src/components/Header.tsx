@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { 
   Menu, 
   X, 
@@ -18,7 +20,8 @@ import {
   Bell,
   Home,
   Search,
-  ShoppingBag
+  ShoppingBag,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -36,6 +39,7 @@ import { useCartStore } from '@/stores/useCartStore';
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -158,6 +162,19 @@ const Header = () => {
                     Crédits
                   </Link>
                 </DropdownMenuItem>
+                
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" onClick={closeMenu}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Administration
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
@@ -203,6 +220,11 @@ const Header = () => {
                 />
                 <NavItemMobile to="/profile" label="Profil" icon={Settings} onClick={closeMenu} />
                 <NavItemMobile to="/credits" label="Crédits" icon={CreditCard} onClick={closeMenu} />
+                
+                {isAdmin && (
+                  <NavItemMobile to="/admin" label="Administration" icon={Shield} onClick={closeMenu} />
+                )}
+                
                 <Button variant="ghost" className="justify-start" onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Se déconnecter
