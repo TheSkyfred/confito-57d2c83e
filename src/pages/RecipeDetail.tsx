@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { parseRecipeInstructions, adaptDbRecipeToRecipeType, getProfileInitials } from '@/utils/supabaseHelpers';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,7 @@ import IngredientCalculator from '@/components/recipe/IngredientCalculator';
 import RecipeRating from '@/components/recipe/RecipeRating';
 import RecipeComments from '@/components/recipe/RecipeComments';
 import RecipePDFGenerator from '@/components/recipe/RecipePDFGenerator';
-import { getProfileInitials } from '@/utils/supabaseHelpers';
+import { RecipeType } from '@/types/recipes';
 
 // Map difficulty to a human-readable format and color
 const difficultyConfig = {
@@ -45,7 +46,6 @@ const RecipeDetail = () => {
   const navigate = useNavigate();
   const { isAdmin, isModerator } = useUserRole();
   const [isFavorite, setIsFavorite] = useState(false);
-  const [multiplier, setMultiplier] = useState(1);
   
   // Safe toFixed function to handle undefined/null values
   const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
@@ -59,9 +59,10 @@ const RecipeDetail = () => {
     queryFn: async () => {
       if (!id) throw new Error('Recipe ID is required');
       
-      const { data: recipe, error } = await supabase
-        .from('recipes')
-        .select(`
+      // Use supabaseDirect to avoid type errors
+      const { data: recipeData, error } = await supabaseDirect.select(
+        'recipes',
+        `
           *,
           author:profiles!recipes_author_id_fkey (*),
           ingredients:recipe_ingredients (*),
@@ -73,19 +74,20 @@ const RecipeDetail = () => {
             badge:recipe_badges!recipe_badge_assignments_badge_id_fkey (*)
           ),
           jam:jams!recipes_jam_id_fkey (*)
-        `)
-        .eq('id', id)
-        .single();
-        
-      if (error) throw error;
+        `,
+        `id.eq.${id}`
+      );
       
-      if (!recipe) {
+      if (error) throw error;
+      if (!recipeData || recipeData.length === 0) {
         throw new Error('Recipe not found');
       }
       
+      const rawRecipe = recipeData[0];
+      
       // Calculate average rating
-      const ratings = recipe.ratings || [];
-      const totalRating = ratings.reduce((sum, r) => sum + r.rating, 0);
+      const ratings = rawRecipe.ratings || [];
+      const totalRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
       const average_rating = ratings.length > 0 ? totalRating / ratings.length : 0;
       
       // Check if the user has favorited this recipe
@@ -101,11 +103,14 @@ const RecipeDetail = () => {
         setIsFavorite(is_favorite);
       }
       
-      return {
-        ...recipe,
+      // Convert the raw recipe to the proper RecipeType
+      const typedRecipe = adaptDbRecipeToRecipeType({
+        ...rawRecipe,
         average_rating,
         is_favorite
-      };
+      });
+      
+      return typedRecipe;
     },
     enabled: !!id
   });
@@ -324,6 +329,39 @@ const RecipeDetail = () => {
     );
   }
   
+  const renderAuthor = () => {
+    if (!recipe?.author) return null;
+    
+    const authorName = recipe.author.username || "Utilisateur anonyme";
+    const avatarUrl = recipe.author.avatar_url;
+    
+    return (
+      <Link to={`/profile/${recipe.author_id}`} className="flex items-center group">
+        <Avatar className="h-8 w-8 mr-2">
+          <AvatarImage src={avatarUrl} alt={authorName} />
+          <AvatarFallback>{getProfileInitials(authorName)}</AvatarFallback>
+        </Avatar>
+        <span className="text-sm font-medium group-hover:underline">
+          {authorName}
+        </span>
+      </Link>
+    );
+  };
+  
+  const renderInstructions = () => {
+    if (!recipe?.instructions) return <p>Aucune instruction disponible pour cette recette.</p>;
+    
+    return (
+      <ol className="space-y-4 list-decimal list-inside">
+        {recipe.instructions.map((step, index) => (
+          <li key={index} className="pl-2">
+            <span className="ml-2">{step.description}</span>
+          </li>
+        ))}
+      </ol>
+    );
+  };
+  
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6 flex items-center justify-between">
@@ -430,15 +468,7 @@ const RecipeDetail = () => {
             </div>
             
             <div className="flex items-center mb-4">
-              <Link to={`/profile/${recipe.author_id}`} className="flex items-center group">
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage src={recipe.author?.avatar_url} alt={recipe.author?.username || "Auteur"} />
-                  <AvatarFallback>{getProfileInitials(recipe.author?.username)}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium group-hover:underline">
-                  {recipe.author?.username || "Utilisateur anonyme"}
-                </span>
-              </Link>
+              {renderAuthor()}
             </div>
             
             {recipe.tags && recipe.tags.length > 0 && (
@@ -490,17 +520,7 @@ const RecipeDetail = () => {
             </TabsContent>
             
             <TabsContent value="instructions" className="pt-4">
-              {recipe.instructions && recipe.instructions.length > 0 ? (
-                <ol className="space-y-4 list-decimal list-inside">
-                  {recipe.instructions.map((step, index) => (
-                    <li key={index} className="pl-2">
-                      <span className="ml-2">{step.description}</span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p>Aucune instruction disponible pour cette recette.</p>
-              )}
+              {renderInstructions()}
             </TabsContent>
           </Tabs>
           

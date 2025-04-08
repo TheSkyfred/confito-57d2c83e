@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import RecipeCard from '@/components/recipe/RecipeCard'; // Updated import
-import { RecipeFilters } from '@/components/recipe/RecipeFilters';
+import RecipeCard from '@/components/recipe/RecipeCard';
+import RecipeFilters from '@/components/recipe/RecipeFilters';
 import { RecipeType } from '@/types/recipes';
 import { adaptDbRecipeToRecipeType } from '@/utils/supabaseHelpers';
 
@@ -43,7 +43,6 @@ const Recipes = () => {
         `)
         .eq('status', 'approved');
 
-      // Apply tab filters
       if (activeTab === 'seasonal') {
         const currentMonth = new Date().getMonth();
         let season = 'été';
@@ -59,7 +58,6 @@ const Recipes = () => {
         query = query.order('average_rating', { ascending: false });
       }
 
-      // Apply custom filters
       if (filters.difficulty.length > 0) {
         query = query.in('difficulty', filters.difficulty);
       }
@@ -84,14 +82,12 @@ const Recipes = () => {
       
       if (error) throw error;
       
-      // Convert DB recipes to RecipeType with proper instructions parsing
       const typedRecipes = data.map(recipe => adaptDbRecipeToRecipeType(recipe));
       
       return typedRecipes;
     }
   });
 
-  // Filter recipes by search term
   const filteredRecipes = recipes && searchTerm 
     ? recipes.filter(recipe => 
         recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

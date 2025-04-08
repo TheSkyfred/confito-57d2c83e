@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { parseRecipeInstructions } from '@/utils/supabaseHelpers';
 
 // Schema Zod pour la validation des données
 const recipeFormSchema = z.object({
@@ -82,10 +83,15 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
       
       setRecipe(data);
       
-      // Convertir les instructions JSON en texte pour l'affichage
-      const instructionsText = (data.instructions || [])
-        .map((step: any) => `${step.step}. ${step.description}`)
-        .join('\n');
+      // Parse and convert the instructions
+      let instructionsText = '';
+      if (data.instructions) {
+        const steps = parseRecipeInstructions(data.instructions);
+        instructionsText = steps
+          .map((step: any) => `${step.step}. ${step.description}`)
+          .join('\n');
+      }
+      
       setParsedInstructions(instructionsText);
       
       // Remplir le formulaire

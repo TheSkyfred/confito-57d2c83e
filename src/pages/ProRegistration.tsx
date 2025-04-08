@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -58,7 +59,7 @@ const ProRegistration = () => {
   });
   
   const onSubmit = async (data: z.infer<typeof proFormSchema>) => {
-    setIsLoading(true);
+    setLoading(true);
     
     try {
       if (!user) {
@@ -105,7 +106,7 @@ const ProRegistration = () => {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
   

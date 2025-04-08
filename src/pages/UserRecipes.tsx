@@ -1,124 +1,75 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Link } from 'react-router-dom';
-
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { adaptDbRecipeToRecipeType } from '@/utils/supabaseHelpers';
+import RecipeCard from '@/components/recipe/RecipeCard';
 import { RecipeType } from '@/types/recipes';
-import { Book, Plus, ClipboardEdit, Star, Clock } from 'lucide-react';
-import { getProfileInitials } from '@/utils/supabaseHelpers';
+import { Link } from 'react-router-dom';
+import { PlusCircle, Search, Filter, ListFilter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const UserRecipes = () => {
-  const { session } = useAuth();
-  const [activeTab, setActiveTab] = useState<string>('myrecipes');
-  
-  // Safe toFixed function to handle undefined/null values
-  const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
-    if (value === undefined || value === null) return '0.0';
-    return value.toFixed(digits);
-  };
-  
-  // Fetch user's recipes
-  const { data: myRecipes, isLoading: isLoadingMyRecipes } = useQuery({
-    queryKey: ['userRecipes', session?.user?.id],
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+
+  const { data: recipes, isLoading } = useQuery({
+    queryKey: ['userRecipes', user?.id, activeTab],
     queryFn: async () => {
-      if (!session?.user) return [];
+      if (!user) return [];
       
-      const { data, error } = await supabase
-        .from('recipes')
-        .select(`
+      // Use supabaseDirect to avoid type errors
+      let filter = `author_id.eq.${user.id}`;
+      
+      if (activeTab === 'published') {
+        filter += `,status.eq.approved`;
+      } else if (activeTab === 'pending') {
+        filter += `,status.eq.pending`;
+      } else if (activeTab === 'drafts') {
+        filter += `,status.eq.brouillon`;
+      }
+      
+      const { data, error } = await supabaseDirect.select(
+        'recipes',
+        `
           *,
-          ratings:recipe_ratings (*),
-          ingredients:recipe_ingredients (*)
-        `)
-        .eq('author_id', session.user.id);
-        
+          author:profiles!recipes_author_id_fkey (username, avatar_url),
+          ingredients:recipe_ingredients(*),
+          ratings:recipe_ratings(*)
+        `,
+        filter
+      );
+      
       if (error) throw error;
       
-      // Calculate average rating for each recipe
-      return data.map(recipe => {
-        const ratings = recipe.ratings || [];
-        const totalRating = ratings.reduce((sum, r) => sum + r.rating, 0);
-        const average_rating = ratings.length > 0 ? totalRating / ratings.length : 0;
-        
-        return {
-          ...recipe,
-          average_rating
-        };
-      });
-    },
-    enabled: !!session?.user
-  });
-  
-  // Fetch user's favorite recipes
-  const { data: favorites, isLoading: isLoadingFavorites } = useQuery({
-    queryKey: ['userFavoriteRecipes', session?.user?.id],
-    queryFn: async () => {
-      if (!session?.user) return [];
+      // Convert the raw recipes to RecipeType[]
+      const typedRecipes = (data || []).map(recipe => adaptDbRecipeToRecipeType(recipe));
       
-      const { data, error } = await supabase
-        .from('recipe_favorites')
-        .select(`
-          id,
-          recipe:recipes (
-            id, title, image_url, difficulty, prep_time_minutes, status,
-            author:profiles!recipes_author_id_fkey (username, avatar_url),
-            ratings:recipe_ratings (*),
-            ingredients:recipe_ingredients (*)
-          )
-        `)
-        .eq('user_id', session.user.id);
-        
-      if (error) throw error;
-      
-      // Calculate average rating for each recipe
-      return data
-        .filter(item => item.recipe) // Filter out any null recipes
-        .map(item => {
-          const recipe = item.recipe;
-          const ratings = recipe.ratings || [];
-          const totalRating = ratings.reduce((sum, r) => sum + r.rating, 0);
-          const average_rating = ratings.length > 0 ? totalRating / ratings.length : 0;
-          
-          return {
-            ...recipe,
-            average_rating,
-            favorite_id: item.id
-          };
-        });
+      return typedRecipes;
     },
-    enabled: !!session?.user
+    enabled: !!user,
   });
-  
-  // Map status to display values
-  const statusDisplay = {
-    'brouillon': { label: 'Brouillon', color: 'bg-gray-100 text-gray-800' },
-    'pending': { label: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
-    'approved': { label: 'Approuvée', color: 'bg-green-100 text-green-800' },
-    'rejected': { label: 'Rejetée', color: 'bg-red-100 text-red-800' },
-  };
-  
-  if (!session?.user) {
+
+  // Filter recipes by search term
+  const filteredRecipes = recipes && searchTerm 
+    ? recipes.filter(recipe => 
+        recipe.title.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : recipes;
+
+  if (!user) {
     return (
-      <div className="container mx-auto py-8">
+      <div className="container py-8">
         <div className="text-center">
-          <Book className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h1 className="text-2xl font-medium mb-2">Mes recettes</h1>
-          <p className="text-muted-foreground mb-6">
-            Vous devez être connecté pour voir vos recettes.
-          </p>
+          <h1 className="text-3xl font-serif font-bold mb-4">Mes recettes</h1>
+          <p className="mb-6">Vous devez être connecté pour voir vos recettes.</p>
           <Button asChild>
             <Link to="/auth">Se connecter</Link>
           </Button>
@@ -126,191 +77,170 @@ const UserRecipes = () => {
       </div>
     );
   }
-  
+
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-serif font-bold">Mes recettes</h1>
+    <div className="container py-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div>
+          <h1 className="text-3xl font-serif font-bold">Mes recettes</h1>
+          <p className="text-muted-foreground">
+            Gérez vos recettes de confitures
+          </p>
+        </div>
+        
         <Button asChild>
           <Link to="/recipes/create">
-            <Plus className="h-4 w-4 mr-2" />
-            Nouvelle recette
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Créer une recette
           </Link>
         </Button>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="myrecipes">Mes recettes</TabsTrigger>
-          <TabsTrigger value="favorites">Mes favoris</TabsTrigger>
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Rechercher par titre..." 
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="all">Toutes</TabsTrigger>
+          <TabsTrigger value="published">Publiées</TabsTrigger>
+          <TabsTrigger value="pending">En attente</TabsTrigger>
+          <TabsTrigger value="drafts">Brouillons</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="myrecipes" className="mt-6">
-          {isLoadingMyRecipes ? (
-            <div className="text-center py-8">Chargement de vos recettes...</div>
-          ) : myRecipes && myRecipes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {myRecipes.map((recipe: RecipeType) => (
-                <Card key={recipe.id} className="overflow-hidden">
-                  <div className="h-48 relative">
-                    <img 
-                      src={recipe.image_url || '/placeholder.svg'} 
-                      alt={recipe.title} 
-                      className="w-full h-full object-cover"
-                    />
-                    <Badge 
-                      className={`absolute top-2 right-2 ${statusDisplay[recipe.status].color}`}
-                    >
-                      {statusDisplay[recipe.status].label}
-                    </Badge>
+        <TabsContent value="all" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              Array(6).fill(0).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="aspect-video w-full">
+                    <Skeleton className="h-full w-full" />
                   </div>
-                  
-                  <CardHeader className="pb-2">
-                    <CardTitle className="line-clamp-1">{recipe.title}</CardTitle>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
                   </CardHeader>
-                  
-                  <CardContent className="pb-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span className="text-sm">
-                          {safeToFixed(recipe.average_rating)}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({recipe.ratings ? recipe.ratings.length : 0})
-                          </span>
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        <span className="text-sm">{recipe.prep_time_minutes} min</span>
-                      </div>
-                    </div>
-                    
-                    {recipe.status === 'rejected' && recipe.rejection_reason && (
-                      <div className="bg-red-50 p-2 rounded-md mb-2 text-xs">
-                        <strong>Motif de rejet:</strong> {recipe.rejection_reason}
-                      </div>
-                    )}
+                  <CardContent>
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4" />
                   </CardContent>
-                  
-                  <CardFooter>
-                    <div className="flex justify-between items-center w-full">
-                      <Link
-                        to={`/recipes/${recipe.id}`}
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Voir la recette
-                      </Link>
-                      
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/recipes/edit/${recipe.id}`}>
-                          <ClipboardEdit className="h-3.5 w-3.5 mr-1" />
-                          Modifier
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardFooter>
                 </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              <Book className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">Aucune recette</h3>
-              <p className="text-muted-foreground mb-6">
-                Vous n'avez pas encore créé de recettes.
-              </p>
-              <Button asChild>
-                <Link to="/recipes/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer ma première recette
-                </Link>
-              </Button>
-            </div>
-          )}
+              ))
+            ) : filteredRecipes && filteredRecipes.length > 0 ? (
+              filteredRecipes.map((recipe: RecipeType) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <ListFilter className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-medium mb-2">Aucune recette trouvée</h3>
+                <p className="text-muted-foreground">
+                  Vous n'avez pas encore créé de recettes
+                </p>
+                <Button className="mt-4" asChild>
+                  <Link to="/recipes/create">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Créer ma première recette
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
         </TabsContent>
         
-        <TabsContent value="favorites" className="mt-6">
-          {isLoadingFavorites ? (
-            <div className="text-center py-8">Chargement de vos favoris...</div>
-          ) : favorites && favorites.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {favorites.map((recipe: any) => (
-                <Card key={recipe.id} className="overflow-hidden">
-                  <div className="h-48 relative">
-                    <img 
-                      src={recipe.image_url || '/placeholder.svg'} 
-                      alt={recipe.title} 
-                      className="w-full h-full object-cover"
-                    />
-                    {recipe.status !== 'approved' && (
-                      <Badge 
-                        className={`absolute top-2 right-2 ${statusDisplay[recipe.status].color}`}
-                      >
-                        {statusDisplay[recipe.status].label}
-                      </Badge>
-                    )}
+        <TabsContent value="published" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              Array(3).fill(0).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="aspect-video w-full">
+                    <Skeleton className="h-full w-full" />
                   </div>
-                  
-                  <CardHeader className="pb-2">
-                    <CardTitle className="line-clamp-1">{recipe.title}</CardTitle>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
                   </CardHeader>
-                  
-                  <CardContent className="pb-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                        <span className="text-sm">
-                          {safeToFixed(recipe.average_rating)}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({recipe.ratings ? recipe.ratings.length : 0})
-                          </span>
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
-                        <span className="text-sm">{recipe.prep_time_minutes} min</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarImage src={recipe.author?.avatar_url} alt={recipe.author?.username || ""} />
-                        <AvatarFallback>{getProfileInitials(recipe.author?.username)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">
-                        par {recipe.author?.username || "Utilisateur inconnu"}
-                      </span>
-                    </div>
-                  </CardContent>
-                  
-                  <CardFooter>
-                    <Link
-                      to={`/recipes/${recipe.id}`}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Voir la recette
-                    </Link>
-                  </CardFooter>
                 </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-8 text-center">
-              <Star className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-xl font-medium mb-2">Aucun favori</h3>
-              <p className="text-muted-foreground mb-6">
-                Vous n'avez pas encore ajouté de recettes à vos favoris.
-              </p>
-              <Button asChild variant="outline">
-                <Link to="/recipes">
-                  Découvrir des recettes
-                </Link>
-              </Button>
-            </div>
-          )}
+              ))
+            ) : filteredRecipes && filteredRecipes.length > 0 ? (
+              filteredRecipes.map((recipe: RecipeType) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <h3 className="text-xl font-medium mb-2">Aucune recette publiée</h3>
+                <p className="text-muted-foreground">
+                  Vos recettes approuvées apparaîtront ici
+                </p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="pending" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              Array(3).fill(0).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="aspect-video w-full">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                </Card>
+              ))
+            ) : filteredRecipes && filteredRecipes.length > 0 ? (
+              filteredRecipes.map((recipe: RecipeType) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <h3 className="text-xl font-medium mb-2">Aucune recette en attente</h3>
+                <p className="text-muted-foreground">
+                  Les recettes soumises pour approbation apparaîtront ici
+                </p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="drafts" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isLoading ? (
+              Array(3).fill(0).map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="aspect-video w-full">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                </Card>
+              ))
+            ) : filteredRecipes && filteredRecipes.length > 0 ? (
+              filteredRecipes.map((recipe: RecipeType) => (
+                <RecipeCard key={recipe.id} recipe={recipe} />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <h3 className="text-xl font-medium mb-2">Aucun brouillon</h3>
+                <p className="text-muted-foreground">
+                  Vos recettes en cours de rédaction apparaîtront ici
+                </p>
+              </div>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

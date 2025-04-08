@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
-import { RecipeStep, RecipeType } from '@/types/supabase';
+import { RecipeStep, RecipeType } from '@/types/recipes';
 
 // Helper function to safely type Supabase queries
 export const getTypedSupabaseQuery = <T extends keyof Database['public']['Tables']>(table: T) => {
@@ -86,9 +86,12 @@ export const parseRecipeInstructions = (instructions: any): RecipeStep[] => {
 
 // Helper function to adapt database recipe to RecipeType
 export const adaptDbRecipeToRecipeType = (dbRecipe: any): RecipeType => {
+  // Parse instructions to ensure they're in the RecipeStep[] format
+  const instructions = parseRecipeInstructions(dbRecipe.instructions);
+  
   return {
     ...dbRecipe,
-    instructions: parseRecipeInstructions(dbRecipe.instructions),
+    instructions,
     // S'assurer que les autres champs nécessaires sont bien définis
     difficulty: dbRecipe.difficulty || 'facile',
     status: dbRecipe.status || 'brouillon',
