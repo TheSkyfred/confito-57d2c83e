@@ -8,6 +8,8 @@ import HeroSection from "@/components/HeroSection";
 import FeatureSection from "@/components/FeatureSection";
 import TopJamsSection from "@/components/TopJamsSection";
 import SeasonalSection from "@/components/SeasonalSection";
+import RandomJamsSection from "@/components/RandomJamsSection";
+import AvailableJamsSection from "@/components/AvailableJamsSection";
 import { PlusCircle, Swords, Trophy } from 'lucide-react';
 import { 
   Card, 
@@ -20,8 +22,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { NewBattleType, AllergenType } from '@/types/supabase';
 import AllergensBadges from '@/components/AllergensBadges';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
+  const { user } = useAuth();
+  
   // Récupérer les battles à venir
   const { data: upcomingBattles, isLoading: loadingBattles } = useQuery({
     queryKey: ['upcomingBattles'],
@@ -108,7 +113,7 @@ const Index = () => {
   
   return (
     <div>
-      <HeroSection />
+      <HeroSection showRegistration={!user} />
       
       <div className="container py-12">
         <div className="flex items-center justify-between mb-8">
@@ -176,7 +181,9 @@ const Index = () => {
         </div>
       </div>
       
-      <FeatureSection />
+      <RandomJamsSection />
+      <AvailableJamsSection />
+      {!user && <FeatureSection />}
       <TopJamsSection />
       <SeasonalSection />
     </div>
