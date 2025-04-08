@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -80,7 +80,7 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({ jamId, onReviewSubmitted 
     try {
       setIsSubmitting(true);
       
-      const { error } = await supabase.from('jam_reviews').insert({
+      const { error } = await supabaseDirect.insert('jam_reviews', {
         jam_id: jamId,
         reviewer_id: user.id,
         taste_rating: ratings.taste,

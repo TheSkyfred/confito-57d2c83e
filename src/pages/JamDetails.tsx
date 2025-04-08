@@ -102,13 +102,10 @@ const JamDetails = () => {
   const { data: detailedReviews } = useQuery({
     queryKey: ['jam-detailed-reviews', id],
     queryFn: async () => {
-      const { data, error } = await getTypedSupabaseQuery('jam_reviews')
-        .select(`
-          *,
-          reviewer:reviewer_id (id, username, avatar_url, full_name)
-        `)
-        .eq('jam_id', id as string)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabaseDirect.select('jam_reviews', `
+        *,
+        reviewer:reviewer_id (id, username, avatar_url, full_name)
+      `);
 
       if (error) throw error;
       return data;
@@ -195,10 +192,10 @@ const JamDetails = () => {
     if (!user || !jam) return;
     
     try {
-      const { error } = await supabase
-        .from('jams')
-        .update({ status: 'approved' })
-        .eq('id', jam.id);
+      const { error } = await supabaseDirect.update('jams', 
+        { status: 'approved' },
+        { id: jam.id }
+      );
         
       if (error) throw error;
       
@@ -222,13 +219,13 @@ const JamDetails = () => {
     if (!user || !jam) return;
     
     try {
-      const { error } = await supabase
-        .from('jams')
-        .update({ 
+      const { error } = await supabaseDirect.update('jams', 
+        { 
           status: 'rejected',
           rejection_reason: "Cette confiture ne répond pas à nos critères de qualité."
-        })
-        .eq('id', jam.id);
+        },
+        { id: jam.id }
+      );
         
       if (error) throw error;
       
@@ -583,7 +580,7 @@ const JamDetails = () => {
               )}
               
               {detailedReviews && detailedReviews.length > 0 ? (
-                <JamReviewsList reviews={detailedReviews} />
+                <JamReviewsList reviews={detailedReviews as DetailedReviewType[]} />
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />

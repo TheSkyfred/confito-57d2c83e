@@ -3,6 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+
 import {
   Users,
   MessageSquare,
@@ -62,6 +66,33 @@ import { toast } from '@/hooks/use-toast';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamType, ProfileType } from '@/types/supabase';
 
+const mockReports = [
+  {
+    id: '1',
+    type: 'comment',
+    status: 'pending',
+    reporter: { username: 'alice', avatar_url: null },
+    reason: 'Contenu inapproprié',
+    content: 'Ce commentaire contient un langage offensant...'
+  },
+  {
+    id: '2',
+    type: 'jam',
+    status: 'pending',
+    reporter: { username: 'bob', avatar_url: null },
+    reason: 'Information trompeuse',
+    content: 'Cette confiture prétend ne pas contenir de sucre, mais les ingrédients mentionnent du sucre de canne.'
+  },
+  {
+    id: '3',
+    type: 'profile',
+    status: 'resolved',
+    reporter: { username: 'charlie', avatar_url: null },
+    reason: 'Usurpation d\'identité',
+    content: 'Ce profil se fait passer pour un artisan reconnu.'
+  }
+];
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,7 +103,6 @@ const AdminDashboard = () => {
   
   const navigate = useNavigate();
 
-  // Check if user is admin
   const { data: userProfile, isLoading: loadingProfile } = useQuery({
     queryKey: ['adminProfile', user?.id],
     queryFn: async () => {
@@ -91,29 +121,28 @@ const AdminDashboard = () => {
   
   const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'moderator';
 
-  // Fetch stats with pending jams count
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['adminStats'],
     queryFn: async () => {
-      // For demo purposes, we fetch the counts separately
-      const [usersResponse, jamsResponse, ordersResponse, pendingJamsResponse] = await Promise.all([
-        getTypedSupabaseQuery('profiles').select('count'),
-        getTypedSupabaseQuery('jams').select('count'),
-        getTypedSupabaseQuery('orders').select('count'),
-        getTypedSupabaseQuery('jams').select('count').eq('status', 'pending')
+      const [usersResponse, jamsResponse, ordersResponse] = await Promise.all([
+        supabaseDirect.select('profiles', 'count'),
+        supabaseDirect.select('jams', 'count'),
+        supabaseDirect.select('orders', 'count')
       ]);
       
+      const { data: pendingJams } = await supabaseDirect.select('jams', 'count')
+        .match({ status: 'pending' });
+      
       return {
-        userCount: usersResponse.count || 0,
-        jamCount: jamsResponse.count || 0,
-        orderCount: ordersResponse.count || 0,
-        pendingJamCount: pendingJamsResponse.count || 0
+        userCount: usersResponse.data || 0,
+        jamCount: jamsResponse.data || 0,
+        orderCount: ordersResponse.data || 0,
+        pendingJamCount: pendingJams?.length || 0
       };
     },
     enabled: !!isAdmin,
   });
   
-  // Fetch users for the Users tab
   const { data: users, isLoading: loadingUsers } = useQuery({
     queryKey: ['adminUsers', searchTerm, userRoleFilter],
     queryFn: async () => {
@@ -135,31 +164,27 @@ const AdminDashboard = () => {
     enabled: !!isAdmin,
   });
   
-  // Fetch pending jams
   const { data: pendingJams, isLoading: loadingPendingJams, refetch: refetchPendingJams } = useQuery({
     queryKey: ['pendingJams'],
     queryFn: async () => {
-      const { data, error } = await getTypedSupabaseQuery('jams')
-        .select(`
-          *,
-          profiles:creator_id (id, username, full_name, avatar_url)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabaseDirect.select('jams', `
+        *,
+        profiles:creator_id (id, username, full_name, avatar_url)
+      `);
         
       if (error) throw error;
-      return data as JamType[];
+      
+      return data?.filter(jam => jam.status === 'pending') || [];
     },
     enabled: !!isAdmin,
   });
   
-  // Fonction pour approuver une confiture
   const approveJam = async (jamId: string) => {
     try {
-      const { error } = await supabase
-        .from('jams')
-        .update({ status: 'approved' })
-        .eq('id', jamId);
+      const { error } = await supabaseDirect.update('jams', 
+        { status: 'approved' },
+        { id: jamId }
+      );
         
       if (error) throw error;
       
@@ -179,13 +204,11 @@ const AdminDashboard = () => {
     }
   };
   
-  // Fonction pour ouvrir la boîte de dialogue de rejet
   const openRejectDialog = (jamId: string) => {
     setJamIdToReject(jamId);
     setIsRejectionDialogOpen(true);
   };
   
-  // Fonction pour rejeter une confiture
   const rejectJam = async () => {
     if (!jamIdToReject) return;
     
@@ -194,13 +217,13 @@ const AdminDashboard = () => {
         ? "Cette confiture ne répond pas à nos critères de qualité." 
         : selectedRejectionReason;
         
-      const { error } = await supabase
-        .from('jams')
-        .update({ 
+      const { error } = await supabaseDirect.update('jams', 
+        { 
           status: 'rejected',
           rejection_reason: rejectionReason
-        })
-        .eq('id', jamIdToReject);
+        },
+        { id: jamIdToReject }
+      );
         
       if (error) throw error;
       
@@ -295,7 +318,6 @@ const AdminDashboard = () => {
         <h1 className="font-serif text-3xl font-bold">Administration</h1>
       </div>
 
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
@@ -362,7 +384,6 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Admin Tabs */}
       <Tabs defaultValue="pending-jams">
         <TabsList className="grid w-full md:w-fit grid-cols-4 mb-6">
           <TabsTrigger value="pending-jams" className="relative">
@@ -388,7 +409,6 @@ const AdminDashboard = () => {
           </TabsTrigger>
         </TabsList>
         
-        {/* Pending Jams Tab */}
         <TabsContent value="pending-jams">
           <Card>
             <CardHeader>
@@ -438,8 +458,8 @@ const AdminDashboard = () => {
                                 <span className="text-xs text-muted-foreground">
                                   {(jam.profiles as any)?.username || 'Utilisateur inconnu'}
                                 </span>
-                                <Badge variant="outline" size="sm" className="ml-2 text-xs">
-                                  {format(new Date(jam.created_at), 'dd/MM/yyyy')}
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {format(new Date(jam.created_at), 'dd/MM/yyyy', { locale: fr })}
                                 </Badge>
                               </div>
                             </div>
@@ -486,7 +506,6 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
         
-        {/* Users Tab */}
         <TabsContent value="users">
           <Card>
             <CardHeader>
@@ -646,7 +665,6 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
         
-        {/* Reports Tab */}
         <TabsContent value="reports">
           <Card>
             <CardHeader>
@@ -736,7 +754,6 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
         
-        {/* Badges Tab */}
         <TabsContent value="badges">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -753,7 +770,6 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Some example badges */}
                 {[
                   { name: "Chef étoilé", description: "Pour les confituriers d'exception", category: "achievement", image: "⭐" },
                   { name: "Aventurier des saveurs", description: "Utilise des ingrédients rares ou exotiques", category: "creativity", image: "🌶️" },
@@ -795,7 +811,6 @@ const AdminDashboard = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Dialog de rejet */}
       <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
         <DialogContent>
           <DialogHeader>

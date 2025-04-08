@@ -3,33 +3,13 @@ import React from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Star } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
-
-interface Review {
-  id: string;
-  jam_id: string;
-  reviewer_id: string;
-  reviewer: {
-    id: string;
-    username: string;
-    avatar_url?: string | null;
-    full_name?: string | null;
-  };
-  taste_rating: number;
-  texture_rating: number;
-  originality_rating: number;
-  balance_rating: number;
-  comment: string | null;
-  created_at: string;
-  updated_at: string;
-}
+import { DetailedReviewType } from '@/types/supabase';
 
 interface JamReviewsListProps {
-  reviews: Review[];
+  reviews: DetailedReviewType[];
 }
 
 // Critères d'évaluation pour l'affichage
@@ -42,7 +22,7 @@ const criteria = [
 
 const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
   // Calculer la note moyenne globale
-  const calculateAverageRating = (review: Review) => {
+  const calculateAverageRating = (review: DetailedReviewType) => {
     const ratings = [
       review.taste_rating,
       review.texture_rating,
@@ -68,7 +48,7 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
                   <ProfileDisplay profile={review.reviewer} />
                   <div className="ml-3">
                     <p className="font-medium">
-                      {review.reviewer.full_name || review.reviewer.username}
+                      {review.reviewer?.full_name || review.reviewer?.username}
                     </p>
                     <div className="flex items-center mt-1">
                       {[1, 2, 3, 4, 5].map((value) => (
@@ -91,21 +71,24 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews }) => {
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-                {criteria.map(criterion => (
-                  <div key={criterion.id} className="flex flex-col items-center">
-                    <span className="text-xs text-muted-foreground mb-1">{criterion.label}</span>
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((value) => (
-                        <Star
-                          key={value}
-                          className="h-3 w-3"
-                          fill={value <= review[criterion.id as keyof Review] ? "#FFA000" : "transparent"}
-                          stroke={value <= review[criterion.id as keyof Review] ? "#FFA000" : "currentColor"}
-                        />
-                      ))}
+                {criteria.map(criterion => {
+                  const ratingValue = review[criterion.id as keyof DetailedReviewType] as number;
+                  return (
+                    <div key={criterion.id} className="flex flex-col items-center">
+                      <span className="text-xs text-muted-foreground mb-1">{criterion.label}</span>
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <Star
+                            key={value}
+                            className="h-3 w-3"
+                            fill={value <= ratingValue ? "#FFA000" : "transparent"}
+                            stroke={value <= ratingValue ? "#FFA000" : "currentColor"}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               {review.comment && (
