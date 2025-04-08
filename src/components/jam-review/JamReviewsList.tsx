@@ -26,7 +26,7 @@ const criteria = [
 const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }) => {
   const { user } = useAuth();
   
-  // Calculer la note moyenne globale
+  // Calculer la note moyenne globale en excluant les zéros
   const calculateAverageRating = (review: DetailedReviewType) => {
     const ratings = [
       review.taste_rating || 0,
@@ -34,6 +34,7 @@ const JamReviewsList: React.FC<JamReviewsListProps> = ({ reviews, onEditReview }
       review.originality_rating || 0,
       review.balance_rating || 0
     ];
+    // Filtre pour exclure les zéros
     const validRatings = ratings.filter(r => r > 0);
     return validRatings.length > 0
       ? validRatings.reduce((sum, r) => sum + r, 0) / validRatings.length

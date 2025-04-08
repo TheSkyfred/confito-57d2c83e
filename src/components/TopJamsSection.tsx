@@ -20,19 +20,31 @@ const TopJamsSection = () => {
           price_credits,
           creator_id,
           profiles (username),
-          jam_images (url, is_primary)
+          jam_images (url, is_primary),
+          jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
         `
       );
       
       if (error) throw error;
       
-      // Calculer la note moyenne pour chaque confiture
+      // Calculer la note moyenne pour chaque confiture en excluant les zéros
       const jamsWithRatings = data.map(jam => {
-        // Safely handle ratings calculation
-        const ratings = jam.reviews ? jam.reviews.map(r => r.rating).filter(Boolean) : [];
-        const avgRating = ratings.length 
-          ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length 
-          : 0;
+        // Calculate average rating for each review
+        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map(review => {
+          const ratings = [
+            review.taste_rating || 0,
+            review.texture_rating || 0, 
+            review.originality_rating || 0,
+            review.balance_rating || 0
+          ].filter(r => r > 0);
+          
+          return ratings.length > 0 ? 
+            ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
+        }).filter(score => score > 0) : [];
+        
+        // Calculate overall average from review scores
+        const avgRating = reviewScores.length > 0 ?
+          reviewScores.reduce((sum, score) => sum + score, 0) / reviewScores.length : 0;
         
         // Find primary image or use the first one
         const primaryImage = jam.jam_images && jam.jam_images.length > 0
@@ -42,12 +54,15 @@ const TopJamsSection = () => {
         return {
           ...jam,
           avgRating,
-          primaryImage
+          primaryImage,
+          reviews: jam.jam_reviews || []
         };
       });
       
       // Trier par note moyenne et ne garder que les 4 meilleures
-      return jamsWithRatings.sort((a, b) => b.avgRating - a.avgRating).slice(0, 4);
+      return jamsWithRatings
+        .sort((a, b) => b.avgRating - a.avgRating)
+        .slice(0, 4);
     },
   });
 

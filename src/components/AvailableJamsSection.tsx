@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -25,7 +26,8 @@ const AvailableJamsSection = () => {
           available_quantity,
           creator_id,
           profiles (username),
-          jam_images (url, is_primary)
+          jam_images (url, is_primary),
+          jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
         `
       );
       
@@ -34,23 +36,32 @@ const AvailableJamsSection = () => {
       // Filtrer les confitures avec un stock disponible
       const availableJams = jams.filter(jam => jam.available_quantity > 0);
       
-      // Calculer la note moyenne pour chaque confiture
+      // Calculer la note moyenne pour chaque confiture en excluant les zéros
       const jamsWithRatings = availableJams.map(jam => {
-        const ratings = jam.reviews ? 
-          jam.reviews
-            .map(r => r.rating)
-            .filter(rating => rating !== null && rating !== undefined) 
-          : [];
-        const avgRating = ratings.length 
-          ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length 
-          : 0;
+        // Calculate average rating for each review
+        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map(review => {
+          const ratings = [
+            review.taste_rating || 0,
+            review.texture_rating || 0, 
+            review.originality_rating || 0,
+            review.balance_rating || 0
+          ].filter(r => r > 0);
+          
+          return ratings.length > 0 ? 
+            ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
+        }).filter(score => score > 0) : [];
+        
+        // Calculate overall average from review scores
+        const avgRating = reviewScores.length > 0 ?
+          reviewScores.reduce((sum, score) => sum + score, 0) / reviewScores.length : 0;
         
         return {
           ...jam,
           avgRating,
           primaryImage: jam.jam_images && jam.jam_images.length > 0 
             ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url)
-            : '/placeholder.svg'
+            : '/placeholder.svg',
+          reviews: jam.jam_reviews || []
         };
       });
       
