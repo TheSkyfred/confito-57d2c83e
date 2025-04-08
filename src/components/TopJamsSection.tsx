@@ -123,7 +123,7 @@ const TopJamsSection = () => {
                       />
                     ))}
                     <span className="text-xs ml-2">
-                      ({jam.reviews ? jam.reviews.length : 0})
+                      {safeToFixed(jam.avgRating)} ({jam.reviews ? jam.reviews.length : 0})
                     </span>
                   </div>
                 </CardContent>

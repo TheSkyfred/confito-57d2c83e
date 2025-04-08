@@ -21,6 +21,12 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
   // Calculate average rating
   const avgRating = jam.avgRating || 0;
   
+  // Safe toFixed function to handle undefined/null values
+  const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
+    if (value === undefined || value === null) return '0.0';
+    return value.toFixed(digits);
+  };
+  
   return (
     <div className="group relative overflow-hidden rounded-lg border border-muted bg-background hover:shadow-md transition-shadow">
       <div className="aspect-square overflow-hidden">
@@ -36,7 +42,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
           <div className="flex items-center space-x-1">
             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
             <span className="text-sm font-medium">
-              {avgRating ? avgRating.toFixed(1) : 'N/A'}
+              {safeToFixed(avgRating)}
             </span>
           </div>
         </div>
