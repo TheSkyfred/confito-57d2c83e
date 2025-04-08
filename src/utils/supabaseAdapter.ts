@@ -236,7 +236,7 @@ export const supabaseDirect = {
       // Mise à jour directe au lieu d'utiliser une fonction RPC
       const { data, error } = await supabase
         .from('advice_products' as any)
-        .update({ click_count: supabase.rpc('increment', { value: 1 }) })
+        .update({ click_count: supabase.sql`click_count + 1` })
         .eq('id', productId);
       
       if (error) throw error;
@@ -275,3 +275,4 @@ export const supabaseDirect = {
     }
   }
 };
+
