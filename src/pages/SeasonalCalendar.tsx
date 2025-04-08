@@ -122,7 +122,7 @@ const SeasonalCalendar = () => {
         })
       );
 
-      return fruitsWithDetails;
+      return fruitsWithDetails as Fruit[];
     },
   });
 
@@ -267,9 +267,9 @@ const SeasonalCalendar = () => {
                 <SelectValue placeholder="Famille" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes les familles</SelectItem>
+                <SelectItem value="all">Toutes les familles</SelectItem>
                 {families.map(family => (
-                  <SelectItem key={family} value={family}>
+                  <SelectItem key={family} value={family || "unknown"}>
                     {family}
                   </SelectItem>
                 ))}
@@ -420,7 +420,7 @@ const SeasonalCalendar = () => {
               )}
             </>
           ) : (
-            <CalendarGrid fruits={filteredFruits} />
+            <CalendarGrid fruits={filteredFruits as any} />
           )}
         </div>
       )}
