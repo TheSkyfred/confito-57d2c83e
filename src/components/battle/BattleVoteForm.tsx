@@ -47,7 +47,7 @@ const BattleVoteForm: React.FC<BattleVoteFormProps> = ({ battle, participant, ju
           .order('weight', { ascending: false });
           
         if (error) throw error;
-        setCriterias(data as BattleCriteriaType[]);
+        setCriterias(data as unknown as BattleCriteriaType[]);
       } catch (error) {
         console.error("Erreur lors de la récupération des critères:", error);
         toast({
@@ -63,7 +63,7 @@ const BattleVoteForm: React.FC<BattleVoteFormProps> = ({ battle, participant, ju
   
   // Construction dynamique des valeurs par défaut du formulaire
   const generateDefaultValues = () => {
-    const defaultValues = { comment: "" };
+    const defaultValues: Record<string, any> = { comment: "" };
     criterias.forEach(criteria => {
       defaultValues[criteria.id] = 0;
     });
@@ -77,7 +77,7 @@ const BattleVoteForm: React.FC<BattleVoteFormProps> = ({ battle, participant, ju
   });
   
   // Gestion de la soumission du formulaire
-  const onSubmit = async (data, submitAsDraft = false) => {
+  const onSubmit = async (data: Record<string, any>, submitAsDraft = false) => {
     try {
       setIsLoading(true);
       
@@ -153,7 +153,7 @@ const BattleVoteForm: React.FC<BattleVoteFormProps> = ({ battle, participant, ju
                     </div>
                     <FormControl>
                       <Rating 
-                        value={field.value} 
+                        value={field.value as number} 
                         onChange={field.onChange}
                         size="md"
                       />

@@ -133,10 +133,10 @@ export type NewBattleType = {
   is_featured: boolean;
   created_at: string;
   updated_at: string;
-  participants?: BattleParticipantType[];
-  judges?: BattleJudgeType[];
-  candidates?: BattleCandidateType[];
-  results?: BattleResultType;
+  battle_participants?: BattleParticipantType[];
+  battle_judges?: BattleJudgeType[];
+  battle_candidates?: BattleCandidateType[];
+  battle_results?: BattleResultType;
 };
 
 export type BattleCandidateType = {

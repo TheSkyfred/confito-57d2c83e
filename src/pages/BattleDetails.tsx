@@ -85,7 +85,9 @@ const BattleDetails = () => {
           
         if (battleError) throw battleError;
         
-        setBattle(battleData as unknown as NewBattleType);
+        // Convertir explicitement les données en NewBattleType
+        const typedBattleData = battleData as unknown as NewBattleType;
+        setBattle(typedBattleData);
         
         // Vérifier l'utilisateur actuel
         const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -105,22 +107,22 @@ const BattleDetails = () => {
           }
           
           // Vérifier si l'utilisateur est un juge
-          const isUserJudge = battleData.battle_judges?.some(
+          const isUserJudge = typedBattleData.battle_judges?.some(
             judge => judge.user_id === currentUser.id
           );
-          setIsJudge(isUserJudge);
+          setIsJudge(!!isUserJudge);
           
           // Vérifier si l'utilisateur est un participant
-          const isUserParticipant = battleData.battle_participants?.some(
+          const isUserParticipant = typedBattleData.battle_participants?.some(
             participant => participant.user_id === currentUser.id
           );
-          setIsParticipant(isUserParticipant);
+          setIsParticipant(!!isUserParticipant);
           
           // Vérifier si l'utilisateur a déjà postulé
-          const hasUserApplied = battleData.battle_candidates?.some(
+          const hasUserApplied = typedBattleData.battle_candidates?.some(
             candidate => candidate.user_id === currentUser.id
           );
-          setHasApplied(hasUserApplied);
+          setHasApplied(!!hasUserApplied);
         }
         
       } catch (error) {
@@ -167,11 +169,11 @@ const BattleDetails = () => {
       return;
     }
     
-    if (!id) return;
+    if (!id || !battle) return;
     
     try {
       // Vérifier si le nombre maximum de juges est atteint
-      if (battle?.battle_judges?.length >= (battle?.max_judges || 10)) {
+      if (battle.battle_judges && battle.battle_judges.length >= (battle.max_judges || 10)) {
         toast({
           title: "Impossible de s'inscrire",
           description: "Le nombre maximum de juges est déjà atteint pour ce battle.",

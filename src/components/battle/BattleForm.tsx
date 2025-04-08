@@ -70,8 +70,19 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
       });
       
       const battleData = {
-        ...data,
+        theme: data.theme,
         constraints: constraintsObj,
+        max_price_credits: data.max_price_credits,
+        min_jams_required: data.min_jams_required,
+        max_judges: data.max_judges,
+        judge_discount_percent: data.judge_discount_percent,
+        reward_credits: data.reward_credits,
+        reward_description: data.reward_description,
+        registration_start_date: new Date(),
+        registration_end_date: data.registration_end_date,
+        production_end_date: data.production_end_date,
+        voting_end_date: data.voting_end_date,
+        is_featured: data.is_featured,
         status: 'inscription' as const
       };
       

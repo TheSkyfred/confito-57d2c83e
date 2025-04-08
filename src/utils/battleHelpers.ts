@@ -19,7 +19,7 @@ export const fetchAllBattles = async () => {
       .order('created_at', { ascending: false });
       
     if (error) throw error;
-    return data as NewBattleType[];
+    return data as unknown as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles:', error.message);
     return [];
@@ -36,7 +36,7 @@ export const fetchUpcomingBattles = async () => {
       .order('registration_end_date', { ascending: true });
       
     if (error) throw error;
-    return data as NewBattleType[];
+    return data as unknown as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles à venir:', error.message);
     return [];
@@ -53,7 +53,7 @@ export const fetchActiveBattles = async () => {
       .order('voting_end_date', { ascending: true });
       
     if (error) throw error;
-    return data as NewBattleType[];
+    return data as unknown as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles en cours:', error.message);
     return [];
@@ -73,7 +73,7 @@ export const fetchCompletedBattles = async () => {
       .order('voting_end_date', { ascending: false });
       
     if (error) throw error;
-    return data as NewBattleType[];
+    return data as unknown as NewBattleType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des battles terminés:', error.message);
     return [];
@@ -107,7 +107,7 @@ export const fetchBattleById = async (id: string) => {
       .single();
       
     if (error) throw error;
-    return data as NewBattleType;
+    return data as unknown as NewBattleType;
   } catch (error: any) {
     console.error(`Erreur lors de la récupération du battle ${id}:`, error.message);
     return null;
@@ -117,11 +117,16 @@ export const fetchBattleById = async (id: string) => {
 // Fonction pour postuler à un battle
 export const applyToBattle = async (battleId: string, motivation: string, referenceJamId: string | null) => {
   try {
+    const user = await supabase.auth.getUser();
+    const userId = user.data.user?.id;
+    
+    if (!userId) throw new Error("Utilisateur non authentifié");
+    
     const { error } = await supabase
       .from('battle_candidates')
       .insert({
         battle_id: battleId,
-        user_id: supabase.auth.getUser().then(res => res.data.user?.id),
+        user_id: userId,
         motivation,
         reference_jam_id: referenceJamId
       });
@@ -137,11 +142,16 @@ export const applyToBattle = async (battleId: string, motivation: string, refere
 // Fonction pour s'inscrire comme juge
 export const applyAsJudge = async (battleId: string) => {
   try {
+    const user = await supabase.auth.getUser();
+    const userId = user.data.user?.id;
+    
+    if (!userId) throw new Error("Utilisateur non authentifié");
+    
     const { error } = await supabase
       .from('battle_judges')
       .insert({
         battle_id: battleId,
-        user_id: supabase.auth.getUser().then(res => res.data.user?.id)
+        user_id: userId
       });
       
     if (error) throw error;
@@ -165,7 +175,7 @@ export const fetchBattleStars = async (limit = 10) => {
       .limit(limit);
       
     if (error) throw error;
-    return data as BattleStarsType[];
+    return data as unknown as BattleStarsType[];
   } catch (error: any) {
     console.error('Erreur lors de la récupération des Battle Stars:', error.message);
     return [];
@@ -182,7 +192,7 @@ export const createNewBattle = async (battleData: Omit<NewBattleType, 'id' | 'cr
       .single();
       
     if (error) throw error;
-    return data as NewBattleType;
+    return data as unknown as NewBattleType;
   } catch (error: any) {
     console.error('Erreur lors de la création du battle:', error.message);
     return null;
@@ -236,7 +246,7 @@ export const useEligibilityCheck = () => {
         .select('*', { count: 'exact', head: true })
         .eq('creator_id', userId);
         
-      if (battle && count !== null && count < battle.min_jams_required) {
+      if (battle && count !== null && battle.min_jams_required && count < battle.min_jams_required) {
         toast({
           title: "Non éligible",
           description: `Vous devez avoir créé au moins ${battle.min_jams_required} confitures pour postuler à ce battle.`,
