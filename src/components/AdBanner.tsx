@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { useAuth } from '@/contexts/AuthContext';
 import ProJamCard from '@/components/ProJamCard';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,6 +14,7 @@ interface AdBannerProps {
 const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [adData, setAdData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -94,9 +96,12 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     if (!adData) return;
     
     try {
+      // Indiquer si l'utilisateur est connecté ou non dans les données de clic
       await supabaseDirect.insert('ads_clicks', {
         campaign_id: adData.id,
         source_page: location.pathname,
+        is_authenticated: !!user,
+        visitor_type: user ? 'authenticated' : 'visitor',
       });
 
       if (adData.redirectUrl) {
