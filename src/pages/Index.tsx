@@ -113,8 +113,22 @@ const Index = () => {
   
   return (
     <div>
+      {/* 1. Échangez vos confitures artisanales */}
       <HeroSection showRegistration={!user} />
       
+      {/* 2. Pourquoi rejoindre notre communauté ? */}
+      {!user && <FeatureSection />}
+      
+      {/* 3. Découvrir des confitures */}
+      <RandomJamsSection />
+      
+      {/* 4. Confitures disponibles les mieux notées */}
+      <AvailableJamsSection />
+      
+      {/* 5. Confitures les mieux notées */}
+      <TopJamsSection />
+      
+      {/* 6. Battles en cours */}
       <div className="container py-12">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -181,10 +195,7 @@ const Index = () => {
         </div>
       </div>
       
-      <RandomJamsSection />
-      <AvailableJamsSection />
-      {!user && <FeatureSection />}
-      <TopJamsSection />
+      {/* 7. Fruits de saison */}
       <SeasonalSection />
     </div>
   );

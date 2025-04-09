@@ -69,7 +69,7 @@ const ProJamCard: React.FC<ProJamCardProps> = ({
           
           <div className="flex items-center justify-between mt-2">
             <span className="font-semibold text-lg">
-              {priceEuros.toFixed(2)} €
+              {typeof priceEuros === 'number' ? priceEuros.toFixed(2) : '0.00'} €
             </span>
           </div>
         </CardContent>
