@@ -55,10 +55,6 @@ const AdminFruitEdit = () => {
   }, [isAdmin, isModerator, navigate, roleLoading, toast]);
 
   const handleFormSubmit = () => {
-    toast({
-      title: "Modifications enregistrées",
-      description: "Les informations du fruit ont été mises à jour avec succès.",
-    });
     navigate(`/admin/fruits/${id}`);
   };
 
