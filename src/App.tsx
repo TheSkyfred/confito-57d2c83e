@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ import RecipeEdit from './pages/RecipeEdit';
 import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminFruits from './pages/AdminFruits';
+import AdminFruitDetails from './pages/AdminFruitDetails';
 import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 
@@ -82,6 +84,7 @@ function App() {
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   <Route path="/admin/fruits" element={<AdminFruits />} />
+                  <Route path="/admin/fruits/:id" element={<AdminFruitDetails />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/rankings" element={<Rankings />} />
                   <Route path="/pro-dashboard" element={<ProDashboard />} />
