@@ -313,20 +313,19 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Fix for the infinite update loop - proper way to use Switch with form */}
               <FormField
                 control={form.control}
                 name="is_published"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
-                      <StandaloneFormLabel>Publier</StandaloneFormLabel>
-                      <StandaloneFormDescription>
+                      <FormLabel>Publier</FormLabel>
+                      <FormDescription>
                         Rendre ce fruit visible dans le calendrier
-                      </StandaloneFormDescription>
+                      </FormDescription>
                     </div>
                     <FormControl>
-                      <Switch 
+                      <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
                       />
