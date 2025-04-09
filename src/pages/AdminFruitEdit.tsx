@@ -10,15 +10,14 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Edit, Trash } from "lucide-react";
-import FruitDetail from '@/components/fruit/FruitDetail';
+import { Loader2, ArrowLeft } from "lucide-react";
+import FruitForm from '@/components/fruit/FruitForm';
 
-const AdminFruitDetails = () => {
+const AdminFruitEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,10 +27,9 @@ const AdminFruitDetails = () => {
   const { 
     data: fruit, 
     isLoading, 
-    error,
-    refetch 
+    error
   } = useQuery({
-    queryKey: ['fruitDetail', id],
+    queryKey: ['fruitEdit', id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('fruits')
@@ -56,35 +54,18 @@ const AdminFruitDetails = () => {
     }
   }, [isAdmin, isModerator, navigate, roleLoading, toast]);
 
-  const handleDelete = async () => {
-    try {
-      const { error } = await supabase
-        .from('fruits')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Fruit supprimé",
-        description: "Le fruit a été supprimé avec succès.",
-      });
-      
-      navigate('/admin/fruits');
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: `Impossible de supprimer ce fruit: ${error.message}`,
-        variant: "destructive",
-      });
-    }
+  const handleFormSubmit = () => {
+    toast({
+      title: "Modifications enregistrées",
+      description: "Les informations du fruit ont été mises à jour avec succès.",
+    });
+    navigate(`/admin/fruits/${id}`);
   };
 
-  const handleEdit = () => {
-    navigate(`/admin/fruits/edit/${id}`);
+  const handleFormCancel = () => {
+    navigate(`/admin/fruits/${id}`);
   };
 
-  // Fix: Prevent rendering until role check is complete
   if (roleLoading) {
     return (
       <div className="container py-8 flex items-center justify-center">
@@ -93,7 +74,6 @@ const AdminFruitDetails = () => {
     );
   }
 
-  // Fix: Return null early if not authorized
   if (!isAdmin && !isModerator) {
     return null;
   }
@@ -132,39 +112,29 @@ const AdminFruitDetails = () => {
   return (
     <div className="container py-8">
       <Button 
-        onClick={() => navigate('/admin/fruits')} 
+        onClick={() => navigate(`/admin/fruits/${id}`)} 
         variant="outline" 
         className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Retour à la liste
+        Retour aux détails
       </Button>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl">{fruit.name}</CardTitle>
-            <CardDescription>
-              {fruit.is_published ? 'Fruit publié' : 'Brouillon'} • {fruit.family || 'Famille non spécifiée'}
-            </CardDescription>
-          </div>
-          <div className="flex space-x-2">
-            <Button onClick={handleEdit}>
-              <Edit className="mr-2 h-4 w-4" />
-              Modifier
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              <Trash className="mr-2 h-4 w-4" />
-              Supprimer
-            </Button>
-          </div>
+        <CardHeader>
+          <CardTitle>Modifier {fruit.name}</CardTitle>
+          <CardDescription>Modifiez les informations de ce fruit saisonnier</CardDescription>
         </CardHeader>
         <CardContent>
-          <FruitDetail fruit={fruit} />
+          <FruitForm 
+            fruit={fruit} 
+            onSubmit={handleFormSubmit} 
+            onCancel={handleFormCancel} 
+          />
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default AdminFruitDetails;
+export default AdminFruitEdit;

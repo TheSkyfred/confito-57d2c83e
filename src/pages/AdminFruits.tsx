@@ -30,7 +30,6 @@ const AdminFruits = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, isModerator, isLoading: roleLoading } = useUserRole();
-  const [selectedFruit, setSelectedFruit] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   // Fetch fruits
@@ -62,7 +61,7 @@ const AdminFruits = () => {
   }, [isAdmin, isModerator, navigate, roleLoading, toast]);
 
   const handleEdit = (fruit: any) => {
-    navigate(`/admin/fruits/${fruit.id}`);
+    navigate(`/admin/fruits/edit/${fruit.id}`);
   };
 
   const handleView = (fruit: any) => {
@@ -93,17 +92,14 @@ const AdminFruits = () => {
 
   const handleFormSubmit = () => {
     setIsFormOpen(false);
-    setSelectedFruit(null);
     refetch();
   };
 
   const handleFormCancel = () => {
     setIsFormOpen(false);
-    setSelectedFruit(null);
   };
 
   const handleAddNew = () => {
-    setSelectedFruit(null);
     setIsFormOpen(true);
   };
   

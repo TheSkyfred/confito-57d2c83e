@@ -39,6 +39,7 @@ import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminFruits from './pages/AdminFruits';
 import AdminFruitDetails from './pages/AdminFruitDetails';
+import AdminFruitEdit from './pages/AdminFruitEdit';
 import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 
@@ -85,10 +86,8 @@ function App() {
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   <Route path="/admin/fruits" element={<AdminFruits />} />
                   <Route path="/admin/fruits/:id" element={<AdminFruitDetails />} />
+                  <Route path="/admin/fruits/edit/:id" element={<AdminFruitEdit />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
-                  <Route path="/rankings" element={<Rankings />} />
-                  <Route path="/pro-dashboard" element={<ProDashboard />} />
-                  <Route path="/pro-registration" element={<ProRegistration />} />
                   <Route path="/seasonal" element={<SeasonalCalendar />} />
                   <Route path="/fruits/:id" element={<FruitDetail />} />
                   <Route path="/user/recipes" element={<UserRecipes />} />
