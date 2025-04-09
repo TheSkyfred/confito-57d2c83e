@@ -353,7 +353,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Fixed Switch component - using the controlled pattern correctly */}
+              {/* Custom publish control with Switch component */}
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <StandaloneFormLabel>Publier</StandaloneFormLabel>
@@ -364,6 +364,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 <Switch
                   checked={isPublished}
                   onCheckedChange={handlePublishChange}
+                  aria-label="Toggle publication status"
                 />
               </div>
             </div>
