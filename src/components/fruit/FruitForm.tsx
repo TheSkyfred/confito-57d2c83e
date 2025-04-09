@@ -96,6 +96,9 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
     const loadFruitData = async () => {
       try {
+        // Set is_published first to avoid sync issues
+        setIsPublished(fruit.is_published ?? true);
+        
         // Mise à jour des valeurs de base du formulaire
         form.reset({
           name: fruit.name || '',
@@ -108,9 +111,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
           seasons: [],
           tags: [],
         });
-        
-        // Update the local state separately from form
-        setIsPublished(fruit.is_published ?? true);
 
         // Charger les saisons associées
         const { data: seasonData, error: seasonError } = await supabase
@@ -177,10 +177,11 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     }
   };
 
-  // Handle publish status change - completely separate from form state
+  // Handle publish status change - separate from form's setValue to prevent loops
   const handlePublishChange = (checked: boolean) => {
     setIsPublished(checked);
-    form.setValue('is_published', checked);
+    // Update the form value without triggering further re-renders
+    form.setValue('is_published', checked, { shouldDirty: true });
   };
 
   // Supprimer un tag
@@ -352,7 +353,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Manually rendered Switch control - completely detached from form control flow */}
+              {/* Fixed Switch component - using the controlled pattern correctly */}
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <StandaloneFormLabel>Publier</StandaloneFormLabel>
@@ -360,7 +361,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                     Rendre ce fruit visible dans le calendrier
                   </StandaloneFormDescription>
                 </div>
-                {/* Use the local state variable only */}
                 <Switch
                   checked={isPublished}
                   onCheckedChange={handlePublishChange}
