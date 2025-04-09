@@ -100,12 +100,16 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
         ...(linkedRecipes?.filter(link => link.recipes).map(link => link.recipes) || [])
       ].filter(Boolean);
 
-      // Remove duplicates - use a unique key for each recipe
-      const uniqueRecipes = Array.from(
-        new Map(allRecipes.map(item => [item.id, item]))
-      ).map(([_, item]) => item);
-
-      return uniqueRecipes;
+      // Remove duplicates - use a Map with ID as key to ensure uniqueness
+      const recipeMap = new Map();
+      allRecipes.forEach(recipe => {
+        if (recipe && recipe.id) {
+          recipeMap.set(recipe.id, recipe);
+        }
+      });
+      
+      // Convert back to array
+      return Array.from(recipeMap.values());
     },
     enabled: !!fruit.id,
   });
@@ -131,7 +135,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
       if (error) throw error;
       
       // Filter out any null advice_articles and ensure each has a unique ID
-      return data
+      const validAdvice = data
         .filter(link => link.advice_articles)
         .map(link => ({
           ...link.advice_articles,
@@ -139,6 +143,17 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
           // Add a unique display key based on advice ID
           displayKey: `advice-${link.advice_articles.id}`
         }));
+        
+      // Ensure no duplicates by using a Map with ID as key
+      const adviceMap = new Map();
+      validAdvice.forEach(advice => {
+        if (advice && advice.id) {
+          adviceMap.set(advice.id, advice);
+        }
+      });
+      
+      // Convert back to array
+      return Array.from(adviceMap.values());
     },
     enabled: !!fruit.id,
   });
@@ -198,8 +213,8 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-1">Tags</h4>
                 <div className="flex flex-wrap gap-1">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">{tag}</Badge>
+                  {tags.map((tag, index) => (
+                    <Badge key={`tag-${index}-${tag}`} variant="secondary">{tag}</Badge>
                   ))}
                 </div>
               </div>
@@ -218,11 +233,11 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               </h3>
               <div className="space-y-2">
                 {Object.entries(seasonGroups).map(([season, months]) => (
-                  <div key={season} className="rounded-md p-3 bg-secondary/50">
+                  <div key={`season-${season}`} className="rounded-md p-3 bg-secondary/50">
                     <p className="font-medium mb-1">{season}</p>
                     <div className="flex flex-wrap gap-1">
                       {months.map((month) => (
-                        <Badge key={month} variant="secondary" className="capitalize">
+                        <Badge key={`month-${season}-${month}`} variant="secondary" className="capitalize">
                           {getMonthName(month)}
                         </Badge>
                       ))}
@@ -345,7 +360,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               ) : advices && advices.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {advices.map((advice) => (
-                    <Card key={advice.displayKey}>
+                    <Card key={advice.displayKey || `advice-${advice.id}`}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-base">{advice.title}</CardTitle>
                         <CardDescription>
