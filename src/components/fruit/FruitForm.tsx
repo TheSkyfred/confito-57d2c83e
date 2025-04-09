@@ -27,44 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Schéma de validation pour le formulaire
-const fruitFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "Le nom doit contenir au moins 2 caractères.",
-  }),
-  image_url: z.string().url({
-    message: "Entrez une URL valide pour l'image.",
-  }).optional().or(z.literal('')),
-  description: z.string().optional(),
-  conservation_tips: z.string().optional(),
-  cooking_tips: z.string().optional(),
-  family: z.string().optional(),
-  is_published: z.boolean().default(true),
-  seasons: z.array(z.number().min(1).max(12)).optional(),
-  tags: z.array(z.string()).optional(),
-});
-
-type FruitFormValues = z.infer<typeof fruitFormSchema>;
-
-const months = [
-  { value: 1, label: "Janvier" },
-  { value: 2, label: "Février" },
-  { value: 3, label: "Mars" },
-  { value: 4, label: "Avril" },
-  { value: 5, label: "Mai" },
-  { value: 6, label: "Juin" },
-  { value: 7, label: "Juillet" },
-  { value: 8, label: "Août" },
-  { value: 9, label: "Septembre" },
-  { value: 10, label: "Octobre" },
-  { value: 11, label: "Novembre" },
-  { value: 12, label: "Décembre" },
-];
-
-type FruitFormProps = {
-  fruit?: any;
-  onSubmit: () => void;
-  onCancel: () => void;
-};
+// ...imports inchangés
 
 const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const { toast } = useToast();
@@ -72,9 +35,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const [selectedSeasons, setSelectedSeasons] = useState<number[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [isPublished, setIsPublished] = useState(true);
 
-  // Initialiser le formulaire
   const form = useForm<FruitFormValues>({
     resolver: zodResolver(fruitFormSchema),
     defaultValues: {
@@ -90,16 +51,11 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     },
   });
 
-  // Charger les données du fruit existant si en mode édition
   useEffect(() => {
     if (!fruit) return;
 
     const loadFruitData = async () => {
       try {
-        // Set is_published first to avoid sync issues
-        setIsPublished(fruit.is_published ?? true);
-        
-        // Mise à jour des valeurs de base du formulaire
         form.reset({
           name: fruit.name || '',
           image_url: fruit.image_url || '',
@@ -112,7 +68,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
           tags: [],
         });
 
-        // Charger les saisons associées
         const { data: seasonData, error: seasonError } = await supabase
           .from('fruit_seasons')
           .select('month')
@@ -126,7 +81,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
           form.setValue('seasons', seasons);
         }
 
-        // Charger les tags associés
         const { data: tagData, error: tagError } = await supabase
           .from('fruit_tags')
           .select('tag')
@@ -152,19 +106,16 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     loadFruitData();
   }, [fruit, form, toast]);
 
-  // Gérer les changements de saisons sélectionnées
   const handleSeasonToggle = (month: number) => {
     setSelectedSeasons(current => {
       const updated = current.includes(month)
         ? current.filter(m => m !== month)
         : [...current, month];
-      
       form.setValue('seasons', updated);
       return updated;
     });
   };
 
-  // Gérer l'ajout de tags
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && tagInput.trim()) {
       e.preventDefault();
@@ -177,32 +128,18 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
     }
   };
 
-  // Handle publish status change - separate from form's setValue to prevent loops
-  const handlePublishChange = (checked: boolean) => {
-    setIsPublished(checked);
-    // Update the form value without triggering further re-renders
-    form.setValue('is_published', checked, { shouldDirty: true });
-  };
-
-  // Supprimer un tag
   const removeTag = (tagToRemove: string) => {
     const newTags = tags.filter(tag => tag !== tagToRemove);
     setTags(newTags);
     form.setValue('tags', newTags);
   };
 
-  // Soumettre le formulaire
   const onFormSubmit = async (values: FruitFormValues) => {
     setIsLoading(true);
     try {
       let fruitId = fruit?.id;
 
-      // Ensure is_published value is taken from our local state
-      values.is_published = isPublished;
-
-      // Insérer ou mettre à jour le fruit
       if (fruitId) {
-        // Mise à jour
         const { error: updateError } = await supabase
           .from('fruits')
           .update({
@@ -218,7 +155,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
         if (updateError) throw updateError;
       } else {
-        // Création
         const { data: newFruit, error: insertError } = await supabase
           .from('fruits')
           .insert({
@@ -237,15 +173,12 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
         fruitId = newFruit.id;
       }
 
-      // Gérer les saisons
       if (fruitId && selectedSeasons.length > 0) {
-        // Supprimer les saisons existantes
         await supabase
           .from('fruit_seasons')
           .delete()
           .eq('fruit_id', fruitId);
 
-        // Insérer les nouvelles saisons
         const seasonObjects = selectedSeasons.map(month => ({
           fruit_id: fruitId,
           month,
@@ -258,15 +191,12 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
         if (seasonError) throw seasonError;
       }
 
-      // Gérer les tags
       if (fruitId && tags.length > 0) {
-        // Supprimer les tags existants
         await supabase
           .from('fruit_tags')
           .delete()
           .eq('fruit_id', fruitId);
 
-        // Insérer les nouveaux tags
         const tagObjects = tags.map(tag => ({
           fruit_id: fruitId,
           tag,
@@ -353,7 +283,6 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              {/* Custom publish control with Switch component */}
               <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                 <div className="space-y-0.5">
                   <StandaloneFormLabel>Publier</StandaloneFormLabel>
@@ -362,8 +291,10 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                   </StandaloneFormDescription>
                 </div>
                 <Switch
-                  checked={isPublished}
-                  onCheckedChange={handlePublishChange}
+                  checked={form.watch("is_published")}
+                  onCheckedChange={(checked) =>
+                    form.setValue("is_published", checked, { shouldDirty: true })
+                  }
                   aria-label="Toggle publication status"
                 />
               </div>
@@ -503,3 +434,4 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 };
 
 export default FruitForm;
+
