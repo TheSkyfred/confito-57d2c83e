@@ -328,21 +328,25 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                <div className="space-y-0.5">
-                  <StandaloneFormLabel>Publier</StandaloneFormLabel>
-                  <StandaloneFormDescription>
-                    Rendre ce fruit visible dans le calendrier
-                  </StandaloneFormDescription>
-                </div>
-                <Switch
-                  checked={form.watch("is_published")}
-                  onCheckedChange={(checked) =>
-                    form.setValue("is_published", checked, { shouldDirty: true })
-                  }
-                  aria-label="Toggle publication status"
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="is_published"
+                render={({ field }) => (
+                  <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <StandaloneFormLabel>Publier</StandaloneFormLabel>
+                      <StandaloneFormDescription>
+                        Rendre ce fruit visible dans le calendrier
+                      </StandaloneFormDescription>
+                    </div>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      aria-label="Toggle publication status"
+                    />
+                  </div>
+                )}
+              />
             </div>
 
             <div className="space-y-6">
