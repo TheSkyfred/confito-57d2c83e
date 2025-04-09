@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -94,15 +94,15 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
 
       if (linkError) throw linkError;
 
-      // Combine both sets of recipes
+      // Combine both sets of recipes and filter out any null values
       const allRecipes = [
         ...(data || []), 
-        ...(linkedRecipes?.map(link => link.recipes) || [])
-      ];
+        ...(linkedRecipes?.filter(link => link.recipes).map(link => link.recipes) || [])
+      ].filter(Boolean);
 
-      // Remove duplicates
+      // Remove duplicates - use a unique key for each recipe
       const uniqueRecipes = Array.from(
-        new Map(allRecipes.map(item => [item['id'], item]))
+        new Map(allRecipes.map(item => [item.id, item]))
       ).map(([_, item]) => item);
 
       return uniqueRecipes;
@@ -129,10 +129,16 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
         .eq('fruit_id', fruit.id);
 
       if (error) throw error;
-      return data.map(link => ({
-        ...link.advice_articles,
-        is_suggested: link.is_suggested
-      }));
+      
+      // Filter out any null advice_articles and ensure each has a unique ID
+      return data
+        .filter(link => link.advice_articles)
+        .map(link => ({
+          ...link.advice_articles,
+          is_suggested: link.is_suggested,
+          // Add a unique display key based on advice ID
+          displayKey: `advice-${link.advice_articles.id}`
+        }));
     },
     enabled: !!fruit.id,
   });
@@ -277,7 +283,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               {loadingRecipes ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[1, 2].map((i) => (
-                    <Card key={i}>
+                    <Card key={`skeleton-recipe-${i}`}>
                       <CardHeader className="p-4">
                         <Skeleton className="h-5 w-1/2" />
                       </CardHeader>
@@ -291,7 +297,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               ) : recipes && recipes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {recipes.map((recipe) => (
-                    <Card key={recipe.id}>
+                    <Card key={`recipe-${recipe.id}`}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-base">{recipe.title}</CardTitle>
                       </CardHeader>
@@ -326,7 +332,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               {loadingAdvices ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[1, 2].map((i) => (
-                    <Card key={i}>
+                    <Card key={`skeleton-advice-${i}`}>
                       <CardHeader className="p-4">
                         <Skeleton className="h-5 w-1/2" />
                       </CardHeader>
@@ -339,7 +345,7 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
               ) : advices && advices.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {advices.map((advice) => (
-                    <Card key={advice.id}>
+                    <Card key={advice.displayKey}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-base">{advice.title}</CardTitle>
                         <CardDescription>
