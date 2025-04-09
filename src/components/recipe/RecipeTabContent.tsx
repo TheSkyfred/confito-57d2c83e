@@ -17,6 +17,11 @@ const RecipeTabContent: React.FC<RecipeTabContentProps> = ({
   isLoading,
   searchTerm = ''
 }) => {
+  // Ajout de logs pour débugging
+  console.log('RecipeTabContent - recipes:', recipes);
+  console.log('RecipeTabContent - isLoading:', isLoading);
+  console.log('RecipeTabContent - searchTerm:', searchTerm);
+  
   const filteredRecipes = recipes && searchTerm 
     ? recipes.filter(recipe => 
         recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -25,6 +30,8 @@ const RecipeTabContent: React.FC<RecipeTabContentProps> = ({
         )
       )
     : recipes;
+    
+  console.log('RecipeTabContent - filteredRecipes:', filteredRecipes);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

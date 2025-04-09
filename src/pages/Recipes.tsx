@@ -27,7 +27,9 @@ const Recipes = () => {
     setFilters(newFilters);
   };
 
+  // Ajoutons des logs pour debugger
   const { data: recipes, isLoading } = useRecipes(activeTab, filters);
+  console.log('Recipes from useRecipes:', recipes);
 
   return (
     <div className="container py-8">

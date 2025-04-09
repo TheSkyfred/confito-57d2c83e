@@ -14,9 +14,12 @@ export const useRecipes = (activeTab: string, filters: RecipeFilters) => {
           *,
           author:profiles!recipes_author_id_fkey (username, avatar_url),
           ingredients:recipe_ingredients(*),
+          tags:recipe_tags(*),
           ratings:recipe_ratings(*)
         `)
         .eq('status', 'approved');
+
+      console.log('Recipe filter - status:', 'approved');
 
       if (activeTab === 'seasonal') {
         const currentMonth = new Date().getMonth();
@@ -26,38 +29,52 @@ export const useRecipes = (activeTab: string, filters: RecipeFilters) => {
         else if (currentMonth >= 8 && currentMonth <= 10) season = 'automne';
         else season = 'hiver';
         
+        console.log('Recipe filter - season:', season);
         query = query.or(`season.eq.${season},season.eq.toutes_saisons`);
       } else if (activeTab === 'quick') {
+        console.log('Recipe filter - quick prep time <= 30');
         query = query.lte('prep_time_minutes', 30);
       } else if (activeTab === 'popular') {
+        console.log('Recipe filter - sorting by average_rating');
         query = query.order('average_rating', { ascending: false });
       }
 
       if (filters.difficulty && filters.difficulty.length > 0) {
+        console.log('Recipe filter - difficulty:', filters.difficulty);
         query = query.in('difficulty', filters.difficulty);
       }
       
       if (filters.season && filters.season.length > 0) {
+        console.log('Recipe filter - season filter:', filters.season);
         query = query.in('season', filters.season);
       }
       
       if (filters.style && filters.style.length > 0) {
+        console.log('Recipe filter - style:', filters.style);
         query = query.in('style', filters.style);
       }
       
       if (filters.maxPrepTime && filters.maxPrepTime < 120) {
+        console.log('Recipe filter - max prep time:', filters.maxPrepTime);
         query = query.lte('prep_time_minutes', filters.maxPrepTime);
       }
       
       if (filters.minRating && filters.minRating > 0) {
+        console.log('Recipe filter - min rating:', filters.minRating);
         query = query.gte('average_rating', filters.minRating);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching recipes:', error);
+        throw error;
+      }
+      
+      console.log('Raw recipes data from API:', data);
       
       const typedRecipes = data.map(recipe => adaptDbRecipeToRecipeType(recipe));
+      console.log('Adapted recipes:', typedRecipes);
       
       return typedRecipes;
     }

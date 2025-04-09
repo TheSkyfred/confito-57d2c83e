@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { RecipeStep, RecipeType } from '@/types/recipes';
@@ -86,18 +85,43 @@ export const parseRecipeInstructions = (instructions: any): RecipeStep[] => {
 
 // Helper function to adapt database recipe to RecipeType
 export const adaptDbRecipeToRecipeType = (dbRecipe: any): RecipeType => {
-  // Parse instructions to ensure they're in the RecipeStep[] format
-  const instructions = parseRecipeInstructions(dbRecipe.instructions);
+  // Ajout de log pour vérifier les données reçues
+  console.log('Adapting DB recipe:', dbRecipe);
+  
+  // Calculer la note moyenne si elle n'existe pas déjà
+  let avgRating = dbRecipe.average_rating;
+  if (!avgRating && dbRecipe.ratings && dbRecipe.ratings.length > 0) {
+    const sum = dbRecipe.ratings.reduce((acc: number, rating: any) => acc + rating.rating, 0);
+    avgRating = sum / dbRecipe.ratings.length;
+  }
   
   return {
-    ...dbRecipe,
-    instructions,
-    // S'assurer que les autres champs nécessaires sont bien définis
-    difficulty: dbRecipe.difficulty || 'facile',
-    status: dbRecipe.status || 'brouillon',
-    season: dbRecipe.season || 'toutes_saisons',
-    style: dbRecipe.style || 'fruitée',
-    average_rating: dbRecipe.average_rating || 0,
-    is_favorite: dbRecipe.is_favorite || false
+    id: dbRecipe.id,
+    title: dbRecipe.title,
+    author_id: dbRecipe.author_id,
+    jam_id: dbRecipe.jam_id,
+    prep_time_minutes: dbRecipe.prep_time_minutes,
+    difficulty: dbRecipe.difficulty,
+    instructions: dbRecipe.instructions || [],
+    image_url: dbRecipe.image_url,
+    created_at: dbRecipe.created_at,
+    updated_at: dbRecipe.updated_at,
+    status: dbRecipe.status,
+    rejection_reason: dbRecipe.rejection_reason,
+    season: dbRecipe.season,
+    style: dbRecipe.style,
+    
+    // Relations
+    ingredients: dbRecipe.ingredients,
+    tags: dbRecipe.tags,
+    ratings: dbRecipe.ratings,
+    comments: dbRecipe.comments,
+    badges: dbRecipe.badges,
+    author: dbRecipe.author,
+    jam: dbRecipe.jam,
+    
+    // Calculated fields
+    average_rating: avgRating,
+    is_favorite: dbRecipe.is_favorite,
   };
 };
