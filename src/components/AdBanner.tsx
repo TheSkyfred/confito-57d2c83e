@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +22,6 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       setLoading(true);
       
       try {
-        // Chercher une campagne active et visible en utilisant supabaseDirect
         const { data, error } = await supabaseDirect.select('ads_campaigns', `
           id,
           name,
@@ -48,7 +46,6 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
           return;
         }
         
-        // Choisir une pub qui correspond à la fréquence d'affichage
         const matchingAds = data.filter((ad: any) => {
           return cardIndex % ad.display_frequency === 0;
         });
@@ -58,10 +55,8 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
           return;
         }
         
-        // Sélectionner aléatoirement une pub parmi celles qui correspondent
         const selectedAd = matchingAds[Math.floor(Math.random() * matchingAds.length)];
         
-        // Préparer les données pour l'affichage
         const isPro = selectedAd.campaign_type === 'pro';
         
         setAdData({
@@ -91,12 +86,10 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     fetchAd();
   }, [cardIndex, location.pathname]);
   
-  // Enregistrer un clic sur la pub
   const handleAdClick = async () => {
     if (!adData) return;
     
     try {
-      // Indiquer si l'utilisateur est connecté ou non dans les données de clic
       await supabaseDirect.insert('ads_clicks', {
         campaign_id: adData.id,
         source_page: location.pathname,
@@ -105,10 +98,8 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       });
 
       if (adData.redirectUrl) {
-        // Open external URL for pro campaigns in a new tab
         window.open(adData.redirectUrl, '_blank', 'noopener,noreferrer');
       } else if (adData.jamId) {
-        // Navigate to jam page for sponsored campaigns
         navigate(`/jam/${adData.jamId}`);
       }
     } catch (error) {
@@ -118,7 +109,6 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   
   if (loading || !adData) return null;
 
-  // Professional ad without jam
   if (adData.campaignType === 'pro') {
     return (
       <div onClick={handleAdClick} className="cursor-pointer">
@@ -141,9 +131,8 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     );
   }
   
-  // Regular sponsored jam
   return (
-    <div onClick={handleAdClick}>
+    <div onClick={handleAdClick} className="cursor-pointer">
       <ProJamCard
         id={adData.jamId}
         name={adData.name}
