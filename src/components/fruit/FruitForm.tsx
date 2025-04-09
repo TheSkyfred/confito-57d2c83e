@@ -332,19 +332,23 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 control={form.control}
                 name="is_published"
                 render={({ field }) => (
-                  <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                    <div className="space-y-0.5">
-                      <StandaloneFormLabel>Publier</StandaloneFormLabel>
-                      <StandaloneFormDescription>
-                        Rendre ce fruit visible dans le calendrier
-                      </StandaloneFormDescription>
+                  <FormItem>
+                    <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Publier</FormLabel>
+                        <FormDescription>
+                          Rendre ce fruit visible dans le calendrier
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          aria-label="Toggle publication status"
+                        />
+                      </FormControl>
                     </div>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      aria-label="Toggle publication status"
-                    />
-                  </div>
+                  </FormItem>
                 )}
               />
             </div>
