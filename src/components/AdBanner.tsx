@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +23,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       setLoading(true);
       
       try {
+        // Fetch active ad campaigns
         const { data, error } = await supabaseDirect.select('ads_campaigns', `
           id,
           name,
@@ -46,6 +48,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
           return;
         }
         
+        // Find ads that match the display frequency based on card index
         const matchingAds = data.filter((ad: any) => {
           return cardIndex % ad.display_frequency === 0;
         });
@@ -55,21 +58,24 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
           return;
         }
         
+        // Randomly select an ad from matching ads
         const selectedAd = matchingAds[Math.floor(Math.random() * matchingAds.length)];
         
         const isPro = selectedAd.campaign_type === 'pro';
+        const isSponsored = selectedAd.campaign_type === 'sponsored';
         
+        // Always display the ad regardless of type or user authentication status
         setAdData({
           id: selectedAd.id,
           name: isPro ? selectedAd.name : selectedAd.jam?.name || 'Confiture',
           campaignType: selectedAd.campaign_type,
           redirectUrl: isPro ? selectedAd.redirect_url : null,
-          jamId: !isPro ? selectedAd.jam_id : null,
+          jamId: (!isPro || isSponsored) ? selectedAd.jam_id : null,
           isPro: isPro || (selectedAd.jam?.is_pro || false),
-          isSponsored: true,
-          priceEuros: !isPro ? (selectedAd.jam?.price_euros || 0) : 0,
-          isAvailable: !isPro ? (selectedAd.jam?.available_quantity > 0) : true,
-          imageUrl: !isPro 
+          isSponsored: isSponsored,
+          priceEuros: (!isPro || isSponsored) ? (selectedAd.jam?.price_euros || 0) : 0,
+          isAvailable: (!isPro || isSponsored) ? (selectedAd.jam?.available_quantity > 0) : true,
+          imageUrl: (!isPro || isSponsored) 
             ? (selectedAd.jam?.jam_images?.find((img: any) => img.is_primary)?.url ||
                selectedAd.jam?.jam_images?.[0]?.url) 
             : null
@@ -90,6 +96,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     if (!adData) return;
     
     try {
+      // Record ad click with proper visitor type
       await supabaseDirect.insert('ads_clicks', {
         campaign_id: adData.id,
         source_page: location.pathname,
@@ -109,6 +116,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   
   if (loading || !adData) return null;
 
+  // Pro campaign display
   if (adData.campaignType === 'pro') {
     return (
       <div onClick={handleAdClick} className="cursor-pointer">
@@ -131,6 +139,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     );
   }
   
+  // Sponsored jam or regular jam ad
   return (
     <div onClick={handleAdClick} className="cursor-pointer">
       <ProJamCard
