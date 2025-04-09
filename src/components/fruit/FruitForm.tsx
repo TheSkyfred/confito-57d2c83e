@@ -26,8 +26,53 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+// Type definitions for the form
+export interface FruitFormProps {
+  fruit?: any;
+  onSubmit: () => void;
+  onCancel: () => void;
+}
+
+export interface FruitFormValues {
+  name: string;
+  image_url: string;
+  description: string;
+  conservation_tips: string;
+  cooking_tips: string;
+  family: string;
+  is_published: boolean;
+  seasons: number[];
+  tags: string[];
+}
+
+// Array of months for the seasonality selection
+const months = [
+  { value: 1, label: 'Janvier' },
+  { value: 2, label: 'Février' },
+  { value: 3, label: 'Mars' },
+  { value: 4, label: 'Avril' },
+  { value: 5, label: 'Mai' },
+  { value: 6, label: 'Juin' },
+  { value: 7, label: 'Juillet' },
+  { value: 8, label: 'Août' },
+  { value: 9, label: 'Septembre' },
+  { value: 10, label: 'Octobre' },
+  { value: 11, label: 'Novembre' },
+  { value: 12, label: 'Décembre' },
+];
+
 // Schéma de validation pour le formulaire
-// ...imports inchangés
+const fruitFormSchema = z.object({
+  name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
+  image_url: z.string().url({ message: "L'URL de l'image doit être valide" }).or(z.string().length(0)),
+  description: z.string().optional(),
+  conservation_tips: z.string().optional(),
+  cooking_tips: z.string().optional(),
+  family: z.string().optional(),
+  is_published: z.boolean().default(true),
+  seasons: z.array(z.number()),
+  tags: z.array(z.string()),
+});
 
 const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const { toast } = useToast();
@@ -434,4 +479,3 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 };
 
 export default FruitForm;
-
