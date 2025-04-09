@@ -311,8 +311,8 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
                 </div>
               ) : recipes && recipes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recipes.map((recipe) => (
-                    <Card key={`recipe-${recipe.id}`}>
+                  {recipes.map((recipe, index) => (
+                    <Card key={`recipe-${recipe.id}-${index}`}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-base">{recipe.title}</CardTitle>
                       </CardHeader>
@@ -359,8 +359,8 @@ const FruitDetail: React.FC<FruitDetailProps> = ({ fruit }) => {
                 </div>
               ) : advices && advices.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {advices.map((advice) => (
-                    <Card key={advice.displayKey || `advice-${advice.id}`}>
+                  {advices.map((advice, index) => (
+                    <Card key={`advice-${advice.id}-${index}`}>
                       <CardHeader className="p-4">
                         <CardTitle className="text-base">{advice.title}</CardTitle>
                         <CardDescription>
