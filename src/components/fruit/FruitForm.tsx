@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
@@ -24,55 +23,46 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-// Type definitions for the form
-export interface FruitFormProps {
-  fruit?: any;
-  onSubmit: () => void;
-  onCancel: () => void;
-}
-
-export interface FruitFormValues {
-  name: string;
-  image_url: string;
-  description: string;
-  conservation_tips: string;
-  cooking_tips: string;
-  family: string;
-  is_published: boolean;
-  seasons: number[];
-  tags: string[];
-}
-
-// Array of months for the seasonality selection
-const months = [
-  { value: 1, label: 'Janvier' },
-  { value: 2, label: 'Février' },
-  { value: 3, label: 'Mars' },
-  { value: 4, label: 'Avril' },
-  { value: 5, label: 'Mai' },
-  { value: 6, label: 'Juin' },
-  { value: 7, label: 'Juillet' },
-  { value: 8, label: 'Août' },
-  { value: 9, label: 'Septembre' },
-  { value: 10, label: 'Octobre' },
-  { value: 11, label: 'Novembre' },
-  { value: 12, label: 'Décembre' },
-];
 
 // Schéma de validation pour le formulaire
 const fruitFormSchema = z.object({
-  name: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
-  image_url: z.string().url({ message: "L'URL de l'image doit être valide" }).or(z.string().length(0)),
+  name: z.string().min(2, {
+    message: "Le nom doit contenir au moins 2 caractères.",
+  }),
+  image_url: z.string().url({
+    message: "Entrez une URL valide pour l'image.",
+  }).optional().or(z.literal('')),
   description: z.string().optional(),
   conservation_tips: z.string().optional(),
   cooking_tips: z.string().optional(),
   family: z.string().optional(),
   is_published: z.boolean().default(true),
-  seasons: z.array(z.number()),
-  tags: z.array(z.string()),
+  seasons: z.array(z.number().min(1).max(12)).optional(),
+  tags: z.array(z.string()).optional(),
 });
+
+type FruitFormValues = z.infer<typeof fruitFormSchema>;
+
+const months = [
+  { value: 1, label: "Janvier" },
+  { value: 2, label: "Février" },
+  { value: 3, label: "Mars" },
+  { value: 4, label: "Avril" },
+  { value: 5, label: "Mai" },
+  { value: 6, label: "Juin" },
+  { value: 7, label: "Juillet" },
+  { value: 8, label: "Août" },
+  { value: 9, label: "Septembre" },
+  { value: 10, label: "Octobre" },
+  { value: 11, label: "Novembre" },
+  { value: 12, label: "Décembre" },
+];
+
+type FruitFormProps = {
+  fruit?: any;
+  onSubmit: () => void;
+  onCancel: () => void;
+};
 
 const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const { toast } = useToast();
@@ -120,7 +110,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
         if (seasonError) throw seasonError;
 
-        if (seasonData && seasonData.length > 0) {
+        if (seasonData?.length) {
           const seasons = seasonData.map(s => s.month);
           setSelectedSeasons(seasons);
           form.setValue('seasons', seasons);
@@ -133,7 +123,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
         if (tagError) throw tagError;
 
-        if (tagData && tagData.length > 0) {
+        if (tagData?.length) {
           const tags = tagData.map(t => t.tag);
           setTags(tags);
           form.setValue('tags', tags);
@@ -219,10 +209,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
       }
 
       if (fruitId && selectedSeasons.length > 0) {
-        await supabase
-          .from('fruit_seasons')
-          .delete()
-          .eq('fruit_id', fruitId);
+        await supabase.from('fruit_seasons').delete().eq('fruit_id', fruitId);
 
         const seasonObjects = selectedSeasons.map(month => ({
           fruit_id: fruitId,
@@ -237,10 +224,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
       }
 
       if (fruitId && tags.length > 0) {
-        await supabase
-          .from('fruit_tags')
-          .delete()
-          .eq('fruit_id', fruitId);
+        await supabase.from('fruit_tags').delete().eq('fruit_id', fruitId);
 
         const tagObjects = tags.map(tag => ({
           fruit_id: fruitId,
@@ -256,7 +240,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
 
       toast({
         title: fruit ? "Fruit mis à jour" : "Fruit créé",
-        description: fruit 
+        description: fruit
           ? `Les informations de ${values.name} ont été mises à jour avec succès.`
           : `Le fruit ${values.name} a été ajouté au calendrier.`,
       });
@@ -328,26 +312,23 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                 )}
               />
 
-              <FormField
-                control={form.control}
+              {/* Switch publication contrôlé par Controller */}
+              <Controller
                 name="is_published"
+                control={form.control}
                 render={({ field }) => (
-                  <FormItem>
-                    <div className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Publier</FormLabel>
-                        <FormDescription>
-                          Rendre ce fruit visible dans le calendrier
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          aria-label="Toggle publication status"
-                        />
-                      </FormControl>
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <StandaloneFormLabel>Publier</StandaloneFormLabel>
+                      <StandaloneFormDescription>
+                        Rendre ce fruit visible dans le calendrier
+                      </StandaloneFormDescription>
                     </div>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      aria-label="Toggle publication status"
+                    />
                   </FormItem>
                 )}
               />
@@ -361,11 +342,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Description du fruit..."
-                        className="min-h-[100px]"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Description du fruit..." className="min-h-[100px]" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -379,11 +356,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                   <FormItem>
                     <FormLabel>Conseils de conservation</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Comment conserver ce fruit..."
-                        className="min-h-[100px]"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Comment conserver ce fruit..." className="min-h-[100px]" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -397,11 +370,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                   <FormItem>
                     <FormLabel>Conseils de préparation</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Comment préparer ce fruit pour les confitures..."
-                        className="min-h-[100px]"
-                        {...field} 
-                      />
+                      <Textarea placeholder="Comment préparer ce fruit..." className="min-h-[100px]" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -428,10 +397,7 @@ const FruitForm: React.FC<FruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
                     checked={selectedSeasons.includes(month.value)}
                     onCheckedChange={() => handleSeasonToggle(month.value)}
                   />
-                  <label
-                    htmlFor={`month-${month.value}`}
-                    className="text-sm cursor-pointer flex-grow"
-                  >
+                  <label htmlFor={`month-${month.value}`} className="text-sm cursor-pointer flex-grow">
                     {month.label}
                   </label>
                 </div>
