@@ -5,6 +5,8 @@ import { ProfileType } from '@/types/supabase';
 
 export type UserWithProfileType = ProfileType & {
   lastLogin?: string;
+  // Make sure is_active is included in the type
+  is_active?: boolean;
 };
 
 export const useUsers = (searchTerm: string = '') => {
