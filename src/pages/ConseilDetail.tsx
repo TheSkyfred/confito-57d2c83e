@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useAdviceArticle } from '@/hooks/useAdvice';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { AdviceArticle } from '@/types/advice';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,20 +27,7 @@ const ConseilDetail: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMounted, setIsMounted] = useState(false); 
 
-  const { data: article, isLoading, error, refetch } = useQuery({
-    queryKey: ['conseil', id],
-    queryFn: () => supabaseDirect.getById('advice_articles', id as string, `
-      *,
-      author:profiles(*),
-      images:advice_images(*),
-      products:advice_products(*),
-      comments:advice_comments(
-        *,
-        user:profiles(*)
-      )
-    `).then(res => res.data as AdviceArticle),
-    enabled: !!id
-  });
+  const { data: article, isLoading, error, refetch } = useAdviceArticle(id as string);
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,10 +43,13 @@ const ConseilDetail: React.FC = () => {
   const fetchComments = async () => {
     if (!id) return;
     try {
-      const { data, error } = await supabaseDirect.select('advice_comments', `
-        *,
-        user:profiles(*)
-      `, `article_id=eq.${id}`);
+      const { data, error } = await supabase
+        .from('advice_comments')
+        .select(`
+          *,
+          user:profiles(*)
+        `)
+        .eq('article_id', id);
       
       if (error) throw error;
       setComments(data);
@@ -90,7 +80,7 @@ const ConseilDetail: React.FC = () => {
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase
-        .from('advice_comments' as any)
+        .from('advice_comments')
         .insert({
           content: newComment,
           article_id: id,
@@ -120,7 +110,11 @@ const ConseilDetail: React.FC = () => {
   
   const handleProductClick = async (productId: string, externalUrl: string) => {
     try {
-      await supabaseDirect.incrementProductClick(productId);
+      await supabase
+        .from('advice_products')
+        .update({ click_count: supabase.rpc('increment', { row_id: productId, amount: 1 }) })
+        .eq('id', productId);
+      
       window.open(externalUrl, '_blank');
     } catch (error) {
       console.error("Error tracking product click:", error);
@@ -140,28 +134,38 @@ const ConseilDetail: React.FC = () => {
     try {
       if (currentlyLiked) {
         await supabase
-          .from('advice_comment_likes' as any)
+          .from('advice_comment_likes')
           .delete()
           .eq('user_id', user.id)
           .eq('comment_id', commentId);
       } else {
         await supabase
-          .from('advice_comment_likes' as any)
+          .from('advice_comment_likes')
           .insert({
             user_id: user.id,
             comment_id: commentId
           });
       }
 
-      await supabaseDirect.updateCommentLikesCount(commentId);
+      // Update likes count
+      const { count } = await supabase
+        .from('advice_comment_likes')
+        .select('*', { count: 'exact' })
+        .eq('comment_id', commentId);
+      
+      await supabase
+        .from('advice_comments')
+        .update({ likes_count: count || 0 })
+        .eq('id', commentId);
+        
       await fetchComments();
     } catch (error) {
       console.error("Error toggling comment like:", error);
     }
   };
 
-  if (isLoading) return <p>Chargement...</p>;
-  if (error || !article) return <p>Erreur: {error?.message || "Article non trouvé"}</p>;
+  if (isLoading) return <p className="container mx-auto py-8">Chargement...</p>;
+  if (error || !article) return <p className="container mx-auto py-8">Erreur: {error?.message || "Article non trouvé"}</p>;
 
   return (
     <div className="container mx-auto py-8">
@@ -180,8 +184,10 @@ const ConseilDetail: React.FC = () => {
         <p className="text-gray-600">Publié le {dayjs(article.published_at).format('D MMMM YYYY')} par {article.author?.full_name}</p>
       </div>
       
-      {article.images && article.images.length > 0 && (
-        <img src={article.images[0].image_url} alt={article.title} className="w-full rounded-md mb-4" />
+      {article.cover_image_url && (
+        <div className="mb-6">
+          <img src={article.cover_image_url} alt={article.title} className="w-full rounded-md mb-4" />
+        </div>
       )}
       
       <div className="mb-6" dangerouslySetInnerHTML={{ __html: article.content || '' }} />
@@ -205,35 +211,39 @@ const ConseilDetail: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-2">Commentaires</h2>
-        {comments && comments.map(comment => (
-          <div key={comment.id} className="mb-4 p-4 rounded-md bg-gray-50">
-            <div className="flex items-start gap-2 mb-2">
-              <Avatar>
-                <AvatarImage src={comment.user?.avatar_url} />
-                <AvatarFallback>{comment.user?.full_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-semibold">{comment.user?.full_name}</div>
-                <div className="text-sm text-gray-500">{dayjs(comment.created_at).format('D MMMM YYYY, HH:mm')}</div>
+        {comments && comments.length > 0 ? (
+          comments.map(comment => (
+            <div key={comment.id} className="mb-4 p-4 rounded-md bg-gray-50">
+              <div className="flex items-start gap-2 mb-2">
+                <Avatar>
+                  <AvatarImage src={comment.user?.avatar_url} />
+                  <AvatarFallback>{comment.user?.full_name?.substring(0, 2).toUpperCase() || "??"}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-semibold">{comment.user?.full_name || "Utilisateur"}</div>
+                  <div className="text-sm text-gray-500">{dayjs(comment.created_at).format('D MMMM YYYY, HH:mm')}</div>
+                </div>
+              </div>
+              <p>{comment.content}</p>
+              <div className="flex items-center gap-4 mt-2">
+                <Button 
+                  variant="ghost"
+                  onClick={() => toggleCommentLike(comment.id, !!comment.isLiked)}
+                  disabled={!isMounted}
+                >
+                  <Heart className="h-4 w-4 mr-2" fill={comment.isLiked ? 'currentColor' : 'none'} />
+                  {comment.likes_count || 0} J'aime
+                </Button>
+                <Button variant="ghost">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Répondre
+                </Button>
               </div>
             </div>
-            <p>{comment.content}</p>
-            <div className="flex items-center gap-4 mt-2">
-              <Button 
-                variant="ghost"
-                onClick={() => toggleCommentLike(comment.id, !!comment.isLiked)}
-                disabled={!isMounted}
-              >
-                <Heart className="h-4 w-4 mr-2" fill={comment.isLiked ? 'currentColor' : 'none'} />
-                {comment.likes_count || 0} J'aime
-              </Button>
-              <Button variant="ghost">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Répondre
-              </Button>
-            </div>
-          </div>
-        ))}
+          ))
+        ) : (
+          <p className="text-muted-foreground">Aucun commentaire pour le moment.</p>
+        )}
       </div>
 
       <div>

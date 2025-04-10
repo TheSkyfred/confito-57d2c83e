@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { AdviceArticle, AdviceFilters } from '@/types/advice';
 
 export const useAdvice = (filters?: AdviceFilters) => {
@@ -12,13 +11,18 @@ export const useAdvice = (filters?: AdviceFilters) => {
     // Vérifier la requête pour voir s'il y a une erreur
     console.log('Fetching advice articles...');
     
-    const { data, error } = await supabaseDirect.select('advice_articles', `
+    let query = supabase
+      .from('advice_articles')
+      .select(`
         *,
         author:profiles(*),
         images:advice_images(*),
         products:advice_products(*),
         comments:advice_comments(count)
-      `, 'visible=eq.true');
+      `)
+      .eq('visible', true);
+    
+    const { data, error } = await query;
     
     if (error) {
       console.error('Erreur lors de la récupération des conseils:', error);
@@ -103,31 +107,34 @@ export const useAdviceArticle = (articleId: string) => {
   const fetchAdviceArticle = async () => {
     if (!articleId) throw new Error("Article ID est requis");
     
-    const { data, error } = await supabaseDirect.select('advice_articles', `
-      *,
-      author:profiles(*),
-      images:advice_images(*),
-      products:advice_products(*),
-      comments:advice_comments(
+    const { data, error } = await supabase
+      .from('advice_articles')
+      .select(`
         *,
-        user:profiles(*)
-      )
-    `, `id=eq.${articleId},visible=eq.true`);
+        author:profiles(*),
+        images:advice_images(*),
+        products:advice_products(*),
+        comments:advice_comments(
+          *,
+          user:profiles(*)
+        )
+      `)
+      .eq('id', articleId)
+      .eq('visible', true)
+      .single();
     
     if (error) {
       console.error('Erreur lors de la récupération du conseil:', error);
       throw error;
     }
     
-    if (!data || data.length === 0) {
+    if (!data) {
       throw new Error('Article non trouvé');
     }
     
-    const article = data[0];
-    
     // Transformer les commentaires pour identifier les fils de discussion
-    if (article && article.comments) {
-      const comments = article.comments as any[];
+    if (data && data.comments) {
+      const comments = data.comments as any[];
       const rootComments = comments.filter(c => !c.parent_comment_id);
       const commentReplies = comments.filter(c => c.parent_comment_id);
       
@@ -137,13 +144,13 @@ export const useAdviceArticle = (articleId: string) => {
         );
       });
       
-      article.comments = rootComments;
+      data.comments = rootComments;
     }
     
     return {
-      ...article,
-      has_video: Boolean(article.video_url),
-      has_products: article.products && article.products.length > 0
+      ...data,
+      has_video: Boolean(data.video_url),
+      has_products: data.products && data.products.length > 0
     } as AdviceArticle;
   };
   
