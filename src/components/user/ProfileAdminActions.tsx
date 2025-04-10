@@ -19,7 +19,7 @@ const ProfileAdminActions: React.FC<ProfileAdminActionsProps> = ({
   return (
     <AdminActionButtons 
       itemId={userId}
-      itemType="profile"
+      itemType="user" // Changed from "profile" to "user"
       status="approved" // Profiles don't have an approval status
       isActive={isActive}
       onActiveChange={onActiveChange}
