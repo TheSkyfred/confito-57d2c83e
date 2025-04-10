@@ -77,13 +77,14 @@ const AdminConseils = () => {
         }, {} as Record<string, ProfileType>);
         
         // Merge profiles into conseils data
-        data.forEach(conseil => {
-          conseil.profiles = profileMap[conseil.author_id] || null;
-        });
+        return data.map((conseil: any) => ({
+          ...conseil,
+          profiles: profileMap[conseil.author_id] || null
+        }));
       }
       
-      // Handle the data as necessary - first convert to unknown then to our expected type
-      return (data || []) as unknown as ConseilWithAuthor[];
+      // Handle the case where there's no data
+      return (data || []) as ConseilWithAuthor[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
