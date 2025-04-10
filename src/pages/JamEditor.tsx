@@ -271,11 +271,6 @@ const JamEditor: React.FC = () => {
         is_active: publish,
       };
       
-      // Add creator_id only for new jams
-      if (!isEditMode) {
-        jamData['creator_id'] = user.id;
-      }
-
       let jam_id = id;
       
       // Create or update jam in database
@@ -287,9 +282,12 @@ const JamEditor: React.FC = () => {
           
         if (updateError) throw updateError;
       } else {
+        // Add creator_id to jamData for new jams
+        jamData.creator_id = user.id;
+        
         const { data: newJam, error: insertError } = await supabase
           .from("jams")
-          .insert({ ...jamData, creator_id: user.id })
+          .insert(jamData)
           .select();
           
         if (insertError) throw insertError;

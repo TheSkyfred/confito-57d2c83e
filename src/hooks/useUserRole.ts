@@ -25,5 +25,8 @@ export const useUserRole = () => {
   const isModerator = role === 'moderator' || isAdmin;
   const isPro = role === 'pro';
   
-  return { isAdmin, isModerator, isPro, role, isLoading };
+  // Add canManage property for the JamDetails component
+  const canManage = isAdmin || isModerator;
+  
+  return { isAdmin, isModerator, isPro, role, isLoading, canManage };
 };

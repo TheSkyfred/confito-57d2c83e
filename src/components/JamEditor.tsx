@@ -9,4 +9,6 @@ const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
   p_url: publicUrl.publicUrl,
   p_is_primary: isMainImage,
   p_creator_id: isEditMode ? jamCreatorId : user.id
-} as any); // Add type assertion to avoid TypeScript error
+});
+
+// Remove type assertion as it was causing TypeScript errors
