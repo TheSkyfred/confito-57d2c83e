@@ -15,11 +15,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { parseRecipeInstructions } from '@/utils/supabaseHelpers';
+import { Trash2, Plus, ArrowUp, ArrowDown, Image, Loader2 } from 'lucide-react';
 
 // Schema Zod pour la validation des données
 const recipeFormSchema = z.object({
@@ -28,9 +30,14 @@ const recipeFormSchema = z.object({
   difficulty: z.enum(['facile', 'moyen', 'avancé']),
   season: z.enum(['printemps', 'été', 'automne', 'hiver', 'toutes_saisons']),
   style: z.enum(['fruitée', 'épicée', 'sans_sucre', 'traditionnelle', 'exotique', 'bio']),
-  instructions: z.string().min(10, 'Les instructions doivent être détaillées'),
-  // Autres champs selon besoin
 });
+
+interface RecipeStep {
+  step: number;
+  description: string;
+  image_url?: string;
+  duration?: string;
+}
 
 interface RecipeFormProps {
   recipeId?: string;
@@ -45,7 +52,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
   
   const [loading, setLoading] = useState(false);
   const [recipe, setRecipe] = useState<any>(null);
-  const [parsedInstructions, setParsedInstructions] = useState<string>('');
+  const [recipeSteps, setRecipeSteps] = useState<RecipeStep[]>([]);
+  const [uploadingImage, setUploadingImage] = useState<{[key: number]: boolean}>({});
   
   const form = useForm<z.infer<typeof recipeFormSchema>>({
     resolver: zodResolver(recipeFormSchema),
@@ -55,7 +63,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
       difficulty: 'facile' as const,
       season: 'toutes_saisons' as const,
       style: 'fruitée' as const,
-      instructions: '',
     },
   });
   
@@ -83,16 +90,11 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
       
       setRecipe(data);
       
-      // Parse and convert the instructions
-      let instructionsText = '';
+      // Extraire les étapes de recette
       if (data.instructions) {
         const steps = parseRecipeInstructions(data.instructions);
-        instructionsText = steps
-          .map((step: any) => `${step.step}. ${step.description}`)
-          .join('\n');
+        setRecipeSteps(steps);
       }
-      
-      setParsedInstructions(instructionsText);
       
       // Remplir le formulaire
       form.reset({
@@ -101,7 +103,6 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
         difficulty: data.difficulty,
         season: data.season,
         style: data.style,
-        instructions: instructionsText,
       });
       
       setLoading(false);
@@ -110,28 +111,104 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
     fetchRecipe();
   }, [recipeId, form, toast, navigate]);
   
-  // Convertir le texte des instructions en format JSON pour la BD
-  const parseInstructions = (instructionsText: string) => {
-    // Diviser par lignes et créer des objets d'étapes
-    return instructionsText.split('\n')
-      .filter(line => line.trim())
-      .map((line, index) => {
-        // Si la ligne commence déjà par un nombre, l'utiliser comme numéro d'étape
-        const stepMatch = line.match(/^(\d+)\.\s*(.*)/);
+  // Ajouter une nouvelle étape
+  const addStep = () => {
+    const nextStep = recipeSteps.length + 1;
+    setRecipeSteps([...recipeSteps, { 
+      step: nextStep, 
+      description: '', 
+      image_url: undefined,
+      duration: ''
+    }]);
+  };
+
+  // Supprimer une étape
+  const removeStep = (stepIndex: number) => {
+    const newSteps = [...recipeSteps];
+    newSteps.splice(stepIndex, 1);
+    
+    // Réindexer les étapes
+    newSteps.forEach((step, idx) => {
+      step.step = idx + 1;
+    });
+    
+    setRecipeSteps(newSteps);
+  };
+
+  // Mettre à jour une étape
+  const updateStep = (stepIndex: number, field: keyof RecipeStep, value: string) => {
+    const newSteps = [...recipeSteps];
+    newSteps[stepIndex] = { ...newSteps[stepIndex], [field]: value };
+    setRecipeSteps(newSteps);
+  };
+
+  // Déplacer une étape vers le haut ou le bas
+  const moveStep = (stepIndex: number, direction: 'up' | 'down') => {
+    if (
+      (direction === 'up' && stepIndex === 0) || 
+      (direction === 'down' && stepIndex === recipeSteps.length - 1)
+    ) {
+      return;
+    }
+
+    const newSteps = [...recipeSteps];
+    const newPos = direction === 'up' ? stepIndex - 1 : stepIndex + 1;
+    
+    // Échanger les positions
+    const temp = newSteps[stepIndex];
+    newSteps[stepIndex] = newSteps[newPos];
+    newSteps[newPos] = temp;
+    
+    // Mettre à jour les numéros d'étapes
+    newSteps.forEach((step, idx) => {
+      step.step = idx + 1;
+    });
+    
+    setRecipeSteps(newSteps);
+  };
+
+  // Gérer l'upload d'image pour une étape
+  const handleImageUpload = async (stepIndex: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0]) return;
+    
+    const file = event.target.files[0];
+    setUploadingImage(prev => ({ ...prev, [stepIndex]: true }));
+    
+    try {
+      // Créer un nom de fichier unique
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_step${stepIndex + 1}.${fileExt}`;
+      const filePath = `recipe-steps/${fileName}`;
+      
+      // Uploader l'image
+      const { error: uploadError } = await supabase.storage
+        .from('jam-images')
+        .upload(filePath, file);
         
-        if (stepMatch) {
-          return {
-            step: parseInt(stepMatch[1]),
-            description: stepMatch[2].trim()
-          };
-        }
+      if (uploadError) throw uploadError;
+      
+      // Récupérer l'URL publique
+      const { data: publicUrlData } = supabase.storage
+        .from('jam-images')
+        .getPublicUrl(filePath);
         
-        // Sinon, générer un numéro d'étape automatiquement
-        return {
-          step: index + 1,
-          description: line.trim()
-        };
+      // Mettre à jour l'étape avec l'URL de l'image
+      updateStep(stepIndex, 'image_url', publicUrlData.publicUrl);
+      
+      toast({
+        title: "Image téléchargée",
+        description: "L'image a été ajoutée à l'étape",
       });
+    } catch (error: any) {
+      console.error("Erreur de téléchargement:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du téléchargement de l'image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingImage(prev => ({ ...prev, [stepIndex]: false }));
+    }
   };
   
   const onSubmit = async (values: z.infer<typeof recipeFormSchema>) => {
@@ -144,10 +221,25 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
       return;
     }
     
+    if (recipeSteps.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Vous devez ajouter au moins une étape à votre recette",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      const instructionsJson = parseInstructions(values.instructions);
+      // Préparer les étapes pour l'enregistrement
+      const formattedSteps = recipeSteps.map(({ step, description, image_url, duration }) => ({
+        step,
+        description,
+        image_url: image_url || null,
+        duration: duration || null
+      }));
       
       // Déterminer si la publication directe est autorisée (pour admin/modo)
       const status = (isAdmin || isModerator) ? 'approved' : 'pending';
@@ -158,7 +250,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
         difficulty: values.difficulty,
         season: values.season,
         style: values.style,
-        instructions: instructionsJson,
+        instructions: formattedSteps,
         author_id: user.id,
         status: isEditing ? recipe.status : status,
       };
@@ -313,26 +405,150 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
           )}
         />
         
-        <FormField
-          control={form.control}
-          name="instructions"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Instructions</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Détaillez les étapes de préparation..."
-                  className="min-h-[200px]"
-                  {...field}
-                />
-              </FormControl>
-              <p className="text-sm text-muted-foreground mt-1">
-                Écrivez une instruction par ligne. Vous pouvez numéroter les étapes (exemple: "1. Préparer les fruits").
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">Étapes de la recette</h3>
+            <Button 
+              type="button" 
+              onClick={addStep}
+              variant="outline"
+              size="sm"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Ajouter une étape
+            </Button>
+          </div>
+          
+          {recipeSteps.length === 0 ? (
+            <div className="text-center p-6 border border-dashed rounded-lg">
+              <p className="text-muted-foreground mb-4">
+                Ajoutez les étapes de préparation pour votre recette
               </p>
-              <FormMessage />
-            </FormItem>
+              <Button onClick={addStep} variant="outline" size="sm">
+                <Plus className="w-4 h-4 mr-2" /> Ajouter une première étape
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {recipeSteps.map((step, index) => (
+                <Card key={index} className="p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">Étape {step.step}</h4>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        onClick={() => moveStep(index, 'up')}
+                        disabled={index === 0}
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                        <span className="sr-only">Monter</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        onClick={() => moveStep(index, 'down')}
+                        disabled={index === recipeSteps.length - 1}
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                        <span className="sr-only">Descendre</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        type="button"
+                        onClick={() => removeStep(index)}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                        <span className="sr-only">Supprimer</span>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <FormLabel htmlFor={`step-desc-${index}`}>Description</FormLabel>
+                      <Textarea
+                        id={`step-desc-${index}`}
+                        value={step.description}
+                        onChange={(e) => updateStep(index, 'description', e.target.value)}
+                        placeholder="Décrivez cette étape..."
+                        className="mt-1"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <FormLabel htmlFor={`step-duration-${index}`}>
+                          Durée (optionnel)
+                        </FormLabel>
+                        <Input
+                          id={`step-duration-${index}`}
+                          value={step.duration || ""}
+                          onChange={(e) => updateStep(index, 'duration', e.target.value)}
+                          placeholder="Ex: 15 minutes"
+                          className="mt-1"
+                        />
+                      </div>
+                      
+                      <div>
+                        <FormLabel htmlFor={`step-image-${index}`}>
+                          Image (optionnel)
+                        </FormLabel>
+                        <div className="mt-1">
+                          <Input
+                            id={`step-image-${index}`}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(index, e as React.ChangeEvent<HTMLInputElement>)}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            disabled={uploadingImage[index]}
+                            onClick={() => {
+                              document
+                                .getElementById(`step-image-${index}`)
+                                ?.click();
+                            }}
+                          >
+                            {uploadingImage[index] ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Téléchargement...
+                              </>
+                            ) : (
+                              <>
+                                <Image className="w-4 h-4 mr-2" />
+                                {step.image_url ? "Changer l'image" : "Ajouter une image"}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {step.image_url && (
+                      <div className="mt-2">
+                        <div className="relative rounded-md overflow-hidden aspect-video w-full max-w-md mx-auto">
+                          <img
+                            src={step.image_url}
+                            alt={`Étape ${step.step}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
           )}
-        />
+        </div>
         
         <div className="flex justify-end space-x-4">
           <Button 
@@ -346,7 +562,14 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
             type="submit" 
             disabled={loading}
           >
-            {loading ? 'Chargement...' : isEditing ? 'Mettre à jour' : 'Publier'}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {isEditing ? 'Mise à jour...' : 'Publication...'}
+              </>
+            ) : (
+              isEditing ? 'Mettre à jour' : 'Publier'
+            )}
           </Button>
         </div>
       </form>
