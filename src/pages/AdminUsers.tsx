@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useUsers, UserWithProfileType } from '@/hooks/useUsers';
 import { useToast } from '@/hooks/use-toast';
 import {
   Table,
@@ -28,80 +29,23 @@ import {
   Search, 
   Shield, 
   User as UserIcon, 
-  UserCog 
+  UserCog,
+  Loader2
 } from 'lucide-react';
-
-// Types d'utilisateur fictifs pour la démonstration
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-  status: 'active' | 'inactive' | 'suspended';
-  lastLogin: string;
-}
-
-const mockUsers: User[] = [
-  { 
-    id: '1', 
-    email: 'admin@confito.fr', 
-    username: 'Admin', 
-    role: 'admin', 
-    status: 'active',
-    lastLogin: '2025-04-07 14:23' 
-  },
-  { 
-    id: '2', 
-    email: 'moderateur@confito.fr', 
-    username: 'Modérateur', 
-    role: 'moderator', 
-    status: 'active',
-    lastLogin: '2025-04-06 09:45' 
-  },
-  { 
-    id: '3', 
-    email: 'confiturier@confito.fr', 
-    username: 'Confiturier Pro', 
-    role: 'pro', 
-    status: 'active',
-    lastLogin: '2025-04-05 16:12' 
-  },
-  { 
-    id: '4', 
-    email: 'client1@exemple.com', 
-    username: 'Client Fidèle', 
-    role: 'user', 
-    status: 'active',
-    lastLogin: '2025-04-04 11:37' 
-  },
-  { 
-    id: '5', 
-    email: 'client2@exemple.com', 
-    username: 'Amateur de Confitures', 
-    role: 'user', 
-    status: 'inactive',
-    lastLogin: '2025-03-20 08:51' 
-  },
-  { 
-    id: '6', 
-    email: 'spam@exemple.com', 
-    username: 'CompteSuspect', 
-    role: 'user', 
-    status: 'suspended',
-    lastLogin: '2025-03-15 22:14' 
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminUsers: React.FC = () => {
-  const { isAdmin, isLoading } = useUserRole();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [users] = useState<User[]>(mockUsers);
   
-  // Rediriger si l'utilisateur n'est pas admin
+  // Get users from Supabase
+  const { data: users, isLoading: usersLoading, refetch } = useUsers();
+  
+  // Redirect if the user isn't admin
   React.useEffect(() => {
-    if (!isLoading && !isAdmin) {
+    if (!roleLoading && !isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
@@ -109,39 +53,40 @@ const AdminUsers: React.FC = () => {
         variant: "destructive",
       });
     }
-  }, [isAdmin, navigate, isLoading, toast]);
+  }, [isAdmin, navigate, roleLoading, toast]);
+  
+  const isLoading = roleLoading || usersLoading;
   
   if (isLoading) {
     return (
       <div className="container p-6">
-        <div className="text-center py-8">Vérification des permissions...</div>
+        <div className="text-center py-8 flex flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin mb-2" />
+          <div>Chargement des utilisateurs...</div>
+        </div>
       </div>
     );
   }
 
-  // Filtrer les utilisateurs selon le terme de recherche
-  const filteredUsers = users.filter(user => 
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter users by search term
+  const filteredUsers = users?.filter(user => 
+    (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase())) || 
+    (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase()))
+  ) || [];
 
-  // Déterminer l'icône et la couleur de badge pour le statut
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" /> Actif</Badge>;
-      case 'inactive':
-        return <Badge variant="outline" className="text-gray-500"><UserIcon className="h-3 w-3 mr-1" /> Inactif</Badge>;
-      case 'suspended':
-        return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" /> Suspendu</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+  // Get badge for user status
+  const getStatusBadge = (isActive: boolean | null | undefined) => {
+    if (isActive === undefined || isActive === null) return <Badge variant="outline">Inconnu</Badge>;
+    return isActive ? 
+      <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" /> Actif</Badge> :
+      <Badge variant="outline" className="text-gray-500"><UserIcon className="h-3 w-3 mr-1" /> Inactif</Badge>;
   };
 
-  // Déterminer l'icône et la couleur de badge pour le rôle
-  const getRoleBadge = (role: string) => {
+  // Get badge for user role
+  const getRoleBadge = (role: string | null | undefined) => {
+    if (!role) return <Badge variant="outline"><UserIcon className="h-3 w-3 mr-1" /> Utilisateur</Badge>;
+    
     switch (role) {
       case 'admin':
         return <Badge className="bg-jam-raspberry"><Shield className="h-3 w-3 mr-1" /> Admin</Badge>;
@@ -154,12 +99,40 @@ const AdminUsers: React.FC = () => {
     }
   };
 
-  // Fonction de gestion fictive pour les actions sur les utilisateurs
-  const handleUserAction = (action: string, userId: string) => {
-    toast({
-      title: `Action ${action}`,
-      description: `Action ${action} sur l'utilisateur #${userId}. Cette fonctionnalité est simulée.`,
-    });
+  // Handle user actions
+  const handleUserAction = async (action: string, userId: string, isActive?: boolean) => {
+    try {
+      if (action === 'modifier') {
+        // Navigate to user edit page (to be implemented)
+        navigate(`/profile/${userId}`);
+        return;
+      }
+
+      if (action === 'suspendre' || action === 'réactiver') {
+        // Toggle active status
+        const { error } = await supabase
+          .from('profiles')
+          .update({ is_active: !isActive })
+          .eq('id', userId);
+        
+        if (error) throw error;
+        
+        toast({
+          title: action === 'suspendre' ? "Utilisateur suspendu" : "Utilisateur réactivé",
+          description: `L'utilisateur a été ${action === 'suspendre' ? 'suspendu' : 'réactivé'} avec succès.`,
+        });
+        
+        // Refresh user list
+        refetch();
+      }
+    } catch (error: any) {
+      console.error(`Error with user action:`, error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors de l'action.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
@@ -192,7 +165,7 @@ const AdminUsers: React.FC = () => {
       <Card>
         <CardContent className="pt-6">
           <Table>
-            <TableCaption>Liste des utilisateurs ({filteredUsers.length} sur {users.length})</TableCaption>
+            <TableCaption>Liste des utilisateurs ({filteredUsers.length} sur {users?.length || 0})</TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>Utilisateur</TableHead>
@@ -206,12 +179,12 @@ const AdminUsers: React.FC = () => {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
-                    <div>{user.username}</div>
-                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                    <div>{user.username || 'Sans nom'}</div>
+                    <div className="text-xs text-muted-foreground">{user.id}</div>
                   </TableCell>
                   <TableCell>{getRoleBadge(user.role)}</TableCell>
-                  <TableCell>{getStatusBadge(user.status)}</TableCell>
-                  <TableCell>{user.lastLogin}</TableCell>
+                  <TableCell>{getStatusBadge(user.is_active)}</TableCell>
+                  <TableCell>{user.lastLogin || 'Inconnu'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button 
@@ -221,11 +194,11 @@ const AdminUsers: React.FC = () => {
                       >
                         Modifier
                       </Button>
-                      {user.status !== 'suspended' ? (
+                      {user.is_active ? (
                         <Button 
                           variant="destructive" 
                           size="sm"
-                          onClick={() => handleUserAction('suspendre', user.id)}
+                          onClick={() => handleUserAction('suspendre', user.id, true)}
                         >
                           Suspendre
                         </Button>
@@ -233,7 +206,7 @@ const AdminUsers: React.FC = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleUserAction('réactiver', user.id)}
+                          onClick={() => handleUserAction('réactiver', user.id, false)}
                           className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
                         >
                           Réactiver
@@ -243,6 +216,13 @@ const AdminUsers: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredUsers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Aucun utilisateur trouvé
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
