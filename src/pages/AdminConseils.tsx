@@ -34,6 +34,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// Define a more specific interface for what Supabase actually returns
 interface ConseilWithAuthor extends AdviceArticle {
   profiles?: ProfileType | null;
 }
@@ -61,7 +62,9 @@ const AdminConseils = () => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return (data || []) as ConseilWithAuthor[];
+      
+      // Handle the data as necessary - first convert to unknown then to our expected type
+      return (data || []) as unknown as ConseilWithAuthor[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
