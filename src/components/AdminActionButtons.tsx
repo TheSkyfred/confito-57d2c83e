@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Edit, Trash2, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -74,15 +73,19 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
     try {
       const { data, error } = await supabase
         .from('jams')
-        .select('is_pro, campaign_type')
+        .select('is_pro')
         .eq('id', itemId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error checking jam type:', error);
+        return { isPro: false, isSponsored: false };
+      }
       
+      // We only check is_pro for now since campaign_type doesn't exist in the jams table
       return {
         isPro: data?.is_pro || false,
-        isSponsored: data?.campaign_type === 'sponsored'
+        isSponsored: false // We're not using campaign_type for now
       };
     } catch (error) {
       console.error('Error checking jam type:', error);
