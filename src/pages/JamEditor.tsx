@@ -264,9 +264,10 @@ const JamEditor: React.FC = () => {
           
         if (updateError) throw updateError;
       } else {
-        const newJamData = { 
+        // Create a complete jam object that includes all required fields
+        const newJamData = {
           ...jamData,
-          creator_id: user.id 
+          creator_id: user.id
         };
         
         const { data: newJam, error: insertError } = await supabase
