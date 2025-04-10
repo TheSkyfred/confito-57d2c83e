@@ -46,6 +46,7 @@ import Settings from './pages/Settings';
 import AdminConseils from './pages/AdminConseils';
 import Conseils from './pages/Conseils';
 import ConseilDetail from './pages/ConseilDetail'; // Import the ConseilDetail page
+import ConseilEdit from './pages/ConseilEdit'; // Import page for conseil edit
 
 const queryClient = new QueryClient();
 
@@ -97,7 +98,8 @@ function App() {
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
                   <Route path="/conseils" element={<Conseils />} />
-                  <Route path="/conseils/:id" element={<ConseilDetail />} /> {/* Add route for ConseilDetail */}
+                  <Route path="/conseils/:id" element={<ConseilDetail />} />
+                  <Route path="/conseils/edit/:id" element={<ConseilEdit />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

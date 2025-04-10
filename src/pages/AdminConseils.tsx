@@ -31,7 +31,8 @@ import { Input } from '@/components/ui/input';
 import {
   EyeIcon,
   FilterIcon,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
 
 // Define a more specific interface for what Supabase actually returns
@@ -186,6 +187,11 @@ const AdminConseils = () => {
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/conseils/${conseil.id}`}>
                         <EyeIcon className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/conseils/edit/${conseil.id}`}>
+                        <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
                   </TableCell>
