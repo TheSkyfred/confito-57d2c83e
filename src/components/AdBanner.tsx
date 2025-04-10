@@ -96,7 +96,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
     if (!adData) return;
     
     try {
-      // Record ad click with proper visitor type
+      // Record ad click with proper visitor type - Fix for non-authenticated users
       await supabaseDirect.insert('ads_clicks', {
         campaign_id: adData.id,
         source_page: location.pathname,

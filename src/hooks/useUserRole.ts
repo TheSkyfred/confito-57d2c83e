@@ -15,6 +15,18 @@ export const useUserRole = () => {
     }
   }, [authLoading]);
   
+  // If no profile, assume anonymous user with role 'user'
+  if (!profile) {
+    return {
+      isAdmin: false,
+      isModerator: false,
+      isPro: false,
+      role: 'user' as UserRole,
+      isLoading,
+      canManage: false
+    };
+  }
+  
   // Ensure profile?.role is a valid role or default to 'user'
   const role: UserRole = profile?.role && ['admin', 'moderator', 'user', 'pro'].includes(profile.role as string) 
     ? profile.role as UserRole 
