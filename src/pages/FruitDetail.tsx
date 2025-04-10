@@ -13,7 +13,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Leaf, AlignJustify, Book, Sparkles, ChevronLeft } from "lucide-react";
+import { Leaf, AlignJustify, Book, Sparkles, ChevronLeft, Candy } from "lucide-react";
 
 import FruitHeader from '@/components/fruit/FruitHeader';
 import FruitSeasonalityCard from '@/components/fruit/FruitSeasonalityCard';
@@ -21,6 +21,7 @@ import FruitRecipesShortcut from '@/components/fruit/FruitRecipesShortcut';
 import FruitDescriptionTab from '@/components/fruit/FruitDescriptionTab';
 import FruitRecipesTabContent from '@/components/fruit/FruitRecipesTabContent';
 import FruitTipsTabContent from '@/components/fruit/FruitTipsTabContent';
+import FruitJamsTabContent from '@/components/fruit/FruitJamsTabContent';
 
 const FruitDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,14 +31,26 @@ const FruitDetail = () => {
   const { data: fruit, isLoading, error } = useQuery({
     queryKey: ['fruit', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // On cherche d'abord dans la table seasonal_fruits
+      const { data: seasonalFruit, error: seasonalError } = await supabase
+        .from('seasonal_fruits')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!seasonalError && seasonalFruit) {
+        return seasonalFruit;
+      }
+
+      // Si pas trouvé, on cherche dans l'ancienne table fruits
+      const { data: oldFruit, error } = await supabase
         .from('fruits')
         .select('*')
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return data;
+      return oldFruit;
     },
     enabled: !!id,
   });
@@ -46,6 +59,19 @@ const FruitDetail = () => {
   const { data: seasons, isLoading: loadingSeasons } = useQuery({
     queryKey: ['fruitSeasons', id],
     queryFn: async () => {
+      // Pour les fruits saisonniers, on utilise les colonnes mensuelles
+      if (fruit && 'jan' in fruit) {
+        const seasonalMonths = [];
+        const monthFields = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        for (let i = 0; i < monthFields.length; i++) {
+          if (fruit[monthFields[i]]) {
+            seasonalMonths.push(i + 1); // Les mois sont 1-12
+          }
+        }
+        return seasonalMonths;
+      }
+      
+      // Pour les anciens fruits, on utilise la table fruit_seasons
       const { data, error } = await supabase
         .from('fruit_seasons')
         .select('month')
@@ -55,7 +81,7 @@ const FruitDetail = () => {
       if (error) throw error;
       return data.map(s => s.month);
     },
-    enabled: !!id,
+    enabled: !!fruit,
   });
 
   // Fetch tags
@@ -131,6 +157,39 @@ const FruitDetail = () => {
       }
     },
     enabled: !!id,
+  });
+
+  // Fetch related jams that use this fruit
+  const { data: jams, isLoading: loadingJams } = useQuery({
+    queryKey: ['fruitJams', id, fruit?.name],
+    queryFn: async () => {
+      if (!fruit?.name) return [];
+      
+      const fruitName = fruit.name.toLowerCase();
+      
+      const { data, error } = await supabase
+        .from('jams')
+        .select(`
+          id,
+          name,
+          description,
+          price_credits,
+          badges,
+          ingredients,
+          creator_id,
+          available_quantity,
+          creator:profiles!jams_creator_id_fkey (username, avatar_url)
+        `)
+        .filter('ingredients', 'cs', `{${fruitName}}`)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(12);
+        
+      if (error) throw error;
+      
+      return data || [];
+    },
+    enabled: !!fruit?.name,
   });
 
   // Fetch related advice
@@ -242,7 +301,7 @@ const FruitDetail = () => {
 
         <div className="md:col-span-2 space-y-6">
           <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="info" className="flex items-center">
                 <AlignJustify className="h-4 w-4 mr-2" />
                 <span>Description</span>
@@ -250,6 +309,10 @@ const FruitDetail = () => {
               <TabsTrigger value="recipes" className="flex items-center">
                 <Book className="h-4 w-4 mr-2" />
                 <span>Recettes</span>
+              </TabsTrigger>
+              <TabsTrigger value="jams" className="flex items-center">
+                <Candy className="h-4 w-4 mr-2" />
+                <span>Confitures</span>
               </TabsTrigger>
               <TabsTrigger value="tips" className="flex items-center">
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -270,6 +333,14 @@ const FruitDetail = () => {
                 fruitName={fruit.name}
                 recipes={recipes} 
                 loadingRecipes={loadingRecipes}
+              />
+            </TabsContent>
+            
+            <TabsContent value="jams" className="mt-6">
+              <FruitJamsTabContent 
+                fruitName={fruit.name}
+                jams={jams} 
+                loadingJams={loadingJams}
               />
             </TabsContent>
 

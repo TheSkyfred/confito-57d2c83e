@@ -18,9 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
+import { Loader2, Image as ImageIcon, Upload } from "lucide-react";
 
 // Schéma de validation pour le formulaire
 const fruitFormSchema = z.object({
@@ -28,9 +27,7 @@ const fruitFormSchema = z.object({
     message: "Le nom doit contenir au moins 2 caractères.",
   }),
   description: z.string().optional(),
-  image_url: z.string().url({
-    message: "Entrez une URL valide pour l'image.",
-  }).optional().or(z.literal('')),
+  image_url: z.string().optional().or(z.literal('')),
   conservation_tips: z.string().optional(),
   cooking_tips: z.string().optional(),
   family: z.string().optional(),
@@ -74,6 +71,9 @@ type SeasonalFruitFormProps = {
 const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, onCancel }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(fruit?.image_url || null);
   
   const form = useForm<FruitFormValues>({
     resolver: zodResolver(fruitFormSchema),
@@ -99,9 +99,69 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
     }
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Valider le type de fichier
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une image valide.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Créer un aperçu de l'image
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setImageFile(file);
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    setUploading(true);
+    try {
+      // Créer un nom de fichier unique
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `fruits/${fileName}`;
+
+      // Uploader vers Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('images')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      // Obtenir l'URL publique
+      const { data: urlData } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Erreur d'upload",
+        description: error.message || "Impossible d'uploader l'image",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const onFormSubmit = async (values: FruitFormValues) => {
     setIsLoading(true);
     try {
+      // Si une nouvelle image a été sélectionnée, l'uploader
+      let imageUrl = values.image_url;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
       if (fruit?.id) {
         // Mise à jour d'un fruit existant
         const { error } = await supabase
@@ -109,7 +169,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           .update({
             name: values.name,
             description: values.description,
-            image_url: values.image_url || null,
+            image_url: imageUrl,
             conservation_tips: values.conservation_tips || null,
             cooking_tips: values.cooking_tips || null,
             family: values.family || null,
@@ -141,7 +201,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           .insert({
             name: values.name,
             description: values.description,
-            image_url: values.image_url || null,
+            image_url: imageUrl,
             conservation_tips: values.conservation_tips || null,
             cooking_tips: values.cooking_tips || null,
             family: values.family || null,
@@ -217,22 +277,59 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="image_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL de l'image</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://..." {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Lien vers une image du fruit
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <FormLabel>Image du fruit</FormLabel>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-4">
+                  <div className="flex flex-col items-center space-y-2">
+                    {previewUrl ? (
+                      <div className="relative w-full">
+                        <img 
+                          src={previewUrl} 
+                          alt="Aperçu" 
+                          className="mx-auto max-h-[200px] rounded object-cover" 
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="absolute top-2 right-2 bg-white dark:bg-gray-800"
+                          onClick={() => {
+                            setPreviewUrl(null);
+                            setImageFile(null);
+                            form.setValue('image_url', '');
+                          }}
+                        >
+                          Supprimer
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                        <div className="text-center">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('image-upload')?.click()}
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Choisir une image
+                          </Button>
+                          <input
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                          <p className="text-xs text-muted-foreground mt-2">
+                            PNG, JPG ou WEBP
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-6">
@@ -310,8 +407,8 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
             <Button type="button" variant="outline" onClick={onCancel}>
               Annuler
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Button type="submit" disabled={isLoading || uploading}>
+              {(isLoading || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {fruit ? "Mettre à jour" : "Créer"}
             </Button>
           </div>

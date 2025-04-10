@@ -59,6 +59,10 @@ const AdminSeasonalFruits = () => {
     navigate(`/admin/seasonal-fruits/edit/${fruit.id}`);
   };
 
+  const handleView = (fruit: any) => {
+    navigate(`/fruits/${fruit.id}`);
+  };
+
   const handleAddNew = () => {
     navigate('/admin/seasonal-fruits/create');
   };
@@ -156,6 +160,9 @@ const AdminSeasonalFruits = () => {
                     <TableCell>{fruit.family || "-"}</TableCell>
                     <TableCell>{countSeasonMonths(fruit)} mois</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => handleView(fruit)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleEdit(fruit)}>
                         <Edit className="h-4 w-4" />
                       </Button>

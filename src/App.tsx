@@ -38,9 +38,6 @@ import RecipeEdit from './pages/RecipeEdit';
 import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminFruits from './pages/AdminFruits';
-import AdminFruitDetails from './pages/AdminFruitDetails';
-// Supprimer l'ancienne page AdminFruitEdit qui causait les erreurs
-// import AdminFruitEdit from './pages/AdminFruitEdit';
 // Nouvelles pages pour les fruits saisonniers
 import AdminSeasonalFruits from './pages/AdminSeasonalFruits';
 import AdminSeasonalFruitEdit from './pages/AdminSeasonalFruitEdit';
@@ -89,20 +86,17 @@ function App() {
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
                   
-                  {/* Anciennes routes de fruits (désactivées) */}
+                  {/* Page de redirection pour l'ancienne interface */}
                   <Route path="/admin/fruits" element={<AdminFruits />} />
-                  <Route path="/admin/fruits/:id" element={<AdminFruitDetails />} />
-                  {/* Suppression de la route qui pose problème */}
-                  {/* <Route path="/admin/fruits/edit/:id" element={<AdminFruitEdit />} /> */}
                   
-                  {/* Nouvelles routes pour les fruits saisonniers */}
+                  {/* Routes pour les fruits saisonniers */}
                   <Route path="/admin/seasonal-fruits" element={<AdminSeasonalFruits />} />
                   <Route path="/admin/seasonal-fruits/edit/:id" element={<AdminSeasonalFruitEdit />} />
                   <Route path="/admin/seasonal-fruits/create" element={<AdminSeasonalFruitEdit />} />
+                  <Route path="/fruits/:id" element={<FruitDetail />} />
                   
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/seasonal" element={<SeasonalCalendar />} />
-                  <Route path="/fruits/:id" element={<FruitDetail />} />
                   <Route path="/user/recipes" element={<UserRecipes />} />
                   <Route path="/recipes" element={<Recipes />} />
                   <Route path="/recipes/:id" element={<RecipeDetail />} />
