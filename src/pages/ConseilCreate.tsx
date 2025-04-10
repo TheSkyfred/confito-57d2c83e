@@ -265,10 +265,7 @@ const ConseilCreate = () => {
                           />
                         </div>
                       )}
-                      <div className="flex flex-col sm:flex-row gap-4 items-start">
-                        <FormControl>
-                          <Input placeholder="URL de l'image" {...field} className="flex-grow" />
-                        </FormControl>
+                      <div className="flex items-center justify-center">
                         <div className="relative">
                           <Input
                             type="file"
@@ -289,7 +286,7 @@ const ConseilCreate = () => {
                             ) : (
                               <>
                                 <Upload className="h-4 w-4 mr-2" />
-                                Télécharger
+                                {field.value ? "Changer l'image" : "Télécharger une image"}
                               </>
                             )}
                           </Button>
@@ -297,7 +294,7 @@ const ConseilCreate = () => {
                       </div>
                     </div>
                     <FormDescription>
-                      URL ou téléchargez une image représentative pour votre conseil
+                      Téléchargez une image représentative pour votre conseil
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -103,7 +102,6 @@ const ConseilEdit: React.FC = () => {
     is_sponsored: false
   });
 
-  // Rediriger si l'utilisateur n'est pas admin ou modérateur
   useEffect(() => {
     if (user && !isAdmin && !isModerator) {
       navigate('/conseils');
@@ -122,7 +120,6 @@ const ConseilEdit: React.FC = () => {
     }
   }, [user, isAdmin, isModerator, navigate]);
 
-  // Charger les produits associés
   useEffect(() => {
     const fetchProducts = async () => {
       if (!id) return;
@@ -151,7 +148,6 @@ const ConseilEdit: React.FC = () => {
     fetchProducts();
   }, [id]);
 
-  // Remplir le formulaire avec les données de l'article
   useEffect(() => {
     if (advice) {
       form.reset({
@@ -186,19 +182,16 @@ const ConseilEdit: React.FC = () => {
     setUploadingCoverImage(true);
     
     try {
-      // Upload the image
       const { error: uploadError } = await supabase.storage
         .from('advice_images')
         .upload(filePath, file);
         
       if (uploadError) throw uploadError;
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
-      // Update the form
       form.setValue('cover_image_url', publicUrl);
       
       toast({
@@ -228,19 +221,16 @@ const ConseilEdit: React.FC = () => {
     setUploadingProductImage(true);
     
     try {
-      // Upload the image
       const { error: uploadError } = await supabase.storage
         .from('advice_images')
         .upload(filePath, file);
         
       if (uploadError) throw uploadError;
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
-      // Update the product form
       setProductForm(prev => ({ ...prev, image_url: publicUrl }));
       
       toast({
@@ -288,7 +278,6 @@ const ConseilEdit: React.FC = () => {
       
       setProducts(prev => [...prev, data[0]]);
       
-      // Réinitialiser le formulaire
       setProductForm({
         name: '',
         description: '',
@@ -342,7 +331,6 @@ const ConseilEdit: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Traiter les tags
       const tagsArray = data.tags
         .split(',')
         .map(tag => tag.trim())
@@ -500,10 +488,7 @@ const ConseilEdit: React.FC = () => {
                               />
                             </div>
                           )}
-                          <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            <FormControl>
-                              <Input placeholder="URL de l'image" {...field} className="flex-grow" />
-                            </FormControl>
+                          <div className="flex items-center justify-center">
                             <div className="relative">
                               <Input
                                 type="file"
@@ -524,7 +509,7 @@ const ConseilEdit: React.FC = () => {
                                 ) : (
                                   <>
                                     <Upload className="h-4 w-4 mr-2" />
-                                    Télécharger
+                                    {field.value ? "Changer l'image" : "Télécharger une image"}
                                   </>
                                 )}
                               </Button>
@@ -532,7 +517,7 @@ const ConseilEdit: React.FC = () => {
                           </div>
                         </div>
                         <FormDescription>
-                          URL ou téléchargez une image représentative pour votre conseil
+                          Téléchargez une image représentative pour votre conseil
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -649,13 +634,16 @@ const ConseilEdit: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Image du produit</label>
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="URL de l'image" 
-                          value={productForm.image_url} 
-                          onChange={(e) => handleProductInputChange('image_url', e.target.value)}
-                          className="flex-grow"
-                        />
+                      <div className="flex flex-col space-y-2">
+                        {productForm.image_url && (
+                          <div className="w-full h-32 overflow-hidden rounded-md border">
+                            <img 
+                              src={productForm.image_url} 
+                              alt="Aperçu de l'image du produit" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                         <div className="relative">
                           <Input
                             type="file"
@@ -669,14 +657,14 @@ const ConseilEdit: React.FC = () => {
                             type="button" 
                             variant="outline"
                             disabled={uploadingProductImage}
-                            className="whitespace-nowrap"
+                            className="w-full"
                           >
                             {uploadingProductImage ? (
-                              "..."
+                              "Téléchargement..."
                             ) : (
                               <>
-                                <ImagePlus className="h-4 w-4 mr-1" />
-                                Upload
+                                <ImagePlus className="h-4 w-4 mr-2" />
+                                {productForm.image_url ? "Changer l'image" : "Télécharger une image"}
                               </>
                             )}
                           </Button>
