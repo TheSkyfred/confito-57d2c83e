@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -38,17 +37,12 @@ import RecipeEdit from './pages/RecipeEdit';
 import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
 import AdminFruits from './pages/AdminFruits';
-// Nouvelles pages pour les fruits saisonniers
 import AdminSeasonalFruits from './pages/AdminSeasonalFruits';
 import AdminSeasonalFruitEdit from './pages/AdminSeasonalFruitEdit';
 import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
-
-// Nouvelles pages pour les conseils
-import Conseils from './pages/Conseils';
-import ConseilDetail from './pages/ConseilDetail';
-import ConseilCreate from './pages/ConseilCreate';
+import AdminConseils from './pages/AdminConseils';
 
 import './App.css';
 
@@ -88,16 +82,11 @@ function App() {
                   <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" />} />
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
-                  
-                  {/* Page de redirection pour l'ancienne interface */}
                   <Route path="/admin/fruits" element={<AdminSeasonalFruits />} />
-                  
-                  {/* Routes pour les fruits saisonniers */}
                   <Route path="/admin/seasonal-fruits" element={<AdminSeasonalFruits />} />
                   <Route path="/admin/seasonal-fruits/edit/:id" element={<AdminSeasonalFruitEdit />} />
                   <Route path="/admin/seasonal-fruits/create" element={<AdminSeasonalFruitEdit />} />
                   <Route path="/fruits/:id" element={<FruitDetail />} />
-                  
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/seasonal" element={<SeasonalCalendar />} />
                   <Route path="/user/recipes" element={<UserRecipes />} />
@@ -105,16 +94,7 @@ function App() {
                   <Route path="/recipes/:id" element={<RecipeDetail />} />
                   <Route path="/recipes/create" element={<RecipeCreate />} />
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
-                  
-                  {/* Routes pour les conseils */}
-                  <Route path="/conseils" element={<Conseils />} />
-                  <Route path="/conseils/:id" element={<ConseilDetail />} />
-                  <Route path="/conseils/create" element={<ConseilCreate />} />
-                  
-                  {/* Pro registration and dashboard */}
-                  <Route path="/pro-dashboard" element={<ProDashboard />} />
-                  <Route path="/pro-registration" element={<ProRegistration />} />
-                  
+                  <Route path="/admin/conseils" element={<AdminConseils />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
