@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -166,7 +167,7 @@ const AdminRecipes = () => {
               <SelectValue placeholder="Tous les statuts" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les statuts</SelectItem>
+              <SelectItem value="all">Tous les statuts</SelectItem>
               <SelectItem value="brouillon">Brouillon</SelectItem>
               <SelectItem value="pending">En attente</SelectItem>
               <SelectItem value="approved">Approuvée</SelectItem>
