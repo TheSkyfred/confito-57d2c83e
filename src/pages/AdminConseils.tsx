@@ -7,6 +7,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
+import { AdviceArticle, ProfileType } from '@/types/supabase';
 
 import {
   Table,
@@ -32,6 +33,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+interface ConseilWithAuthor extends AdviceArticle {
+  profiles?: ProfileType;
+}
+
 const AdminConseils = () => {
   const { isAdmin, isModerator } = useUserRole();
   const { session } = useAuth();
@@ -40,7 +45,7 @@ const AdminConseils = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { data: conseils, isLoading, error, refetch } = useQuery({
+  const { data: conseils, isLoading, error, refetch } = useQuery<ConseilWithAuthor[]>({
     queryKey: ['adminConseils', statusFilter],
     queryFn: async () => {
       let query = supabase.from('advice_articles').select(`
@@ -55,7 +60,7 @@ const AdminConseils = () => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data || [];
+      return data as ConseilWithAuthor[] || [];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
