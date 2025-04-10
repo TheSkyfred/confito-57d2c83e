@@ -43,6 +43,7 @@ import AdminSeasonalFruits from './pages/AdminSeasonalFruits';
 import AdminSeasonalFruitEdit from './pages/AdminSeasonalFruitEdit';
 import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
+import Settings from './pages/Settings';
 
 // Nouvelles pages pour les conseils
 import Conseils from './pages/Conseils';
@@ -72,6 +73,7 @@ function App() {
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/profile/:id" element={<UserProfile />} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="/jam/:id" element={<JamDetails />} />
                   <Route path="/jam/create" element={<JamEditor />} />
                   <Route path="/jam/edit/:id" element={<JamEditor />} />
