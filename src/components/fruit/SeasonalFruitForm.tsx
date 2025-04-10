@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -122,6 +121,19 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
   const uploadImage = async (file: File): Promise<string> => {
     setUploading(true);
     try {
+      // Vérifier si le bucket existe
+      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+      
+      if (bucketError) {
+        throw new Error(`Erreur de vérification des buckets: ${bucketError.message}`);
+      }
+      
+      const imagesBucketExists = buckets.some(b => b.name === 'images');
+      
+      if (!imagesBucketExists) {
+        throw new Error("Le bucket 'images' n'existe pas. Veuillez contacter l'administrateur.");
+      }
+
       // Créer un nom de fichier unique
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
@@ -159,7 +171,16 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
       // Si une nouvelle image a été sélectionnée, l'uploader
       let imageUrl = values.image_url;
       if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+        try {
+          imageUrl = await uploadImage(imageFile);
+        } catch (imageError: any) {
+          // Si l'upload d'image échoue mais que le reste du formulaire est valide,
+          // on permet à l'utilisateur de continuer sans image
+          toast({
+            title: "Avertissement",
+            description: `L'image n'a pas pu être téléchargée, mais le fruit sera créé sans image: ${imageError.message}`,
+          });
+        }
       }
 
       if (fruit?.id) {
