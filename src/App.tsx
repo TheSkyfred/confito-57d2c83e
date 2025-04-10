@@ -43,8 +43,7 @@ import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import AdminConseils from './pages/AdminConseils';
-
-import './App.css';
+import Conseils from './pages/Conseils';  // Ajout de l'import pour la page Conseils
 
 const queryClient = new QueryClient();
 
@@ -95,6 +94,7 @@ function App() {
                   <Route path="/recipes/create" element={<RecipeCreate />} />
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
+                  <Route path="/conseils" element={<Conseils />} />  {/* Ajout de la route pour Conseils */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
