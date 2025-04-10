@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -23,13 +24,13 @@ const accountTypeEnum = z.enum(["standard", "professional"]);
 type AccountType = z.infer<typeof accountTypeEnum>;
 
 const registerSchema = z.object({
+  accountType: accountTypeEnum,
   email: z.string().email({ message: "Email invalide" }),
   password: z.string().min(6, { message: "Mot de passe d'au moins 6 caractères" }),
   confirmPassword: z.string().min(6, { message: "Mot de passe d'au moins 6 caractères" }),
   fullName: z.string().min(2, { message: "Nom complet requis" }),
   username: z.string().min(3, { message: "Nom d'utilisateur d'au moins 3 caractères" })
     .regex(/^[a-zA-Z0-9_]+$/, { message: "Uniquement lettres, chiffres et underscore" }),
-  accountType: accountTypeEnum
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Les mots de passe ne correspondent pas",
   path: ["confirmPassword"],
@@ -122,10 +123,8 @@ const Auth = () => {
       
       if (values.accountType === "professional") {
         localStorage.setItem("redirect_to_pro_registration", "true");
-        toast({
-          title: "Compte professionnel",
-          description: "Après confirmation de votre email, vous pourrez compléter votre profil professionnel.",
-        });
+        navigate("/pro-registration");
+        return;
       }
       
       setActiveTab("login");
@@ -284,6 +283,50 @@ const Auth = () => {
                 <form onSubmit={registerForm.handleSubmit(handleRegister)} className="space-y-4">
                   <FormField
                     control={registerForm.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Type de compte</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                          >
+                            <div className="flex items-center space-x-3 rounded-md border p-3">
+                              <RadioGroupItem value="standard" id="standard" />
+                              <label htmlFor="standard" className="flex flex-1 cursor-pointer items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium leading-none">Particulier</p>
+                                    <p className="text-xs text-muted-foreground">Compte standard pour les amateurs de confitures</p>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3 rounded-md border p-3">
+                              <RadioGroupItem value="professional" id="professional" />
+                              <label htmlFor="professional" className="flex flex-1 cursor-pointer items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium leading-none">Professionnel</p>
+                                    <p className="text-xs text-muted-foreground">Pour les producteurs et artisans de confitures</p>
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={registerForm.control}
                     name="fullName"
                     render={({ field }) => (
                       <FormItem>
@@ -346,50 +389,6 @@ const Auth = () => {
                         <FormLabel>Confirmer le mot de passe</FormLabel>
                         <FormControl>
                           <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={registerForm.control}
-                    name="accountType"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Type de compte</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            <div className="flex items-center space-x-3 rounded-md border p-3">
-                              <RadioGroupItem value="standard" id="standard" />
-                              <label htmlFor="standard" className="flex flex-1 cursor-pointer items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <p className="text-sm font-medium leading-none">Particulier</p>
-                                    <p className="text-xs text-muted-foreground">Compte standard pour les amateurs de confitures</p>
-                                  </div>
-                                </div>
-                              </label>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3 rounded-md border p-3">
-                              <RadioGroupItem value="professional" id="professional" />
-                              <label htmlFor="professional" className="flex flex-1 cursor-pointer items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <p className="text-sm font-medium leading-none">Professionnel</p>
-                                    <p className="text-xs text-muted-foreground">Pour les producteurs et artisans de confitures</p>
-                                  </div>
-                                </div>
-                              </label>
-                            </div>
-                          </RadioGroup>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
