@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -292,13 +293,19 @@ const JamEditor: React.FC = () => {
             
           if (uploadError) throw uploadError;
           
-          const { data: publicUrl } = supabase.storage
+          const { data: publicUrlData } = supabase.storage
             .from("jam-images")
             .getPublicUrl(filePath);
             
+          if (!publicUrlData) {
+            throw new Error("Failed to get public URL for uploaded image");
+          }
+          
+          const publicUrl = publicUrlData.publicUrl;
+          
           const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
             p_jam_id: jam_id,
-            p_url: publicUrl.publicUrl,
+            p_url: publicUrl,
             p_is_primary: isMainImage,
             p_creator_id: isEditMode ? jamCreatorId : user.id
           });
@@ -311,7 +318,7 @@ const JamEditor: React.FC = () => {
                 .from("jam_images")
                 .insert({
                   jam_id: jam_id,
-                  url: publicUrl.publicUrl,
+                  url: publicUrl,
                   is_primary: isMainImage
                 });
                 
