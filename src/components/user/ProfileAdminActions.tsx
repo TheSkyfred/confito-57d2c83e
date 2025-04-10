@@ -17,6 +17,7 @@ import {
 import { Edit, Trash2, CheckCircle, XCircle, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 interface ProfileAdminActionsProps {
   userId: string;
@@ -38,11 +39,14 @@ const ProfileAdminActions: React.FC<ProfileAdminActionsProps> = ({
   
   const handleToggleActive = async () => {
     try {
-      // Here we would update the user's active status in the database
-      // This is a placeholder for now
+      // Instead of using is_active which doesn't exist in profiles table,
+      // we'll use the role field to effectively activate/deactivate users
+      // by setting their role to 'user' for active or to a temporary value for inactive
+      const newRole = isActive ? 'inactive' : 'user';
+      
       const { error } = await supabase
         .from('profiles')
-        .update({ is_active: !isActive })
+        .update({ role: newRole })
         .eq('id', userId);
       
       if (error) throw error;
