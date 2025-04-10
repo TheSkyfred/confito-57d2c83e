@@ -34,9 +34,15 @@ export interface UseJamFormProps {
   initialJamId?: string;
   jamCreatorId?: string | null;
   isProJam?: boolean;
+  isAdmin?: boolean;
 }
 
-export const useJamForm = ({ initialJamId, jamCreatorId, isProJam = false }: UseJamFormProps = {}) => {
+export const useJamForm = ({ 
+  initialJamId, 
+  jamCreatorId, 
+  isProJam = false, 
+  isAdmin = false 
+}: UseJamFormProps = {}) => {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
@@ -187,24 +193,20 @@ export const useJamForm = ({ initialJamId, jamCreatorId, isProJam = false }: Use
           p_jam_id: jamId,
           p_url: publicUrl,
           p_is_primary: isMainImage,
-          p_creator_id: initialJamId ? creatorId : jamCreatorId
+          p_creator_id: creatorId
         });
         
         if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
-          // Fallback for when RPC function doesn't exist
-          if (!initialJamId) {
-            const { error: directInsertError } = await supabase
-              .from("jam_images")
-              .insert({
-                jam_id: jamId,
-                url: publicUrl,
-                is_primary: isMainImage
-              });
-              
-            if (directInsertError) throw directInsertError;
-          } else {
-            throw new Error("Erreur de permission: Vous n'avez pas le droit d'ajouter des images à cette confiture. Contactez l'administrateur pour configurer les règles de sécurité.");
-          }
+          // Fallback pour quand la fonction RPC n'existe pas
+          const { error: directInsertError } = await supabase
+            .from("jam_images")
+            .insert({
+              jam_id: jamId,
+              url: publicUrl,
+              is_primary: isMainImage
+            });
+            
+          if (directInsertError) throw directInsertError;
         } else if (imageInsertError) {
           throw imageInsertError;
         }

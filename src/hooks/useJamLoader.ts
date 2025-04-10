@@ -75,6 +75,8 @@ export const useJamLoader = ({
           .select(`*, jam_images(*)`)
           .eq("id", jamId);
         
+        // Modification principale : les administrateurs peuvent modifier n'importe quelle confiture
+        // Les modérateurs peuvent modifier les confitures non-pro uniquement
         if (!isAdmin) {
           if (isModerator) {
             const { data: jamCheck, error: checkError } = await supabase
@@ -166,7 +168,7 @@ export const useJamLoader = ({
           description: jamWithTypes.description || "",
           type: jamWithTypes.type || "",
           badges: jamWithTypes.badges || [],
-          ingredients: parsedIngredients, // Use the parsed ingredients array
+          ingredients: parsedIngredients,
           allergens: jamWithTypes.allergens || [],
           production_date: jamWithTypes.production_date || new Date().toISOString().split("T")[0],
           weight_grams: jamWithTypes.weight_grams || 250,

@@ -82,6 +82,7 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </FormDescription>
       </div>
 
+      {/* La section d'image est maintenant toujours visible si handleImageChange est fourni */}
       {handleImageChange && (
         <div>
           <FormLabel>Photo principale</FormLabel>

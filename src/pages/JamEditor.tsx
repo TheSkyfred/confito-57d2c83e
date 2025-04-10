@@ -41,8 +41,9 @@ const JamEditor: React.FC = () => {
     handleImageChange,
   } = useJamForm({
     initialJamId: id,
-    jamCreatorId: user?.id || null,
+    jamCreatorId: jamCreatorId || user?.id || null,
     isProJam,
+    isAdmin, // Ajout de la propriété isAdmin
   });
 
   if (!user) {
