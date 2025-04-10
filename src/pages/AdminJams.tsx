@@ -6,7 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
-import { JamType } from '@/types/supabase';
+import { JamType, ProfileType } from '@/types/supabase';
 
 import {
   Table,
@@ -34,10 +34,11 @@ import {
   PlusCircle
 } from 'lucide-react';
 
-interface JamWithProfile extends JamType {
+// Updated interface to correctly handle the profiles property
+interface JamWithProfile extends Omit<JamType, 'profiles'> {
   profiles?: {
-    username: string;
     id: string;
+    username: string;
   } | null;
 }
 
