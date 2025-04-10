@@ -111,6 +111,10 @@ function App() {
                   <Route path="/conseils/:id" element={<ConseilDetail />} />
                   <Route path="/conseils/create" element={<ConseilCreate />} />
                   
+                  {/* Pro registration and dashboard */}
+                  <Route path="/pro-dashboard" element={<ProDashboard />} />
+                  <Route path="/pro-registration" element={<ProRegistration />} />
+                  
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

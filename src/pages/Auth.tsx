@@ -106,6 +106,7 @@ const Auth = () => {
           data: {
             full_name: values.fullName,
             username: values.username,
+            accountType: values.accountType
           },
         },
       });
