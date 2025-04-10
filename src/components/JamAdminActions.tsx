@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminActionButtons from '@/components/AdminActionButtons';
 import { useUserRole } from '@/hooks/useUserRole';
+import { JamType } from '@/types/supabase';
 
 interface JamAdminActionsProps {
   jamId: string;
@@ -11,6 +12,7 @@ interface JamAdminActionsProps {
   onStatusChange?: () => void;
   onActiveChange?: () => void;
   creatorId?: string;
+  isPro?: boolean;
 }
 
 const JamAdminActions: React.FC<JamAdminActionsProps> = ({ 
@@ -19,12 +21,15 @@ const JamAdminActions: React.FC<JamAdminActionsProps> = ({
   isActive = true,
   onStatusChange,
   onActiveChange,
-  creatorId
+  creatorId,
+  isPro = false
 }) => {
   const { isAdmin, isModerator } = useUserRole();
 
-  // Permettre aux admins et modérateurs d'éditer toutes les confitures
-  const canEdit = isAdmin || isModerator;
+  // Permettre aux admins d'éditer toutes les confitures
+  // Permettre aux modérateurs d'éditer toutes les confitures SAUF celles des pros
+  // Les confitures pro ne peuvent être éditées que par les admins
+  const canEdit = isAdmin || (isModerator && !isPro);
 
   return (
     <AdminActionButtons 

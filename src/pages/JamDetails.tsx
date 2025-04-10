@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -75,7 +74,7 @@ const JamDetails = () => {
   const [favorited, setFavorited] = useState(false);
   const { addItem } = useCartStore();
   const [reviewToEdit, setReviewToEdit] = useState<DetailedReviewType | undefined>();
-  const { isAdmin, isModerator } = useUserRole();
+  const { isAdmin, isModerator, canManage } = useUserRole();
   const [quantity, setQuantity] = useState(1);
   
   const { data: jam, isLoading, error, refetch } = useQuery({
@@ -334,16 +333,16 @@ const JamDetails = () => {
         </div>
       )}
       
-      {isModerator && (
-        <div className="mb-6">
-          <JamAdminActions 
-            jamId={jam.id} 
-            status={jam.status}
-            isActive={jam.is_active} 
-            onStatusChange={refetch}
-            onActiveChange={refetch}
-          />
-        </div>
+      {canManage && (
+        <JamAdminActions 
+          jamId={jam.id} 
+          status={jam.status} 
+          isActive={jam.is_active}
+          creatorId={jam.creator_id}
+          isPro={jam.is_pro}
+          onStatusChange={refetch}
+          onActiveChange={refetch}
+        />
       )}
       
       <div className="flex items-center justify-between mb-6">
@@ -368,7 +367,7 @@ const JamDetails = () => {
         <div>
           <Carousel 
             className="w-full" 
-            hideNavigation={true} // Add this to hide navigation arrows
+            hideNavigation={true}
           >
             <CarouselContent>
               {primaryImage && (
@@ -395,7 +394,6 @@ const JamDetails = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {/* CarouselPrevious and CarouselNext will now be conditionally rendered based on the hideNavigation prop */}
           </Carousel>
         </div>
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +62,7 @@ const JamEditor: React.FC = () => {
   ]);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [jamCreatorId, setJamCreatorId] = useState<string | null>(null);
+  const [isProJam, setIsProJam] = useState<boolean>(false);
 
   // Initialize form data
   const [formData, setFormData] = useState<JamFormData>({
@@ -84,7 +84,7 @@ const JamEditor: React.FC = () => {
     main_image_index: 0,
   });
 
-  // Redirect if not logged in
+  // Redirect if not logged in or no proper permissions
   useEffect(() => {
     if (!user) {
       toast({
@@ -123,9 +123,31 @@ const JamEditor: React.FC = () => {
         .select(`*, jam_images(*)`)
         .eq("id", id);
       
-      // Only filter by creator_id if the user is not an admin or moderator
-      if (!isAdmin && !isModerator) {
-        query = query.eq("creator_id", user?.id);
+      // For admin users, don't apply creator_id filter
+      if (!isAdmin) {
+        if (isModerator) {
+          // Moderators can edit any non-pro jam
+          const { data: jamCheck, error: checkError } = await supabase
+            .from("jams")
+            .select("is_pro")
+            .eq("id", id)
+            .single();
+            
+          if (checkError) throw checkError;
+          
+          if (jamCheck.is_pro) {
+            toast({
+              title: "Accès refusé",
+              description: "Seuls les administrateurs peuvent modifier les confitures pro.",
+              variant: "destructive",
+            });
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+        } else {
+          // Regular users can only edit their own jams
+          query = query.eq("creator_id", user?.id);
+        }
       }
       
       const { data: jam, error } = await query.single();
@@ -144,6 +166,7 @@ const JamEditor: React.FC = () => {
 
       // Store the creator ID for later use during image uploads
       setJamCreatorId(jam.creator_id);
+      setIsProJam(jam.is_pro || false);
 
       // Handle type casting for the database fields
       const jamWithTypes = jam as unknown as JamType;
