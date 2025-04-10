@@ -35,7 +35,8 @@ import {
 } from 'lucide-react';
 
 // Define a more specific interface for what Supabase actually returns
-interface ConseilWithAuthor extends AdviceArticle {
+interface ConseilWithAuthor extends Omit<AdviceArticle, 'author'> {
+  author?: ProfileType | null;
   profiles?: ProfileType | null;
 }
 
@@ -93,6 +94,8 @@ const AdminConseils = () => {
     
     const searchLower = searchTerm.toLowerCase();
     const titleMatch = conseil.title?.toLowerCase().includes(searchLower);
+    
+    // Use profiles property since we've added it to the data
     const authorMatch = conseil.profiles?.username?.toLowerCase().includes(searchLower);
     
     return titleMatch || authorMatch;
