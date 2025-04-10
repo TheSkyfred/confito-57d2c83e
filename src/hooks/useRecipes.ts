@@ -72,9 +72,27 @@ export const useRecipes = (activeTab: string, filters: RecipeFilters) => {
       
       console.log('Raw recipes data from API:', data);
       
-      // We've removed the author relationship that was causing the error
+      // Fetch author information separately for each recipe
+      const enhancedRecipes = await Promise.all(data.map(async (recipe) => {
+        let author = null;
+        if (recipe.author_id) {
+          const { data: authorData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', recipe.author_id)
+            .single();
+            
+          author = authorData;
+        }
+        
+        return {
+          ...recipe,
+          author
+        };
+      }));
+      
       // Adapt the data to our RecipeType format
-      const typedRecipes = data.map(recipe => adaptDbRecipeToRecipeType(recipe));
+      const typedRecipes = enhancedRecipes.map(recipe => adaptDbRecipeToRecipeType(recipe));
       console.log('Adapted recipes:', typedRecipes);
       
       return typedRecipes;

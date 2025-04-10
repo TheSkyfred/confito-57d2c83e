@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { parseRecipeInstructions, adaptDbRecipeToRecipeType, getProfileInitials } from '@/utils/supabaseHelpers';
 import AdminActionButtons from '@/components/AdminActionButtons';
 import RecipeAdminActions from '@/components/recipe/RecipeAdminActions';
@@ -63,11 +62,10 @@ const RecipeDetail = () => {
     queryFn: async () => {
       if (!id) throw new Error('Recipe ID is required');
       
-      const { data: recipeData, error } = await supabaseDirect.select(
-        'recipes',
-        `
+      const { data: recipeData, error } = await supabase
+        .from('recipes')
+        .select(`
           *,
-          author:profiles!recipes_author_id_fkey (*),
           ingredients:recipe_ingredients (*),
           tags:recipe_tags (*),
           ratings:recipe_ratings (*),
@@ -77,18 +75,27 @@ const RecipeDetail = () => {
             badge:recipe_badges!recipe_badge_assignments_badge_id_fkey (*)
           ),
           jam:jams!recipes_jam_id_fkey (*)
-        `,
-        { id: id }
-      );
+        `)
+        .eq('id', id)
+        .single();
       
       if (error) throw error;
-      if (!recipeData || recipeData.length === 0) {
+      if (!recipeData) {
         throw new Error('Recipe not found');
       }
       
-      const rawRecipe = recipeData[0];
+      let author = null;
+      if (recipeData.author_id) {
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', recipeData.author_id)
+          .single();
+          
+        author = authorData;
+      }
       
-      const ratings = rawRecipe.ratings || [];
+      const ratings = recipeData.ratings || [];
       const totalRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
       const average_rating = ratings.length > 0 ? totalRating / ratings.length : 0;
       
@@ -105,7 +112,8 @@ const RecipeDetail = () => {
       }
       
       const typedRecipe = adaptDbRecipeToRecipeType({
-        ...rawRecipe,
+        ...recipeData,
+        author,
         average_rating,
         is_favorite
       });
@@ -159,8 +167,7 @@ const RecipeDetail = () => {
       const { data } = await supabase
         .from('recipes')
         .select(`
-          id, title, image_url, difficulty,
-          author:profiles!recipes_author_id_fkey (username),
+          id, title, image_url, difficulty, author_id,
           tags:recipe_tags (tag)
         `)
         .eq('status', 'approved')
@@ -169,13 +176,27 @@ const RecipeDetail = () => {
         
       if (!data) return [];
       
-      return data
-        .map(r => {
+      const enhancedData = await Promise.all(
+        data.map(async (r) => {
+          let author = null;
+          if (r.author_id) {
+            const { data: authorData } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', r.author_id)
+              .single();
+            author = authorData;
+          }
+          
           const matchingTags = r.tags
             ? r.tags.filter(t => recipeTags.includes(t.tag)).length
             : 0;
-          return { ...r, relevance: matchingTags };
+            
+          return { ...r, author, relevance: matchingTags };
         })
+      );
+      
+      return enhancedData
         .filter(r => r.relevance > 0)
         .sort((a, b) => b.relevance - a.relevance)
         .slice(0, 3);
@@ -276,14 +297,33 @@ const RecipeDetail = () => {
   );
   
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center space-x-4 mb-8">
+          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <div className="h-72 md:h-96 bg-gray-200 rounded animate-pulse mb-6"></div>
+            <div className="h-10 bg-gray-200 rounded animate-pulse mb-4 w-3/4"></div>
+            <div className="flex space-x-4 mb-6">
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-6 w-16 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+          <div className="lg:col-span-1">
+            <div className="bg-gray-100 rounded-lg p-6">
+              <div className="h-8 bg-gray-200 rounded animate-pulse mb-4"></div>
+              <div className="h-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   if (error || !recipe) {
-    return <div>Error loading recipe</div>;
-  }
-  
-  if (!recipe) {
     return (
       <div className="container mx-auto py-8">
         <div className="bg-gray-50 rounded-lg p-8 text-center">
