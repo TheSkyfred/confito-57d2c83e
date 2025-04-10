@@ -66,10 +66,59 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
       case 'advice': return `/conseils/${itemId}`;
     }
   };
+
+  // Check if the item is a pro or sponsored jam
+  const checkIsSpecialJam = async () => {
+    if (itemType !== 'jam') return { isPro: false, isSponsored: false };
+    
+    try {
+      const { data, error } = await supabase
+        .from('jams')
+        .select('is_pro, campaign_type')
+        .eq('id', itemId)
+        .single();
+      
+      if (error) throw error;
+      
+      return {
+        isPro: data?.is_pro || false,
+        isSponsored: data?.campaign_type === 'sponsored'
+      };
+    } catch (error) {
+      console.error('Error checking jam type:', error);
+      return { isPro: false, isSponsored: false };
+    }
+  };
   
   const handleApprove = async () => {
     try {
       const tableName = getTableName();
+      
+      // Special handling for jams that might be pro or sponsored
+      if (itemType === 'jam') {
+        const { isPro, isSponsored } = await checkIsSpecialJam();
+        
+        // Only admins can approve pro jams
+        if (isPro && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent approuver les confitures professionnelles",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Only admins can approve sponsored jams
+        if (isSponsored && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent approuver les confitures sponsorisées",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       const { error } = await supabase
         .from(tableName)
         .update({ 
@@ -99,6 +148,32 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
   const handleReject = async () => {
     try {
       const tableName = getTableName();
+      
+      // Special handling for jams that might be pro or sponsored
+      if (itemType === 'jam') {
+        const { isPro, isSponsored } = await checkIsSpecialJam();
+        
+        // Only admins can reject pro jams
+        if (isPro && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent refuser les confitures professionnelles",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Only admins can reject sponsored jams
+        if (isSponsored && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent refuser les confitures sponsorisées",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       const { error } = await supabase
         .from(tableName)
         .update({ 
@@ -128,6 +203,32 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
   const handleToggleActive = async () => {
     try {
       const tableName = getTableName();
+      
+      // Special handling for jams that might be pro or sponsored
+      if (itemType === 'jam') {
+        const { isPro, isSponsored } = await checkIsSpecialJam();
+        
+        // Only admins can change status of pro jams
+        if (isPro && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent modifier l'état des confitures professionnelles",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Only admins can change status of sponsored jams
+        if (isSponsored && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent modifier l'état des confitures sponsorisées",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       const newActiveState = !isActive;
       
       // For advice articles, the field is 'visible' instead of 'is_active'
@@ -161,6 +262,32 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
   const handleDelete = async () => {
     try {
       const tableName = getTableName();
+      
+      // Special handling for jams that might be pro or sponsored
+      if (itemType === 'jam') {
+        const { isPro, isSponsored } = await checkIsSpecialJam();
+        
+        // Only admins can delete pro jams
+        if (isPro && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent supprimer les confitures professionnelles",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Only admins can delete sponsored jams
+        if (isSponsored && !isAdmin) {
+          toast({
+            title: "Permission refusée",
+            description: "Seuls les administrateurs peuvent supprimer les confitures sponsorisées",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       const { error } = await supabase
         .from(tableName)
         .delete()
@@ -186,7 +313,32 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
     }
   };
   
-  const handleEdit = () => {
+  const handleEdit = async () => {
+    // Special handling for jams that might be pro or sponsored
+    if (itemType === 'jam') {
+      const { isPro, isSponsored } = await checkIsSpecialJam();
+      
+      // Only admins can edit pro jams
+      if (isPro && !isAdmin) {
+        toast({
+          title: "Permission refusée",
+          description: "Seuls les administrateurs peuvent modifier les confitures professionnelles",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Only admins can edit sponsored jams
+      if (isSponsored && !isAdmin) {
+        toast({
+          title: "Permission refusée",
+          description: "Seuls les administrateurs peuvent modifier les confitures sponsorisées",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     if (editRoute) {
       navigate(editRoute);
     }

@@ -147,11 +147,14 @@ export const useAdviceArticle = (articleId: string) => {
       data.comments = rootComments;
     }
     
+    // Ensure that the returned data matches the AdviceArticle type
     return {
       ...data,
       has_video: Boolean(data.video_url),
-      has_products: data.products && data.products.length > 0
-    } as AdviceArticle;
+      has_products: data.products && data.products.length > 0,
+      // Ensure author has the correct type structure
+      author: data.author || null
+    } as unknown as AdviceArticle;
   };
   
   return useQuery({

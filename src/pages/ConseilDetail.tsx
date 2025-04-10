@@ -110,9 +110,10 @@ const ConseilDetail: React.FC = () => {
   
   const handleProductClick = async (productId: string, externalUrl: string) => {
     try {
+      // Correct way to update the click_count
       await supabase
         .from('advice_products')
-        .update({ click_count: supabase.rpc('increment', { row_id: productId, amount: 1 }) })
+        .update({ click_count: (await supabase.from('advice_products').select('click_count').eq('id', productId).single()).data.click_count + 1 })
         .eq('id', productId);
       
       window.open(externalUrl, '_blank');
