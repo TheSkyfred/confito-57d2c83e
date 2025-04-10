@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -72,8 +73,8 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             <Clock className="h-3.5 w-3.5 mr-1" />
             <span>{prep_time_minutes} min</span>
           </div>
-          <Badge variant="outline" className={difficultyConfig[difficulty].color}>
-            {difficultyConfig[difficulty].label}
+          <Badge variant="outline" className={difficultyConfig[difficulty]?.color || 'bg-gray-100'}>
+            {difficultyConfig[difficulty]?.label || difficulty}
           </Badge>
         </div>
         

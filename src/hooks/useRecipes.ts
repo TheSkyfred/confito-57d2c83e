@@ -12,7 +12,6 @@ export const useRecipes = (activeTab: string, filters: RecipeFilters) => {
         .from('recipes')
         .select(`
           *,
-          author:profiles!recipes_author_id_fkey (username, avatar_url),
           ingredients:recipe_ingredients(*),
           tags:recipe_tags(*),
           ratings:recipe_ratings(*)
@@ -73,6 +72,8 @@ export const useRecipes = (activeTab: string, filters: RecipeFilters) => {
       
       console.log('Raw recipes data from API:', data);
       
+      // We've removed the author relationship that was causing the error
+      // Adapt the data to our RecipeType format
       const typedRecipes = data.map(recipe => adaptDbRecipeToRecipeType(recipe));
       console.log('Adapted recipes:', typedRecipes);
       
