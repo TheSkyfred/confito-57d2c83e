@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,6 +71,7 @@ import JamAdminActions from '@/components/JamAdminActions';
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [favorited, setFavorited] = useState(false);
   const { addItem } = useCartStore();
   const [reviewToEdit, setReviewToEdit] = useState<DetailedReviewType | undefined>();
