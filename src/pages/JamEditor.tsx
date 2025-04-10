@@ -21,7 +21,6 @@ import RecipeForm from "@/components/jam-editor/RecipeForm";
 import VisibilityForm from "@/components/jam-editor/VisibilityForm";
 import JamPreview from "@/components/jam-editor/JamPreview";
 
-// Type definitions
 interface Ingredient {
   name: string;
   quantity: string;
@@ -64,7 +63,6 @@ const JamEditor: React.FC = () => {
   const [jamCreatorId, setJamCreatorId] = useState<string | null>(null);
   const [isProJam, setIsProJam] = useState<boolean>(false);
 
-  // Initialize form data
   const [formData, setFormData] = useState<JamFormData>({
     name: "",
     description: "",
@@ -84,7 +82,6 @@ const JamEditor: React.FC = () => {
     main_image_index: 0,
   });
 
-  // Redirect if not logged in or no proper permissions
   useEffect(() => {
     if (!user) {
       toast({
@@ -100,7 +97,6 @@ const JamEditor: React.FC = () => {
     }
   }, [user, isEditMode]);
 
-  // Handle image upload
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
@@ -112,21 +108,17 @@ const JamEditor: React.FC = () => {
     }
   };
 
-  // Load existing jam data for editing
   const loadJamData = async () => {
     try {
       setLoading(true);
       
-      // Create a query to get the jam
       let query = supabase
         .from("jams")
         .select(`*, jam_images(*)`)
         .eq("id", id);
       
-      // For admin users, don't apply creator_id filter
       if (!isAdmin) {
         if (isModerator) {
-          // Moderators can edit any non-pro jam
           const { data: jamCheck, error: checkError } = await supabase
             .from("jams")
             .select("is_pro")
@@ -145,7 +137,6 @@ const JamEditor: React.FC = () => {
             return;
           }
         } else {
-          // Regular users can only edit their own jams
           query = query.eq("creator_id", user?.id);
         }
       }
@@ -164,14 +155,11 @@ const JamEditor: React.FC = () => {
         return;
       }
 
-      // Store the creator ID for later use during image uploads
       setJamCreatorId(jam.creator_id);
       setIsProJam(jam.is_pro || false);
 
-      // Handle type casting for the database fields
       const jamWithTypes = jam as unknown as JamType;
 
-      // Convert ingredients from string[] to Ingredient[]
       const ingredients = jamWithTypes.ingredients 
         ? typeof jamWithTypes.ingredients[0] === 'string' 
           ? jamWithTypes.ingredients.map((ing: string) => {
@@ -181,7 +169,6 @@ const JamEditor: React.FC = () => {
           : jamWithTypes.ingredients 
         : [{ name: "", quantity: "" }];
 
-      // Format recipe steps from recipe field if available
       let recipeSteps: RecipeStep[] = [];
       
       if (jamWithTypes.recipe) {
@@ -195,7 +182,6 @@ const JamEditor: React.FC = () => {
         }
       }
       
-      // Get image URL from jam_images
       let mainImageUrl = null;
       if (jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
         const primaryImage = jamWithTypes.jam_images.find((img: any) => img.is_primary);
@@ -238,22 +224,18 @@ const JamEditor: React.FC = () => {
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (publish: boolean = false) => {
     if (!user) return;
     
     try {
       setSaving(true);
       
-      // Format ingredients for storage
       const ingredientsForStorage = formData.ingredients.map(
         ing => `${ing.name}|${ing.quantity}`
       );
       
-      // Format recipe steps as JSON string
       const recipeString = JSON.stringify(formData.recipe_steps);
       
-      // Prepare jam data
       const jamData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
@@ -273,7 +255,6 @@ const JamEditor: React.FC = () => {
       
       let jam_id = id;
       
-      // Create or update jam in database
       if (isEditMode) {
         const { error: updateError } = await supabase
           .from("jams")
@@ -282,12 +263,14 @@ const JamEditor: React.FC = () => {
           
         if (updateError) throw updateError;
       } else {
-        // Add creator_id to jamData for new jams
-        jamData.creator_id = user.id;
+        const newJamData = { 
+          ...jamData,
+          creator_id: user.id 
+        };
         
         const { data: newJam, error: insertError } = await supabase
           .from("jams")
-          .insert(jamData)
+          .insert(newJamData)
           .select();
           
         if (insertError) throw insertError;
@@ -296,9 +279,7 @@ const JamEditor: React.FC = () => {
         }
       }
       
-      // Handle image uploads
       if (formData.images.length > 0 && jam_id) {
-        // Upload each image
         for (let i = 0; i < formData.images.length; i++) {
           const file = formData.images[i];
           const isMainImage = i === formData.main_image_index;
@@ -311,24 +292,20 @@ const JamEditor: React.FC = () => {
             
           if (uploadError) throw uploadError;
           
-          // Get public URL
           const { data: publicUrl } = supabase.storage
             .from("jam-images")
             .getPublicUrl(filePath);
             
-          // Use RPC function to insert image reference, bypassing RLS
           const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
             p_jam_id: jam_id,
             p_url: publicUrl.publicUrl,
             p_is_primary: isMainImage,
             p_creator_id: isEditMode ? jamCreatorId : user.id
           });
-            
-          // Fallback if RPC function doesn't exist
+          
           if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
             console.log('RPC function not found, using direct insert');
             
-            // For new jams, we use standard insert since the creator_id matches the current user
             if (!isEditMode) {
               const { error: directInsertError } = await supabase
                 .from("jam_images")
@@ -340,7 +317,6 @@ const JamEditor: React.FC = () => {
                 
               if (directInsertError) throw directInsertError;
             } else {
-              // For edited jams, we need to alert the user to a permissions issue
               throw new Error("Erreur de permission: Vous n'avez pas le droit d'ajouter des images à cette confiture. Contactez l'administrateur pour configurer les règles de sécurité.");
             }
           } else if (imageInsertError) {
@@ -356,7 +332,6 @@ const JamEditor: React.FC = () => {
           : "Votre confiture a été enregistrée en brouillon",
       });
       
-      // Navigate to jam details or dashboard
       navigate(publish ? `/jam/${jam_id}` : "/dashboard");
     } catch (error: any) {
       console.error("Error saving jam:", error);
@@ -369,8 +344,7 @@ const JamEditor: React.FC = () => {
       setSaving(false);
     }
   };
-  
-  // Handle section expansion
+
   const toggleSection = (section: string) => {
     setExpandedSections(prevSections => 
       prevSections.includes(section) 
@@ -379,7 +353,6 @@ const JamEditor: React.FC = () => {
     );
   };
 
-  // Update form data
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
