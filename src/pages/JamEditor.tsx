@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +62,7 @@ const JamEditor: React.FC = () => {
     "basic-info",
   ]);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [jamCreatorId, setJamCreatorId] = useState<string | null>(null);
 
   // Initialize form data
   const [formData, setFormData] = useState<JamFormData>({
@@ -139,6 +141,9 @@ const JamEditor: React.FC = () => {
         navigate("/dashboard", { replace: true });
         return;
       }
+
+      // Store the creator ID for later use during image uploads
+      setJamCreatorId(jam.creator_id);
 
       // Handle type casting for the database fields
       const jamWithTypes = jam as unknown as JamType;
@@ -241,8 +246,12 @@ const JamEditor: React.FC = () => {
         price_credits: formData.price_credits,
         recipe: recipeString,
         is_active: publish,
-        creator_id: user.id,
       };
+      
+      // Add creator_id only for new jams
+      if (!isEditMode) {
+        jamData['creator_id'] = user.id;
+      }
 
       let jam_id = id;
       
@@ -286,16 +295,36 @@ const JamEditor: React.FC = () => {
             .from("jam-images")
             .getPublicUrl(filePath);
             
-          // Insert image reference to database
-          const { error: imageInsertError } = await supabase
-            .from("jam_images")
-            .insert({
-              jam_id: jam_id,
-              url: publicUrl.publicUrl,
-              is_primary: isMainImage
-            });
+          // Use RPC function to insert image reference, bypassing RLS
+          let { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
+            p_jam_id: jam_id,
+            p_url: publicUrl.publicUrl,
+            p_is_primary: isMainImage,
+            p_creator_id: isEditMode ? jamCreatorId : user.id
+          });
             
-          if (imageInsertError) throw imageInsertError;
+          // Fallback if RPC function doesn't exist
+          if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
+            console.log('RPC function not found, using direct insert');
+            
+            // For new jams, we use standard insert since the creator_id matches the current user
+            if (!isEditMode) {
+              const { error: directInsertError } = await supabase
+                .from("jam_images")
+                .insert({
+                  jam_id: jam_id,
+                  url: publicUrl.publicUrl,
+                  is_primary: isMainImage
+                });
+                
+              if (directInsertError) throw directInsertError;
+            } else {
+              // For edited jams, we need to alert the user to a permissions issue
+              throw new Error("Erreur de permission: Vous n'avez pas le droit d'ajouter des images à cette confiture. Contactez l'administrateur pour configurer les règles de sécurité.");
+            }
+          } else if (imageInsertError) {
+            throw imageInsertError;
+          }
         }
       }
 
