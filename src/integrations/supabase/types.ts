@@ -2213,6 +2213,15 @@ export type Database = {
         Args: { recipe_uuid: string }
         Returns: number
       }
+      insert_jam_image: {
+        Args: {
+          p_jam_id: string
+          p_url: string
+          p_is_primary: boolean
+          p_creator_id: string
+        }
+        Returns: undefined
+      }
       random_date_last_6months: {
         Args: Record<PropertyKey, never>
         Returns: string

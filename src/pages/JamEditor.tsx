@@ -231,7 +231,7 @@ const JamEditor: React.FC = () => {
       const recipeString = JSON.stringify(formData.recipe_steps);
       
       // Prepare jam data
-      const jamData = {
+      const jamData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
         type: formData.type,
@@ -266,7 +266,7 @@ const JamEditor: React.FC = () => {
       } else {
         const { data: newJam, error: insertError } = await supabase
           .from("jams")
-          .insert(jamData)
+          .insert({ ...jamData, creator_id: user.id })
           .select();
           
         if (insertError) throw insertError;
@@ -296,7 +296,7 @@ const JamEditor: React.FC = () => {
             .getPublicUrl(filePath);
             
           // Use RPC function to insert image reference, bypassing RLS
-          let { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
+          const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
             p_jam_id: jam_id,
             p_url: publicUrl.publicUrl,
             p_is_primary: isMainImage,
