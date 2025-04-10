@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -141,12 +142,16 @@ const Header = () => {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/dashboard" onClick={closeMenu}>
-                    <User className="mr-2 h-4 w-4" />
-                    Tableau de bord
-                  </Link>
-                </DropdownMenuItem>
+                
+                {/* Only show dashboard for non-pro users */}
+                {!isPro && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" onClick={closeMenu}>
+                      <User className="mr-2 h-4 w-4" />
+                      Tableau de bord
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 
                 {isPro && (
                   <DropdownMenuItem asChild>
@@ -230,7 +235,10 @@ const Header = () => {
             
             {user ? (
               <>
-                <NavItemMobile to="/dashboard" label="Tableau de bord" icon={User} onClick={closeMenu} />
+                {/* Only show dashboard for non-pro users in mobile menu */}
+                {!isPro && (
+                  <NavItemMobile to="/dashboard" label="Tableau de bord" icon={User} onClick={closeMenu} />
+                )}
                 
                 {isPro && (
                   <NavItemMobile to="/pro-dashboard" label="Dashboard Pro" icon={Briefcase} onClick={closeMenu} />
