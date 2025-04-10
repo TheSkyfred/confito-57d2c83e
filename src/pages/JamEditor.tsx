@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { JamType } from "@/types/supabase";
 import { RecipeStep } from "@/components/jam-editor/RecipeForm";
+import { useUserRole } from "@/hooks/useUserRole";
 
 import BasicInfoForm from "@/components/jam-editor/BasicInfoForm";
 import IngredientsForm from "@/components/jam-editor/IngredientsForm";
@@ -49,6 +49,7 @@ interface JamFormData {
 
 const JamEditor: React.FC = () => {
   const { user } = useAuth();
+  const { isAdmin, isModerator } = useUserRole();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
@@ -114,12 +115,18 @@ const JamEditor: React.FC = () => {
     try {
       setLoading(true);
       
-      const { data: jam, error } = await supabase
+      // Create a query to get the jam
+      let query = supabase
         .from("jams")
         .select(`*, jam_images(*)`)
-        .eq("id", id)
-        .eq("creator_id", user?.id)
-        .single();
+        .eq("id", id);
+      
+      // Only filter by creator_id if the user is not an admin or moderator
+      if (!isAdmin && !isModerator) {
+        query = query.eq("creator_id", user?.id);
+      }
+      
+      const { data: jam, error } = await query.single();
 
       if (error) throw error;
       
