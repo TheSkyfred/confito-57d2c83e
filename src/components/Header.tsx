@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +10,7 @@ import {
   LogOut, 
   Settings, 
   PlusCircle, 
+  UserPlus,
   Heart,
   MessageSquare,
   Calendar,
@@ -207,19 +207,12 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <>
-              <Button variant="ghost" asChild>
-                <Link to="/auth">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Se connecter
-                </Link>
-              </Button>
-              <Button asChild>
-                <Link to="/auth">
-                  S'inscrire
-                </Link>
-              </Button>
-            </>
+            <Button asChild className="flex items-center">
+              <Link to="/auth">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Se connecter / S'inscrire
+              </Link>
+            </Button>
           )}
         </div>
       </div>
@@ -263,10 +256,10 @@ const Header = () => {
               </>
             ) : (
               <>
-                <NavItemMobile to="/auth" label="Se connecter" icon={LogIn} onClick={closeMenu} />
                 <Button variant="default" className="justify-start" asChild>
                   <Link to="/auth" onClick={closeMenu}>
-                    S'inscrire
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Se connecter / S'inscrire
                   </Link>
                 </Button>
               </>
