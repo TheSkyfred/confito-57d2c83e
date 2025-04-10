@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -26,12 +25,15 @@ import {
   Clock, 
   AlertCircle,
   Star, 
-  FileDown
+  FileDown,
+  MinusCircle,
+  PlusCircle
 } from 'lucide-react';
 import { RecipeStep } from './RecipeForm';
 import { CreditBadge } from '@/components/ui/credit-badge';
+import { Input } from '@/components/ui/input';
+import { useCartStore } from '@/stores/useCartStore';
 
-// Map category values to readable labels
 const categoryLabels: Record<string, string> = {
   'classic': 'Classique (fruits)',
   'vegetable': 'Légumes',
@@ -41,7 +43,6 @@ const categoryLabels: Record<string, string> = {
   'mixed': 'Mixte (fruits et légumes)'
 };
 
-// Map tag IDs to readable labels
 const tagLabels: Record<string, string> = {
   'bio': 'Bio',
   'vegan': 'Végan',
@@ -75,14 +76,14 @@ export interface JamPreviewProps {
 }
 
 const JamPreview = ({ formData, fullPreview = false }: JamPreviewProps) => {
+  const [quantity, setQuantity] = useState(1);
+  
   if (!formData) return null;
   
-  // Generate main image preview if there's an uploaded image
   const imageUrl = formData.images && formData.images.length > 0 && formData.main_image_index !== undefined
     ? URL.createObjectURL(formData.images[formData.main_image_index])
     : null;
     
-  // Format expiration date if we have production date and shelf life months
   let expirationDate = null;
   if (formData.production_date && formData.shelf_life_months) {
     const productionDate = new Date(formData.production_date);
@@ -90,8 +91,13 @@ const JamPreview = ({ formData, fullPreview = false }: JamPreviewProps) => {
     expirationDate.setMonth(expirationDate.getMonth() + formData.shelf_life_months);
   }
   
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity >= 1 && newQuantity <= formData.available_quantity) {
+      setQuantity(newQuantity);
+    }
+  };
+  
   const generateLabel = () => {
-    // This would be replaced by real label generation logic
     return (
       <div className="border border-dashed border-gray-300 p-4 text-center">
         <p className="text-sm text-muted-foreground">
@@ -170,10 +176,41 @@ const JamPreview = ({ formData, fullPreview = false }: JamPreviewProps) => {
             <div className="mt-6 flex items-center">
               <CreditBadge amount={formData.price_credits} size="lg" />
               
-              <Button className="ml-auto bg-jam-raspberry hover:bg-jam-raspberry/90">
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Ajouter au panier
-              </Button>
+              <div className="ml-auto flex items-center space-x-2">
+                <div className="flex items-center">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleQuantityChange(quantity - 1)}
+                    disabled={quantity <= 1}
+                  >
+                    <MinusCircle className="h-4 w-4" />
+                  </Button>
+                  
+                  <Input
+                    type="number"
+                    min={1} 
+                    max={formData.available_quantity}
+                    value={quantity}
+                    onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                    className="w-16 text-center"
+                  />
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleQuantityChange(quantity + 1)}
+                    disabled={quantity >= formData.available_quantity}
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <Button className="bg-jam-raspberry hover:bg-jam-raspberry/90">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Ajouter au panier
+                </Button>
+              </div>
             </div>
           </div>
         </div>

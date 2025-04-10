@@ -39,14 +39,14 @@ const ProfileAdminActions: React.FC<ProfileAdminActionsProps> = ({
   
   const handleToggleActive = async () => {
     try {
-      // Instead of using is_active which doesn't exist in profiles table,
-      // we'll use the role field to effectively activate/deactivate users
-      // by setting their role to 'user' for active or to a temporary value for inactive
-      const newRole = isActive ? 'inactive' : 'user';
+      // Use role field to activate/deactivate users by setting their role
+      // 'user', 'admin', 'moderator', or 'pro' are active roles
+      // We'll use a custom role 'inactive' to deactivate them
+      const currentRole = isActive ? 'inactive' : 'user';
       
       const { error } = await supabase
         .from('profiles')
-        .update({ role: newRole })
+        .update({ role: currentRole })
         .eq('id', userId);
       
       if (error) throw error;

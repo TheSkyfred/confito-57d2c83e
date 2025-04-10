@@ -35,12 +35,15 @@ import {
   Clock,
   Edit,
   CheckCircle,
-  XCircle
+  XCircle,
+  MinusCircle,
+  PlusCircle
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import {
   Carousel,
   CarouselContent,
@@ -71,6 +74,7 @@ const JamDetails = () => {
   const { addItem } = useCartStore();
   const [reviewToEdit, setReviewToEdit] = useState<DetailedReviewType | undefined>();
   const { isAdmin, isModerator } = useUserRole();
+  const [quantity, setQuantity] = useState(1);
   
   const { data: jam, isLoading, error, refetch } = useQuery({
     queryKey: ['jam', id],
@@ -197,6 +201,26 @@ const JamDetails = () => {
     }
   };
 
+  const handleQuantityChange = (newQuantity: number) => {
+    if (!jam) return;
+    
+    if (newQuantity < 1) {
+      return;
+    }
+    
+    if (newQuantity > jam.available_quantity) {
+      toast({
+        title: "Quantité limitée",
+        description: `Il ne reste que ${jam.available_quantity} exemplaires disponibles.`,
+        variant: "destructive"
+      });
+      setQuantity(jam.available_quantity);
+      return;
+    }
+    
+    setQuantity(newQuantity);
+  };
+
   const addToCart = async () => {
     if (!user) {
       toast({
@@ -204,16 +228,17 @@ const JamDetails = () => {
         description: "Veuillez vous connecter pour commander",
         variant: "destructive"
       });
+      navigate("/auth");
       return;
     }
     
     if (!jam) return;
     
     try {
-      await addItem(jam);
+      await addItem(jam, quantity);
       toast({
         title: "Ajouté au panier",
-        description: "Cette confiture a été ajoutée à votre panier",
+        description: `${quantity} ${quantity > 1 ? 'pots ont été ajoutés' : 'pot a été ajouté'} à votre panier`,
       });
     } catch (error) {
       console.error('Error adding item to cart:', error);
@@ -458,7 +483,36 @@ const JamDetails = () => {
               <span className="text-2xl font-bold">{jam.price_credits}</span>
               <span className="ml-1 text-muted-foreground">crédits</span>
             </div>
-            <div className="flex space-x-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleQuantityChange(quantity - 1)}
+                  disabled={quantity <= 1}
+                >
+                  <MinusCircle className="h-4 w-4" />
+                </Button>
+                
+                <Input
+                  type="number"
+                  min="1" 
+                  max={jam.available_quantity}
+                  value={quantity}
+                  onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+                  className="w-16 text-center"
+                />
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleQuantityChange(quantity + 1)}
+                  disabled={!jam || quantity >= jam.available_quantity}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+              
               <Button 
                 variant="default" 
                 className="bg-jam-raspberry hover:bg-jam-raspberry/90"

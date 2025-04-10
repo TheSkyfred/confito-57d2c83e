@@ -15,7 +15,6 @@ const Cart = () => {
   const { items, removeItem, updateQuantity, clearCart, getTotalCredits } = useCartStore();
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Synchroniser le panier avec la base de données au chargement de la page
   useEffect(() => {
     const syncCart = async () => {
       await useCartStore.getState().syncWithDatabase();
