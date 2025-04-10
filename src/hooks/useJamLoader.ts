@@ -122,15 +122,18 @@ export const useJamLoader = ({
         let parsedIngredients: Ingredient[] = [{ name: "", quantity: "" }];
         
         if (jamWithTypes.ingredients) {
-          if (typeof jamWithTypes.ingredients[0] === 'string') {
-            // If they're strings, parse them into objects
-            parsedIngredients = jamWithTypes.ingredients.map((ing: string) => {
-              const [name, quantity] = ing.split('|');
-              return { name: name || ing, quantity: quantity || '' };
-            });
-          } else {
-            // If they're already objects, use them as-is
-            parsedIngredients = jamWithTypes.ingredients as Ingredient[];
+          if (Array.isArray(jamWithTypes.ingredients) && jamWithTypes.ingredients.length > 0) {
+            if (typeof jamWithTypes.ingredients[0] === 'string') {
+              // If they're strings, parse them into objects
+              parsedIngredients = jamWithTypes.ingredients.map((ing: unknown) => {
+                const ingString = ing as string;
+                const [name, quantity] = ingString.split('|');
+                return { name: name || ingString, quantity: quantity || '' };
+              });
+            } else {
+              // If they're already objects, use them as-is
+              parsedIngredients = jamWithTypes.ingredients as unknown as Ingredient[];
+            }
           }
         }
 
