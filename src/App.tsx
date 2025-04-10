@@ -21,6 +21,7 @@ import Checkout from './pages/Checkout';
 import Credits from './pages/Credits';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminJams from './pages/AdminJams'; // Import the new AdminJams page
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
 import BattleAdmin from './pages/BattleAdmin';
@@ -78,6 +79,7 @@ function App() {
                   <Route path="/battles/:id" element={<BattleDetails />} />
                   <Route path="/battles/admin" element={<BattleAdmin />} />
                   <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/jams" element={<AdminJams />} />
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
