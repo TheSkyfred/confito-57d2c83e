@@ -2094,9 +2094,11 @@ export type Database = {
           apr: boolean
           aug: boolean
           conservation_tips: string | null
+          cooking_tips: string | null
           created_at: string
           dec: boolean
           description: string | null
+          family: string | null
           feb: boolean
           id: string
           image_url: string | null
@@ -2115,9 +2117,11 @@ export type Database = {
           apr?: boolean
           aug?: boolean
           conservation_tips?: string | null
+          cooking_tips?: string | null
           created_at?: string
           dec?: boolean
           description?: string | null
+          family?: string | null
           feb?: boolean
           id?: string
           image_url?: string | null
@@ -2136,9 +2140,11 @@ export type Database = {
           apr?: boolean
           aug?: boolean
           conservation_tips?: string | null
+          cooking_tips?: string | null
           created_at?: string
           dec?: boolean
           description?: string | null
+          family?: string | null
           feb?: boolean
           id?: string
           image_url?: string | null
