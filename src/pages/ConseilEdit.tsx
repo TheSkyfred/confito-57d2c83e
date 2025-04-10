@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -81,6 +82,7 @@ const ConseilEdit: React.FC = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
   const [uploadingProductImage, setUploadingProductImage] = useState(false);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -159,6 +161,11 @@ const ConseilEdit: React.FC = () => {
         tags: advice.tags ? advice.tags.join(', ') : '',
         visible: advice.visible
       });
+      
+      // Set cover image preview if available
+      if (advice.cover_image_url) {
+        setCoverImagePreview(advice.cover_image_url);
+      }
     }
   }, [advice, form]);
 
@@ -182,17 +189,27 @@ const ConseilEdit: React.FC = () => {
     setUploadingCoverImage(true);
     
     try {
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading to bucket: advice_images, path:", filePath);
+      
+      const { error: uploadError, data } = await supabase.storage
         .from('advice_images')
         .upload(filePath, file);
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
       
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
+      console.log("File uploaded successfully, public URL:", publicUrl);
+      
+      // Update the form and preview
       form.setValue('cover_image_url', publicUrl);
+      setCoverImagePreview(publicUrl);
       
       toast({
         title: "Image téléchargée",
@@ -202,7 +219,7 @@ const ConseilEdit: React.FC = () => {
       console.error('Erreur lors du téléchargement de l\'image:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de télécharger l'image",
+        description: `Impossible de télécharger l'image: ${error.message || error}`,
         variant: "destructive"
       });
     } finally {
@@ -221,15 +238,23 @@ const ConseilEdit: React.FC = () => {
     setUploadingProductImage(true);
     
     try {
-      const { error: uploadError } = await supabase.storage
+      console.log("Uploading product image to bucket: advice_images, path:", filePath);
+      
+      const { error: uploadError, data } = await supabase.storage
         .from('advice_images')
         .upload(filePath, file);
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Product image upload error:", uploadError);
+        throw uploadError;
+      }
       
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
+      
+      console.log("Product image uploaded successfully, public URL:", publicUrl);
       
       setProductForm(prev => ({ ...prev, image_url: publicUrl }));
       
@@ -241,7 +266,7 @@ const ConseilEdit: React.FC = () => {
       console.error('Erreur lors du téléchargement de l\'image du produit:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de télécharger l'image du produit",
+        description: `Impossible de télécharger l'image du produit: ${error.message || error}`,
         variant: "destructive"
       });
     } finally {
@@ -406,7 +431,7 @@ const ConseilEdit: React.FC = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>{advice.title}</CardTitle>
+          <CardTitle>{advice?.title}</CardTitle>
           <CardDescription>
             Modifiez les informations de votre conseil
           </CardDescription>
@@ -479,16 +504,16 @@ const ConseilEdit: React.FC = () => {
                       <FormItem>
                         <FormLabel>Image de couverture</FormLabel>
                         <div className="space-y-4">
-                          {field.value && (
+                          {(coverImagePreview || field.value) && (
                             <div className="relative w-full max-w-md h-48 overflow-hidden rounded-md border">
                               <img 
-                                src={field.value} 
+                                src={coverImagePreview || field.value} 
                                 alt="Aperçu de l'image de couverture" 
                                 className="w-full h-full object-cover"
                               />
                             </div>
                           )}
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-start">
                             <div className="relative">
                               <Input
                                 type="file"
@@ -509,7 +534,7 @@ const ConseilEdit: React.FC = () => {
                                 ) : (
                                   <>
                                     <Upload className="h-4 w-4 mr-2" />
-                                    {field.value ? "Changer l'image" : "Télécharger une image"}
+                                    {(coverImagePreview || field.value) ? "Changer l'image" : "Télécharger une image"}
                                   </>
                                 )}
                               </Button>
