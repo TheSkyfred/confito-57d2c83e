@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Link } from "react-router-dom"
-import { Coffee } from "lucide-react"
+import { Coffee, LogIn } from "lucide-react"
 
 interface HeroSectionProps {
   showRegistration?: boolean;
@@ -38,9 +38,17 @@ export default function HeroSection({ showRegistration = true }: HeroSectionProp
                 <Link to="/explore">Découvrir les confitures</Link>
               </Button>
               {showRegistration && (
-                <Button asChild size="lg" variant="outline">
-                  <Link to="/register">Créer un compte</Link>
-                </Button>
+                <div className="flex gap-2">
+                  <Button asChild size="lg" variant="outline">
+                    <Link to="/auth" className="flex items-center">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Se connecter
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" className="bg-jam-honey hover:bg-jam-honey/90">
+                    <Link to="/auth">S'inscrire</Link>
+                  </Button>
+                </div>
               )}
             </div>
             
@@ -77,3 +85,4 @@ export default function HeroSection({ showRegistration = true }: HeroSectionProp
     </div>
   )
 }
+
