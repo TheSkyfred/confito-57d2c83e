@@ -366,7 +366,10 @@ const JamDetails = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <Carousel className="w-full">
+          <Carousel 
+            className="w-full" 
+            hideNavigation={true} // Add this to hide navigation arrows
+          >
             <CarouselContent>
               {primaryImage && (
                 <CarouselItem key="primary">
@@ -392,8 +395,7 @@ const JamDetails = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
+            {/* CarouselPrevious and CarouselNext will now be conditionally rendered based on the hideNavigation prop */}
           </Carousel>
         </div>
 
