@@ -42,14 +42,20 @@ const JamEditor: React.FC<JamEditorProps> = () => {
       if (uploadError) throw uploadError;
       
       // Get public URL
-      const { data: publicUrl } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from("jam-images")
         .getPublicUrl(filePath);
         
+      if (!publicUrlData) {
+        throw new Error("Failed to get public URL for uploaded image");
+      }
+      
+      const publicUrl = publicUrlData.publicUrl;
+      
       // Use RPC function to insert image reference, bypassing RLS
       const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
         p_jam_id: jamId,
-        p_url: publicUrl.publicUrl,
+        p_url: publicUrl,
         p_is_primary: isMainImage,
         p_creator_id: isEditing ? creatorId : userId
       });
@@ -58,7 +64,7 @@ const JamEditor: React.FC<JamEditorProps> = () => {
         throw imageInsertError;
       }
       
-      return publicUrl.publicUrl;
+      return publicUrl;
     } catch (error) {
       console.error("Error uploading image:", error);
       throw error;
