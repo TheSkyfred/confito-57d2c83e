@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,21 +43,32 @@ const AdminConseils = () => {
   const { data: conseils, isLoading, error, refetch } = useQuery({
     queryKey: ['adminConseils', statusFilter],
     queryFn: async () => {
-      let filter: Record<string, any> = {};
+      let query = supabase.from('advice_articles').select(`
+        *,
+        profiles:author_id(username, avatar_url)
+      `);
+      
       if (statusFilter !== 'all') {
-        filter = { visible: statusFilter === 'visible' };
+        query = query.eq('visible', statusFilter === 'visible');
       }
       
-      const { data, error } = await supabaseDirect.select(
-        'advice_articles',
-        '*, profiles(username, avatar_url)',
-        filter
-      );
+      const { data, error } = await query;
       
       if (error) throw error;
       return data || [];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
+  });
+  
+  // Filter conseils based on search term
+  const filteredConseils = conseils?.filter(conseil => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const titleMatch = conseil.title?.toLowerCase().includes(searchLower);
+    const authorMatch = conseil.profiles?.username?.toLowerCase().includes(searchLower);
+    
+    return titleMatch || authorMatch;
   });
   
   if (!isAdmin && !isModerator) {
@@ -108,7 +120,7 @@ const AdminConseils = () => {
           <p>Erreur lors du chargement des conseils</p>
           <p className="text-sm">{(error as Error).message}</p>
         </div>
-      ) : conseils && conseils.length > 0 ? (
+      ) : filteredConseils && filteredConseils.length > 0 ? (
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -121,7 +133,7 @@ const AdminConseils = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {conseils.map((conseil) => (
+              {filteredConseils.map((conseil) => (
                 <TableRow key={conseil.id}>
                   <TableCell className="font-medium">{conseil.title}</TableCell>
                   <TableCell>{conseil.profiles?.username || "Utilisateur anonyme"}</TableCell>
