@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Edit, Trash2, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, Edit, Trash2, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
@@ -22,7 +22,9 @@ interface AdminActionButtonsProps {
   itemId: string;
   itemType: 'jam' | 'recipe' | 'advice';
   status?: string;
+  isActive?: boolean;
   onStatusChange?: () => void;
+  onActiveChange?: () => void;
   canEdit?: boolean;
   canDelete?: boolean;
   editRoute?: string;
@@ -33,9 +35,11 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
   itemId, 
   itemType, 
   status = 'pending',
+  isActive = true,
   onStatusChange,
+  onActiveChange,
   canEdit = true,
-  canDelete = false,
+  canDelete = true,
   editRoute,
   redirectAfterDelete
 }) => {
@@ -51,6 +55,15 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
       case 'jam': return 'jams';
       case 'recipe': return 'recipes';
       case 'advice': return 'advice_articles';
+    }
+  };
+
+  // Map item type to view route
+  const getViewRoute = () => {
+    switch (itemType) {
+      case 'jam': return `/jam/${itemId}`;
+      case 'recipe': return `/recipes/${itemId}`;
+      case 'advice': return `/conseils/${itemId}`;
     }
   };
   
@@ -107,6 +120,39 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
       toast({
         title: "Erreur",
         description: error.message || `Une erreur est survenue lors du rejet`,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleToggleActive = async () => {
+    try {
+      const tableName = getTableName();
+      const newActiveState = !isActive;
+      
+      // For advice articles, the field is 'visible' instead of 'is_active'
+      const fieldName = itemType === 'advice' ? 'visible' : 'is_active';
+      
+      const { error } = await supabase
+        .from(tableName)
+        .update({ 
+          [fieldName]: newActiveState
+        })
+        .eq('id', itemId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: newActiveState ? "Activé" : "Désactivé",
+        description: `L'élément a été ${newActiveState ? 'activé' : 'désactivé'} avec succès`,
+      });
+      
+      if (onActiveChange) onActiveChange();
+    } catch (error: any) {
+      console.error(`Error toggling active state for ${itemType}:`, error);
+      toast({
+        title: "Erreur",
+        description: error.message || `Une erreur est survenue lors du changement d'état`,
         variant: "destructive",
       });
     }
@@ -190,6 +236,25 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
             </Button>
           )}
           
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleToggleActive}
+            className={isActive ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100" : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"}
+          >
+            {isActive ? (
+              <>
+                <ToggleRight className="h-4 w-4 mr-1" />
+                Désactiver
+              </>
+            ) : (
+              <>
+                <ToggleLeft className="h-4 w-4 mr-1" />
+                Activer
+              </>
+            )}
+          </Button>
+          
           {canEdit && editRoute && (
             <Button 
               variant="outline" 
@@ -201,7 +266,7 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
             </Button>
           )}
           
-          {canDelete && isAdmin && (
+          {canDelete && (
             <>
               <Button 
                 variant="outline" 

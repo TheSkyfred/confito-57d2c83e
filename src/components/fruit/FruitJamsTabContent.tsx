@@ -9,20 +9,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ExternalLink, Candy } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+
+interface Jam {
+  id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  badges?: string[];
+  price_credits?: number;
+  available_quantity?: number;
+  status?: string;
+  creator?: {
+    username: string;
+  };
+}
 
 interface FruitJamsTabContentProps {
   fruitName: string;
-  jams: any[] | null;
+  jams: Jam[] | null;
   loadingJams: boolean;
 }
 
 const FruitJamsTabContent: React.FC<FruitJamsTabContentProps> = ({ 
   fruitName,
   jams,
-  loadingJams
+  loadingJams 
 }) => {
   if (loadingJams) {
     return (
@@ -49,19 +63,7 @@ const FruitJamsTabContent: React.FC<FruitJamsTabContentProps> = ({
   }
 
   if (!jams || jams.length === 0) {
-    return (
-      <Card className="border-dashed border-2">
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Aucune confiture trouvée</CardTitle>
-          <CardDescription>
-            Aucune confiture utilisant {fruitName} n'a été trouvée dans notre base de données.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          <Candy className="h-16 w-16 text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <p className="text-muted-foreground">Aucune confiture liée à ce fruit pour le moment.</p>;
   }
 
   return (
@@ -79,7 +81,9 @@ const FruitJamsTabContent: React.FC<FruitJamsTabContentProps> = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Candy className="h-12 w-12 text-muted-foreground" />
+                <div className="h-12 w-12 text-muted-foreground flex items-center justify-center">
+                  🍯
+                </div>
               )}
             </div>
             <CardHeader className="pb-2">
@@ -97,7 +101,7 @@ const FruitJamsTabContent: React.FC<FruitJamsTabContentProps> = ({
               <p className="text-sm line-clamp-2">{jam.description}</p>
               <div className="mt-2 text-sm text-muted-foreground">
                 <span className="font-medium">{jam.price_credits} crédits</span>
-                {jam.available_quantity > 0 ? (
+                {jam.available_quantity ? (
                   <span className="ml-2 text-green-600">• Disponible ({jam.available_quantity})</span>
                 ) : (
                   <span className="ml-2 text-red-500">• Rupture de stock</span>
@@ -105,13 +109,11 @@ const FruitJamsTabContent: React.FC<FruitJamsTabContentProps> = ({
               </div>
             </CardContent>
             <CardFooter>
-              <Link 
-                to={`/jam/${jam.id}`} 
-                className="text-sm flex items-center hover:underline text-primary"
-              >
-                Voir la confiture
-                <ExternalLink className="ml-1 h-3 w-3" />
-              </Link>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={`/jam/${jam.id}`}>
+                  Voir la confiture
+                </Link>
+              </Button>
             </CardFooter>
           </Card>
         ))}

@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, MessageSquare } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
-import AdminActionButtons from '@/components/AdminActionButtons';
+import AdviceAdminActions from '@/components/advice/AdviceAdminActions';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 
@@ -167,15 +167,10 @@ const ConseilDetail: React.FC = () => {
     <div className="container mx-auto py-8">
       {isModerator && (
         <div className="mb-6">
-          <AdminActionButtons 
-            itemId={article.id}
-            itemType="advice"
-            status={article.visible ? 'approved' : 'rejected'}
-            onStatusChange={refetch}
-            canEdit={true}
-            canDelete={isAdmin}
-            editRoute={`/conseils/edit/${article.id}`}
-            redirectAfterDelete="/conseils"
+          <AdviceAdminActions 
+            adviceId={article.id}
+            isVisible={article.visible}
+            onVisibilityChange={refetch}
           />
         </div>
       )}

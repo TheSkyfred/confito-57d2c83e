@@ -62,7 +62,7 @@ import JamReviewForm from '@/components/jam-review/JamReviewForm';
 import JamReviewsList from '@/components/jam-review/JamReviewsList';
 import AllergensBadges from '@/components/AllergensBadges';
 import { useUserRole } from '@/hooks/useUserRole';
-import AdminActionButtons from '@/components/AdminActionButtons';
+import JamAdminActions from '@/components/JamAdminActions';
 
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -309,11 +309,12 @@ const JamDetails = () => {
       
       {isModerator && (
         <div className="mb-6">
-          <AdminActionButtons 
-            itemId={jam.id} 
-            itemType="jam" 
-            status={jam.status} 
+          <JamAdminActions 
+            jamId={jam.id} 
+            status={jam.status}
+            isActive={jam.is_active} 
             onStatusChange={refetch}
+            onActiveChange={refetch}
           />
         </div>
       )}

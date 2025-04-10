@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { parseRecipeInstructions, adaptDbRecipeToRecipeType, getProfileInitials } from '@/utils/supabaseHelpers';
 import AdminActionButtons from '@/components/AdminActionButtons';
+import RecipeAdminActions from '@/components/recipe/RecipeAdminActions';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +41,7 @@ const difficultyConfig = {
 };
 
 const RecipeDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const { session } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -275,28 +276,11 @@ const RecipeDetail = () => {
   );
   
   if (isLoading) {
-    return (
-      <div className="container mx-auto py-8 text-center">
-        <p>Chargement de la recette...</p>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
   
-  if (error) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="bg-red-50 text-red-800 p-4 rounded-md">
-          <p>Erreur lors du chargement de la recette</p>
-          <p className="text-sm">{(error as Error).message}</p>
-          <Button variant="outline" className="mt-4" asChild>
-            <Link to="/recipes">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour aux recettes
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
+  if (error || !recipe) {
+    return <div>Error loading recipe</div>;
   }
   
   if (!recipe) {
@@ -388,17 +372,13 @@ const RecipeDetail = () => {
   
   return (
     <div className="container mx-auto py-8">
-      {isModerator && recipe && (
+      {isModerator && (
         <div className="mb-6">
-          <AdminActionButtons 
-            itemId={recipe.id}
-            itemType="recipe"
+          <RecipeAdminActions 
+            recipeId={recipe.id}
             status={recipe.status}
+            isActive={true}
             onStatusChange={refetch}
-            canEdit={true}
-            canDelete={isAdmin}
-            editRoute={`/recipes/edit/${recipe.id}`}
-            redirectAfterDelete="/recipes"
           />
         </div>
       )}

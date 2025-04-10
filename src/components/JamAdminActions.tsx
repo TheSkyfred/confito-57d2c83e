@@ -7,14 +7,18 @@ import { useUserRole } from '@/hooks/useUserRole';
 interface JamAdminActionsProps {
   jamId: string;
   status?: string;
+  isActive?: boolean;
   onStatusChange?: () => void;
+  onActiveChange?: () => void;
   creatorId?: string;
 }
 
 const JamAdminActions: React.FC<JamAdminActionsProps> = ({ 
   jamId,
   status = 'pending',
+  isActive = true,
   onStatusChange,
+  onActiveChange,
   creatorId
 }) => {
   const { isAdmin, isModerator } = useUserRole();
@@ -27,7 +31,9 @@ const JamAdminActions: React.FC<JamAdminActionsProps> = ({
       itemId={jamId}
       itemType="jam"
       status={status}
+      isActive={isActive}
       onStatusChange={onStatusChange}
+      onActiveChange={onActiveChange}
       canEdit={canEdit}
       canDelete={isAdmin}
       editRoute={`/jam/edit/${jamId}`}
