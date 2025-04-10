@@ -75,7 +75,8 @@ export const useJamForm = ({ initialJamId, jamCreatorId, isProJam = false }: Use
     }
   };
 
-  const handleSubmit = async (publish: boolean = false) => {
+  // Return type now allows void and boolean to match the interface requirements
+  const handleSubmit = async (publish: boolean = false): Promise<boolean | void> => {
     try {
       setSaving(true);
       

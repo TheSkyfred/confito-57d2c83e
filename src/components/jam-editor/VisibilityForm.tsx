@@ -19,7 +19,8 @@ import {
 
 interface VisibilityFormProps {
   saving: boolean;
-  handleSubmit: (publish?: boolean) => Promise<void>;
+  // Updated to match the JamEditorAccordion interface
+  handleSubmit: (publish?: boolean) => Promise<boolean | void>;
   isEditMode: boolean;
 }
 

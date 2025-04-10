@@ -7,6 +7,13 @@ import { JamFormData } from "@/hooks/useJamForm";
 import { JamType } from "@/types/supabase";
 import { RecipeStep } from "@/components/jam-editor/RecipeForm";
 
+// Define the Ingredient interface to ensure type consistency
+interface Ingredient {
+  name: string;
+  quantity: string;
+  is_allergen?: boolean;
+}
+
 interface UseJamLoaderProps {
   jamId?: string;
   userId?: string | null;
@@ -111,14 +118,21 @@ export const useJamLoader = ({
 
         const jamWithTypes = jam as unknown as JamType;
 
-        const ingredients = jamWithTypes.ingredients 
-          ? typeof jamWithTypes.ingredients[0] === 'string' 
-            ? jamWithTypes.ingredients.map((ing: string) => {
-                const [name, quantity] = ing.split('|');
-                return { name: name || ing, quantity: quantity || '' };
-              })
-            : jamWithTypes.ingredients 
-          : [{ name: "", quantity: "" }];
+        // Parse the ingredients data to ensure it's in the correct format
+        let parsedIngredients: Ingredient[] = [{ name: "", quantity: "" }];
+        
+        if (jamWithTypes.ingredients) {
+          if (typeof jamWithTypes.ingredients[0] === 'string') {
+            // If they're strings, parse them into objects
+            parsedIngredients = jamWithTypes.ingredients.map((ing: string) => {
+              const [name, quantity] = ing.split('|');
+              return { name: name || ing, quantity: quantity || '' };
+            });
+          } else {
+            // If they're already objects, use them as-is
+            parsedIngredients = jamWithTypes.ingredients as Ingredient[];
+          }
+        }
 
         let recipeSteps: RecipeStep[] = [];
         
@@ -149,7 +163,7 @@ export const useJamLoader = ({
           description: jamWithTypes.description || "",
           type: jamWithTypes.type || "",
           badges: jamWithTypes.badges || [],
-          ingredients: ingredients,
+          ingredients: parsedIngredients, // Use the parsed ingredients array
           allergens: jamWithTypes.allergens || [],
           production_date: jamWithTypes.production_date || new Date().toISOString().split("T")[0],
           weight_grams: jamWithTypes.weight_grams || 250,

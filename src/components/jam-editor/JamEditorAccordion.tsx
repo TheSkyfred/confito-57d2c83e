@@ -17,7 +17,7 @@ interface JamEditorAccordionProps {
   mainImagePreview: string | null;
   handleImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   saving: boolean;
-  handleSubmit: (publish?: boolean) => Promise<boolean>;
+  handleSubmit: (publish?: boolean) => Promise<boolean | void>; // Updated the return type to accept both boolean and void
   isEditMode: boolean;
   expandedSections: string[];
   setExpandedSections: (sections: string[]) => void;

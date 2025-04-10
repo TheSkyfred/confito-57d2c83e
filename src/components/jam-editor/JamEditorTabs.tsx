@@ -16,7 +16,8 @@ interface JamEditorTabsProps {
   mainImagePreview: string | null;
   handleImageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   saving: boolean;
-  handleSubmit: (publish?: boolean) => Promise<boolean>;
+  // Updated return type to match JamEditorAccordion
+  handleSubmit: (publish?: boolean) => Promise<boolean | void>; 
   isEditMode: boolean;
   expandedSections: string[];
   setExpandedSections: (sections: string[]) => void;
