@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -46,8 +45,9 @@ import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import AdminConseils from './pages/AdminConseils';
 import Conseils from './pages/Conseils';
-import ConseilDetail from './pages/ConseilDetail'; // Import the ConseilDetail page
-import ConseilEdit from './pages/ConseilEdit'; // Import page for conseil edit
+import ConseilDetail from './pages/ConseilDetail'; 
+import ConseilEdit from './pages/ConseilEdit';
+import ConseilCreate from './pages/ConseilCreate'; // Add this missing import
 
 const queryClient = new QueryClient();
 
