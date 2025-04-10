@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -264,15 +263,12 @@ const JamEditor: React.FC = () => {
           
         if (updateError) throw updateError;
       } else {
-        // Create a complete jam object that includes all required fields
-        const newJamData = {
-          ...jamData,
-          creator_id: user.id
-        };
-        
         const { data: newJam, error: insertError } = await supabase
           .from("jams")
-          .insert(newJamData)
+          .insert({
+            ...jamData,
+            creator_id: user.id
+          })
           .select();
           
         if (insertError) throw insertError;
