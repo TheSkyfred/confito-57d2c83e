@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -43,7 +44,8 @@ import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import AdminConseils from './pages/AdminConseils';
-import Conseils from './pages/Conseils';  // Ajout de l'import pour la page Conseils
+import Conseils from './pages/Conseils';
+import ConseilDetail from './pages/ConseilDetail'; // Import the ConseilDetail page
 
 const queryClient = new QueryClient();
 
@@ -94,7 +96,8 @@ function App() {
                   <Route path="/recipes/create" element={<RecipeCreate />} />
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
-                  <Route path="/conseils" element={<Conseils />} />  {/* Ajout de la route pour Conseils */}
+                  <Route path="/conseils" element={<Conseils />} />
+                  <Route path="/conseils/:id" element={<ConseilDetail />} /> {/* Add route for ConseilDetail */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
