@@ -7,7 +7,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
-import { AdviceArticle, ProfileType } from '@/types/supabase';
+import { AdviceArticle } from '@/types/advice';
+import { ProfileType } from '@/types/supabase';
 
 import {
   Table,
