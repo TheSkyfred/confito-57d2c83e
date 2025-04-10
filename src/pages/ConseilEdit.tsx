@@ -47,7 +47,8 @@ import {
   Plus,
   Trash2,
   ImagePlus,
-  ExternalLink
+  ExternalLink,
+  Upload
 } from 'lucide-react';
 
 interface FormData {
@@ -79,6 +80,8 @@ const ConseilEdit: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [products, setProducts] = useState<AdviceProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
+  const [uploadingProductImage, setUploadingProductImage] = useState(false);
 
   const form = useForm<FormData>({
     defaultValues: {
@@ -171,6 +174,90 @@ const ConseilEdit: React.FC = () => {
     { label: 'Stérilisation', value: 'sterilisation' },
     { label: 'Matériel', value: 'materiel' }
   ];
+  
+  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `cover_images/${fileName}`;
+    
+    setUploadingCoverImage(true);
+    
+    try {
+      // Upload the image
+      const { error: uploadError } = await supabase.storage
+        .from('advice_images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('advice_images')
+        .getPublicUrl(filePath);
+      
+      // Update the form
+      form.setValue('cover_image_url', publicUrl);
+      
+      toast({
+        title: "Image téléchargée",
+        description: "L'image de couverture a été téléchargée avec succès"
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement de l\'image:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingCoverImage(false);
+    }
+  };
+
+  const handleProductImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `product_images/${fileName}`;
+    
+    setUploadingProductImage(true);
+    
+    try {
+      // Upload the image
+      const { error: uploadError } = await supabase.storage
+        .from('advice_images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('advice_images')
+        .getPublicUrl(filePath);
+      
+      // Update the product form
+      setProductForm(prev => ({ ...prev, image_url: publicUrl }));
+      
+      toast({
+        title: "Image téléchargée",
+        description: "L'image du produit a été téléchargée avec succès"
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement de l\'image du produit:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'image du produit",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingProductImage(false);
+    }
+  };
 
   const handleProductInputChange = (field: keyof ProductFormData, value: string | boolean) => {
     setProductForm(prev => ({ ...prev, [field]: value }));
@@ -402,7 +489,7 @@ const ConseilEdit: React.FC = () => {
                     name="cover_image_url"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Image de couverture (URL)</FormLabel>
+                        <FormLabel>Image de couverture</FormLabel>
                         <div className="space-y-4">
                           {field.value && (
                             <div className="relative w-full max-w-md h-48 overflow-hidden rounded-md border">
@@ -413,12 +500,39 @@ const ConseilEdit: React.FC = () => {
                               />
                             </div>
                           )}
-                          <FormControl>
-                            <Input placeholder="https://example.com/image.jpg" {...field} />
-                          </FormControl>
+                          <div className="flex flex-col sm:flex-row gap-4 items-start">
+                            <FormControl>
+                              <Input placeholder="URL de l'image" {...field} className="flex-grow" />
+                            </FormControl>
+                            <div className="relative">
+                              <Input
+                                type="file"
+                                id="cover-image-upload"
+                                onChange={handleCoverImageUpload}
+                                className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                                accept="image/*"
+                                disabled={uploadingCoverImage}
+                              />
+                              <Button 
+                                type="button" 
+                                variant="outline"
+                                disabled={uploadingCoverImage}
+                                className="w-full"
+                              >
+                                {uploadingCoverImage ? (
+                                  "Téléchargement..."
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Télécharger
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                         <FormDescription>
-                          URL d'une image représentative pour votre conseil
+                          URL ou téléchargez une image représentative pour votre conseil
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -534,12 +648,40 @@ const ConseilEdit: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">URL de l'image</label>
-                      <Input 
-                        placeholder="https://example.com/image.jpg" 
-                        value={productForm.image_url} 
-                        onChange={(e) => handleProductInputChange('image_url', e.target.value)}
-                      />
+                      <label className="block text-sm font-medium mb-1">Image du produit</label>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="URL de l'image" 
+                          value={productForm.image_url} 
+                          onChange={(e) => handleProductInputChange('image_url', e.target.value)}
+                          className="flex-grow"
+                        />
+                        <div className="relative">
+                          <Input
+                            type="file"
+                            id="product-image-upload"
+                            onChange={handleProductImageUpload}
+                            className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                            accept="image/*"
+                            disabled={uploadingProductImage}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            disabled={uploadingProductImage}
+                            className="whitespace-nowrap"
+                          >
+                            {uploadingProductImage ? (
+                              "..."
+                            ) : (
+                              <>
+                                <ImagePlus className="h-4 w-4 mr-1" />
+                                Upload
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Lien externe</label>

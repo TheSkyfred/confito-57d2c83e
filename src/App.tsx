@@ -100,8 +100,9 @@ function App() {
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
                   <Route path="/conseils" element={<Conseils />} />
-                  <Route path="/conseils/:id" element={<ConseilDetail />} />
+                  <Route path="/conseils/create" element={<ConseilCreate />} />
                   <Route path="/conseils/edit/:id" element={<ConseilEdit />} />
+                  <Route path="/conseils/:id" element={<ConseilDetail />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

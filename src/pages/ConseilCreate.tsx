@@ -1,9 +1,11 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { AdviceType } from '@/types/advice';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -33,7 +35,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload } from 'lucide-react';
 
 interface FormData {
   title: string;
@@ -49,6 +51,8 @@ const ConseilCreate = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, isModerator } = useUserRole();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
   
   // Rediriger si l'utilisateur n'est pas admin ou modérateur
   React.useEffect(() => {
@@ -81,8 +85,52 @@ const ConseilCreate = () => {
     }
   });
   
+  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const filePath = `cover_images/${fileName}`;
+    
+    setUploadingCoverImage(true);
+    
+    try {
+      // Upload the image
+      const { error: uploadError } = await supabase.storage
+        .from('advice_images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('advice_images')
+        .getPublicUrl(filePath);
+      
+      // Update the form
+      form.setValue('cover_image_url', publicUrl);
+      
+      toast({
+        title: "Image téléchargée",
+        description: "L'image de couverture a été téléchargée avec succès"
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement de l\'image:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingCoverImage(false);
+    }
+  };
+  
   const onSubmit = async (data: FormData) => {
     if (!user) return;
+    
+    setIsSubmitting(true);
     
     try {
       // Traiter les tags
@@ -117,6 +165,8 @@ const ConseilCreate = () => {
         description: "Impossible de créer le conseil",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -136,6 +186,7 @@ const ConseilCreate = () => {
           <ArrowLeft className="h-4 w-4 mr-1" />
           Retour aux conseils
         </Button>
+        <h1 className="text-2xl font-bold ml-2">Créer un nouveau conseil</h1>
       </div>
       
       <Card className="max-w-3xl mx-auto">
@@ -203,12 +254,50 @@ const ConseilCreate = () => {
                 name="cover_image_url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Image de couverture (URL)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com/image.jpg" {...field} />
-                    </FormControl>
+                    <FormLabel>Image de couverture</FormLabel>
+                    <div className="space-y-4">
+                      {field.value && (
+                        <div className="relative w-full max-w-md h-48 overflow-hidden rounded-md border">
+                          <img 
+                            src={field.value} 
+                            alt="Aperçu de l'image de couverture" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex flex-col sm:flex-row gap-4 items-start">
+                        <FormControl>
+                          <Input placeholder="URL de l'image" {...field} className="flex-grow" />
+                        </FormControl>
+                        <div className="relative">
+                          <Input
+                            type="file"
+                            id="cover-image-upload"
+                            onChange={handleCoverImageUpload}
+                            className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                            accept="image/*"
+                            disabled={uploadingCoverImage}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            disabled={uploadingCoverImage}
+                            className="w-full"
+                          >
+                            {uploadingCoverImage ? (
+                              "Téléchargement..."
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Télécharger
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                     <FormDescription>
-                      URL d'une image représentative pour votre conseil
+                      URL ou téléchargez une image représentative pour votre conseil
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -302,8 +391,8 @@ const ConseilCreate = () => {
                 >
                   Annuler
                 </Button>
-                <Button type="submit">
-                  Publier le conseil
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Publication en cours..." : "Publier le conseil"}
                 </Button>
               </div>
             </form>
