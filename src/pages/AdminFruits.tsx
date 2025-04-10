@@ -60,12 +60,23 @@ const AdminFruits = () => {
     }
   }, [isAdmin, isModerator, navigate, roleLoading, toast]);
 
+  // Rediriger vers la page des fruits saisonniers pour éditer
   const handleEdit = (fruit: any) => {
-    navigate(`/admin/fruits/edit/${fruit.id}`);
+    // Rediriger vers la nouvelle route des fruits saisonniers
+    toast({
+      title: "Information",
+      description: "Redirection vers la nouvelle interface de gestion des fruits saisonniers.",
+    });
+    navigate(`/admin/seasonal-fruits`);
   };
 
   const handleView = (fruit: any) => {
-    navigate(`/admin/fruits/${fruit.id}`);
+    // Rediriger vers la nouvelle route des fruits saisonniers
+    toast({
+      title: "Information",
+      description: "Redirection vers la nouvelle interface de gestion des fruits saisonniers.",
+    });
+    navigate(`/admin/seasonal-fruits`);
   };
 
   const handleDelete = async (id: string) => {
@@ -100,7 +111,17 @@ const AdminFruits = () => {
   };
 
   const handleAddNew = () => {
-    setIsFormOpen(true);
+    // Rediriger vers la nouvelle route pour créer un fruit saisonnier
+    toast({
+      title: "Information",
+      description: "Redirection vers la nouvelle interface de création de fruits saisonniers.",
+    });
+    navigate('/admin/seasonal-fruits/create');
+  };
+  
+  // Afficher une bannière d'information sur la nouvelle interface
+  const handleGoToNewInterface = () => {
+    navigate('/admin/seasonal-fruits');
   };
   
   // Fix: Prevent rendering until role check is complete
@@ -125,6 +146,23 @@ const AdminFruits = () => {
           Administration du calendrier des fruits pour les confitures
         </CardDescription>
       </CardHeader>
+
+      {/* Bannière d'information */}
+      <Card className="mb-6 border-orange-300 bg-orange-50 dark:bg-orange-950">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h3 className="font-medium text-orange-800 dark:text-orange-200">Interface mise à jour disponible</h3>
+              <p className="text-orange-700 dark:text-orange-300 text-sm">
+                Une nouvelle interface de gestion des fruits saisonniers est disponible avec des fonctionnalités améliorées.
+              </p>
+            </div>
+            <Button onClick={handleGoToNewInterface} className="bg-orange-500 hover:bg-orange-600">
+              Accéder à la nouvelle interface
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex justify-between items-center my-6">
         <h2 className="text-xl font-medium">Liste des fruits</h2>
