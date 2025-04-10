@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 
 interface ConseilWithAuthor extends AdviceArticle {
-  profiles?: ProfileType;
+  profiles?: ProfileType | null;
 }
 
 const AdminConseils = () => {
@@ -46,7 +46,7 @@ const AdminConseils = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { data: conseils, isLoading, error, refetch } = useQuery<ConseilWithAuthor[]>({
+  const { data: conseils, isLoading, error, refetch } = useQuery({
     queryKey: ['adminConseils', statusFilter],
     queryFn: async () => {
       let query = supabase.from('advice_articles').select(`
@@ -61,7 +61,7 @@ const AdminConseils = () => {
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as ConseilWithAuthor[] || [];
+      return (data || []) as ConseilWithAuthor[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
