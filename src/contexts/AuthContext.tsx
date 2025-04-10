@@ -12,6 +12,7 @@ interface AuthContextProps {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, metadata?: AccountMetadata) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (profileData: Partial<ProfileType>) => Promise<void>;
 }
 
 interface AccountMetadata {
@@ -173,6 +174,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (error) throw error;
   };
 
+  const updateProfile = async (profileData: Partial<ProfileType>) => {
+    try {
+      if (!user) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      setProfile(prev => {
+        if (!prev) return profileData as ProfileType;
+        return { ...prev, ...profileData };
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -183,6 +205,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         signIn,
         signUp,
         signOut,
+        updateProfile,
       }}
     >
       {children}
