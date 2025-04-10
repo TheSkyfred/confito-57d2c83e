@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -74,6 +75,8 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(fruit?.image_url || null);
   
+  console.log("Current fruit data:", fruit);
+  
   const form = useForm<FruitFormValues>({
     resolver: zodResolver(fruitFormSchema),
     defaultValues: {
@@ -121,19 +124,6 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
   const uploadImage = async (file: File): Promise<string> => {
     setUploading(true);
     try {
-      // Vérifier si le bucket existe
-      const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-      
-      if (bucketError) {
-        throw new Error(`Erreur de vérification des buckets: ${bucketError.message}`);
-      }
-      
-      const imagesBucketExists = buckets.some(b => b.name === 'images');
-      
-      if (!imagesBucketExists) {
-        throw new Error("Le bucket 'images' n'existe pas. Veuillez contacter l'administrateur.");
-      }
-
       // Créer un nom de fichier unique
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
@@ -151,6 +141,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         .from('images')
         .getPublicUrl(filePath);
 
+      console.log("Image uploaded successfully, URL:", urlData.publicUrl);
       return urlData.publicUrl;
     } catch (error: any) {
       console.error('Error uploading image:', error);
@@ -166,6 +157,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
   };
 
   const onFormSubmit = async (values: FruitFormValues) => {
+    console.log("Form submitted with values:", values);
     setIsLoading(true);
     try {
       // Si une nouvelle image a été sélectionnée, l'uploader
@@ -183,33 +175,41 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         }
       }
 
+      const fruitData = {
+        name: values.name,
+        description: values.description,
+        image_url: imageUrl,
+        conservation_tips: values.conservation_tips || null,
+        cooking_tips: values.cooking_tips || null,
+        family: values.family || null,
+        jan: values.jan,
+        feb: values.feb,
+        mar: values.mar,
+        apr: values.apr,
+        may: values.may,
+        jun: values.jun,
+        jul: values.jul,
+        aug: values.aug,
+        sep: values.sep,
+        oct: values.oct,
+        nov: values.nov,
+        dec: values.dec,
+      };
+      
+      console.log("Data to be saved:", fruitData);
+
       if (fruit?.id) {
         // Mise à jour d'un fruit existant
+        console.log("Updating existing fruit with ID:", fruit.id);
         const { error } = await supabase
           .from('seasonal_fruits')
-          .update({
-            name: values.name,
-            description: values.description,
-            image_url: imageUrl,
-            conservation_tips: values.conservation_tips || null,
-            cooking_tips: values.cooking_tips || null,
-            family: values.family || null,
-            jan: values.jan,
-            feb: values.feb,
-            mar: values.mar,
-            apr: values.apr,
-            may: values.may,
-            jun: values.jun,
-            jul: values.jul,
-            aug: values.aug,
-            sep: values.sep,
-            oct: values.oct,
-            nov: values.nov,
-            dec: values.dec,
-          })
+          .update(fruitData)
           .eq('id', fruit.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Update error:", error);
+          throw error;
+        }
         
         toast({
           title: "Fruit mis à jour",
@@ -217,30 +217,15 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         });
       } else {
         // Création d'un nouveau fruit
+        console.log("Creating new fruit");
         const { error } = await supabase
           .from('seasonal_fruits')
-          .insert({
-            name: values.name,
-            description: values.description,
-            image_url: imageUrl,
-            conservation_tips: values.conservation_tips || null,
-            cooking_tips: values.cooking_tips || null,
-            family: values.family || null,
-            jan: values.jan,
-            feb: values.feb,
-            mar: values.mar,
-            apr: values.apr,
-            may: values.may,
-            jun: values.jun,
-            jul: values.jul,
-            aug: values.aug,
-            sep: values.sep,
-            oct: values.oct,
-            nov: values.nov,
-            dec: values.dec,
-          });
+          .insert(fruitData);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Insert error:", error);
+          throw error;
+        }
         
         toast({
           title: "Fruit créé",

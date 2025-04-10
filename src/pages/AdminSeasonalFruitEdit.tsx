@@ -27,7 +27,8 @@ const AdminSeasonalFruitEdit = () => {
   const { 
     data: fruit, 
     isLoading, 
-    error
+    error,
+    refetch
   } = useQuery({
     queryKey: ['seasonalFruitEdit', id],
     queryFn: async () => {
@@ -55,6 +56,16 @@ const AdminSeasonalFruitEdit = () => {
   }, [isAdmin, isModerator, navigate, roleLoading, toast]);
 
   const handleFormSubmit = () => {
+    toast({
+      title: id ? "Fruit mis à jour" : "Fruit créé",
+      description: id ? "Le fruit a été mis à jour avec succès." : "Le nouveau fruit a été créé avec succès.",
+    });
+    
+    // Rafraîchir les données après la soumission si on est en mode édition
+    if (id) {
+      refetch();
+    }
+    
     navigate(`/admin/seasonal-fruits`);
   };
 
