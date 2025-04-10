@@ -50,10 +50,7 @@ const AdminConseils = () => {
   const { data: conseils, isLoading, error, refetch } = useQuery({
     queryKey: ['adminConseils', statusFilter],
     queryFn: async () => {
-      let query = supabase.from('advice_articles').select(`
-        *,
-        profiles:author_id(username, avatar_url)
-      `);
+      let query = supabase.from('advice_articles').select('*');
       
       if (statusFilter !== 'all') {
         query = query.eq('visible', statusFilter === 'visible');
@@ -62,6 +59,27 @@ const AdminConseils = () => {
       const { data, error } = await query;
       
       if (error) throw error;
+      
+      // Fetch author profiles separately
+      if (data && data.length > 0) {
+        const authorIds = data.map(item => item.author_id);
+        const uniqueAuthorIds = [...new Set(authorIds)];
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', uniqueAuthorIds);
+          
+        const profileMap = (profiles || []).reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, ProfileType>);
+        
+        // Merge profiles into conseils data
+        data.forEach(conseil => {
+          conseil.profiles = profileMap[conseil.author_id] || null;
+        });
+      }
       
       // Handle the data as necessary - first convert to unknown then to our expected type
       return (data || []) as unknown as ConseilWithAuthor[];

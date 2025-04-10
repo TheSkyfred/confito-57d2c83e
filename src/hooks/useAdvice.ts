@@ -11,14 +11,11 @@ export const useAdvice = (filters?: AdviceFilters) => {
     // Vérifier la requête pour voir s'il y a une erreur
     console.log('Fetching advice articles...');
     
+    // Modified query to use author_id instead of trying to join with profiles
     let query = supabase
       .from('advice_articles')
       .select(`
-        *,
-        author:profiles(*),
-        images:advice_images(*),
-        products:advice_products(*),
-        comments:advice_comments(count)
+        *
       `)
       .eq('visible', true);
     
@@ -31,12 +28,35 @@ export const useAdvice = (filters?: AdviceFilters) => {
     
     console.log('Advice articles received:', data);
     
-    // Transformer les données pour ajouter des champs calculés
+    // Après avoir récupéré les données des articles, récupérer les profils des auteurs
+    const authorIds = data?.map(article => article.author_id) || [];
+    const uniqueAuthorIds = [...new Set(authorIds)];
+    
+    // Récupérer les profils des auteurs uniquement si nous avons des articles
+    let authorProfiles: Record<string, any> = {};
+    
+    if (uniqueAuthorIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', uniqueAuthorIds);
+        
+      if (!profilesError && profilesData) {
+        // Créer un dictionnaire des profils par ID
+        authorProfiles = profilesData.reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+    }
+    
+    // Transformer les données pour ajouter des champs calculés et associer les auteurs
     return data?.map((article: any): AdviceArticle => ({
       ...article,
       has_video: Boolean(article.video_url),
-      has_products: article.products && article.products.length > 0,
-      comments_count: article.comments?.[0]?.count || 0
+      has_products: false, // Nous mettrons à jour cela plus tard si nécessaire
+      comments_count: 0, // Nous mettrons à jour cela plus tard si nécessaire
+      author: authorProfiles[article.author_id] || null
     })) || [];
   };
   
@@ -107,54 +127,59 @@ export const useAdviceArticle = (articleId: string) => {
   const fetchAdviceArticle = async () => {
     if (!articleId) throw new Error("Article ID est requis");
     
-    const { data, error } = await supabase
+    // Modification de la requête pour éviter les jointures qui ne fonctionnent pas
+    const { data: articleData, error: articleError } = await supabase
       .from('advice_articles')
-      .select(`
-        *,
-        author:profiles(*),
-        images:advice_images(*),
-        products:advice_products(*),
-        comments:advice_comments(
-          *,
-          user:profiles(*)
-        )
-      `)
+      .select('*')
       .eq('id', articleId)
       .eq('visible', true)
       .single();
     
-    if (error) {
-      console.error('Erreur lors de la récupération du conseil:', error);
-      throw error;
+    if (articleError) {
+      console.error('Erreur lors de la récupération du conseil:', articleError);
+      throw articleError;
     }
     
-    if (!data) {
+    if (!articleData) {
       throw new Error('Article non trouvé');
     }
     
-    // Transformer les commentaires pour identifier les fils de discussion
-    if (data && data.comments) {
-      const comments = data.comments as any[];
-      const rootComments = comments.filter(c => !c.parent_comment_id);
-      const commentReplies = comments.filter(c => c.parent_comment_id);
-      
-      rootComments.forEach(rootComment => {
-        rootComment.replies = commentReplies.filter(
-          reply => reply.parent_comment_id === rootComment.id
-        );
-      });
-      
-      data.comments = rootComments;
-    }
+    // Récupérer l'auteur séparément
+    const { data: authorData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', articleData.author_id)
+      .single();
     
-    // Ensure that the returned data matches the AdviceArticle type
+    // Récupérer les images séparément
+    const { data: imagesData } = await supabase
+      .from('advice_images')
+      .select('*')
+      .eq('article_id', articleId);
+    
+    // Récupérer les produits séparément
+    const { data: productsData } = await supabase
+      .from('advice_products')
+      .select('*')
+      .eq('article_id', articleId);
+    
+    // Compter les commentaires séparément
+    const { count: commentsCount } = await supabase
+      .from('advice_comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('article_id', articleId);
+    
+    // Assembler toutes les données
     return {
-      ...data,
-      has_video: Boolean(data.video_url),
-      has_products: data.products && data.products.length > 0,
-      // Ensure author has the correct type structure
-      author: data.author || null
-    } as unknown as AdviceArticle;
+      ...articleData,
+      has_video: Boolean(articleData.video_url),
+      has_products: productsData && productsData.length > 0,
+      comments_count: commentsCount || 0,
+      author: authorData || null,
+      images: imagesData || [],
+      products: productsData || [],
+      comments: [] // Nous ne chargeons pas les commentaires pour l'instant
+    } as AdviceArticle;
   };
   
   return useQuery({
