@@ -54,6 +54,8 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
   const [recipe, setRecipe] = useState<any>(null);
   const [recipeSteps, setRecipeSteps] = useState<RecipeStep[]>([]);
   const [uploadingImage, setUploadingImage] = useState<{[key: number]: boolean}>({});
+  const [mainImageUrl, setMainImageUrl] = useState<string | null>(null);
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
   
   const form = useForm<z.infer<typeof recipeFormSchema>>({
     resolver: zodResolver(recipeFormSchema),
@@ -89,6 +91,11 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
       }
       
       setRecipe(data);
+      
+      // Charger l'image principale si elle existe
+      if (data.image_url) {
+        setMainImageUrl(data.image_url);
+      }
       
       // Extraire les étapes de recette
       if (data.instructions) {
@@ -165,6 +172,50 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
     });
     
     setRecipeSteps(newSteps);
+  };
+
+  // Gérer l'upload d'image principale
+  const handleMainImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || !event.target.files[0]) return;
+    
+    const file = event.target.files[0];
+    setUploadingMainImage(true);
+    
+    try {
+      // Créer un nom de fichier unique
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_main.${fileExt}`;
+      const filePath = `recipe-images/${fileName}`;
+      
+      // Uploader l'image
+      const { error: uploadError } = await supabase.storage
+        .from('jam-images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      // Récupérer l'URL publique
+      const { data: publicUrlData } = supabase.storage
+        .from('jam-images')
+        .getPublicUrl(filePath);
+        
+      // Mettre à jour l'URL de l'image principale
+      setMainImageUrl(publicUrlData.publicUrl);
+      
+      toast({
+        title: "Image téléchargée",
+        description: "L'image principale a été ajoutée à la recette",
+      });
+    } catch (error: any) {
+      console.error("Erreur de téléchargement:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du téléchargement de l'image",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingMainImage(false);
+    }
   };
 
   // Gérer l'upload d'image pour une étape
@@ -253,6 +304,7 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
         instructions: formattedSteps,
         author_id: user.id,
         status: isEditing ? recipe.status : status,
+        image_url: mainImageUrl,
       };
       
       let result;
@@ -315,6 +367,51 @@ const RecipeForm: React.FC<RecipeFormProps> = ({ recipeId }) => {
             </FormItem>
           )}
         />
+        
+        {/* Image principale */}
+        <div className="space-y-2">
+          <FormLabel>Image principale (optionnelle)</FormLabel>
+          <div className="flex flex-col space-y-2">
+            <Input
+              id="main-image"
+              type="file"
+              accept="image/*"
+              onChange={handleMainImageUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full md:w-auto"
+              disabled={uploadingMainImage}
+              onClick={() => document.getElementById('main-image')?.click()}
+            >
+              {uploadingMainImage ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Téléchargement...
+                </>
+              ) : (
+                <>
+                  <Image className="w-4 h-4 mr-2" />
+                  {mainImageUrl ? "Changer l'image principale" : "Ajouter une image principale"}
+                </>
+              )}
+            </Button>
+            
+            {mainImageUrl && (
+              <div className="mt-2">
+                <div className="relative rounded-md overflow-hidden aspect-video w-full max-w-md mx-auto">
+                  <img
+                    src={mainImageUrl}
+                    alt="Image principale de la recette"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
