@@ -49,14 +49,14 @@ const AdminConseils = () => {
       
       const { data, error } = await supabaseDirect.select(
         'advice_articles',
-        '*, author:profiles!advice_articles_author_id_fkey (username, avatar_url)',
+        '*, profiles(username, avatar_url)',
         filter
       );
       
       if (error) throw error;
       return data || [];
     },
-    enabled: session && (isAdmin || isModerator)
+    enabled: Boolean(session && (isAdmin || isModerator))
   });
   
   if (!isAdmin && !isModerator) {
@@ -124,7 +124,7 @@ const AdminConseils = () => {
               {conseils.map((conseil) => (
                 <TableRow key={conseil.id}>
                   <TableCell className="font-medium">{conseil.title}</TableCell>
-                  <TableCell>{conseil.author?.username || "Utilisateur anonyme"}</TableCell>
+                  <TableCell>{conseil.profiles?.username || "Utilisateur anonyme"}</TableCell>
                   <TableCell>
                     {new Date(conseil.created_at).toLocaleDateString()}
                   </TableCell>
