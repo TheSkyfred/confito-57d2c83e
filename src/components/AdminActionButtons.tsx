@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, Edit, Trash2, Shield, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -82,9 +83,8 @@ const AdminActionButtons: React.FC<AdminActionButtonsProps> = ({
         return { isPro: false, isSponsored: false };
       }
       
-      // We only check is_pro for now since campaign_type doesn't exist in the jams table
       return {
-        isPro: data?.is_pro || false,
+        isPro: data.is_pro || false,
         isSponsored: false // We're not using campaign_type for now
       };
     } catch (error) {
