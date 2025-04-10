@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CalendarDays, ArrowRight } from 'lucide-react';
+import { CalendarDays, ArrowRight, Leaf } from 'lucide-react';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 const getCurrentMonth = (): number => {
@@ -16,6 +16,14 @@ const monthToField = (month: number): string => {
   return fields[month - 1];
 };
 
+const getMonthName = (monthIndex: number): string => {
+  const monthNames = [
+    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+  ];
+  return monthNames[monthIndex - 1];
+};
+
 const SeasonalSection = () => {
   const currentMonth = getCurrentMonth();
   const monthField = monthToField(currentMonth);
@@ -25,7 +33,7 @@ const SeasonalSection = () => {
     queryFn: async () => {
       const { data, error } = await supabaseDirect.select(
         'seasonal_fruits',
-        `id, name, image_url, description`
+        `id, name, image_url, description, ${monthField}`
       );
       
       if (error) throw error;
@@ -49,7 +57,7 @@ const SeasonalSection = () => {
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link to="/calendar">
+            <Link to="/seasonal">
               Calendrier complet
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -75,11 +83,17 @@ const SeasonalSection = () => {
               <Card key={fruit.id} className="overflow-hidden hover:shadow-md transition-shadow">
                 <CardContent className="p-6 text-center">
                   <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-jam-honey/20">
-                    <img 
-                      src={fruit.image_url || '/placeholder.svg'} 
-                      alt={fruit.name} 
-                      className="w-full h-full object-cover"
-                    />
+                    {fruit.image_url ? (
+                      <img 
+                        src={fruit.image_url || '/placeholder.svg'} 
+                        alt={fruit.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <Leaf className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
                   <h3 className="text-xl font-medium mb-2">{fruit.name}</h3>
                   <p className="text-sm text-muted-foreground">
@@ -93,10 +107,10 @@ const SeasonalSection = () => {
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">
-                Aucun fruit de saison n'est disponible pour le moment.
+                Aucun fruit de saison n'est disponible pour {getMonthName(currentMonth)}.
               </p>
               <Button className="mt-4" asChild>
-                <Link to="/calendar">
+                <Link to="/seasonal">
                   Consulter le calendrier
                 </Link>
               </Button>
