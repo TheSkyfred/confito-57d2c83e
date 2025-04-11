@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadAvatar } from '@/utils/supabaseAdapter';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { User, AtSign, MapPin, Globe, Phone, FileText } from 'lucide-react';
+import { User, AtSign, MapPin, Globe, Phone, FileText, Home } from 'lucide-react';
 
 import {
   Card,
@@ -39,7 +40,10 @@ const profileFormSchema = z.object({
     message: "Veuillez entrer une URL valide",
   }).or(z.literal('')).optional(),
   phone: z.string().optional(),
-  address: z.string().optional(),
+  address_line1: z.string().optional(),
+  address_line2: z.string().optional(),
+  postal_code: z.string().optional(),
+  city: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -60,7 +64,10 @@ const Settings = () => {
       bio: '',
       website: '',
       phone: '',
-      address: '',
+      address_line1: '',
+      address_line2: '',
+      postal_code: '',
+      city: '',
     },
   });
 
@@ -78,7 +85,10 @@ const Settings = () => {
         bio: profile.bio || '',
         website: profile.website || '',
         phone: profile.phone || '',
-        address: profile.address || '',
+        address_line1: profile.address_line1 || '',
+        address_line2: profile.address_line2 || '',
+        postal_code: profile.postal_code || '',
+        city: profile.city || '',
       });
       setAvatarUrl(profile.avatar_url || null);
     }
@@ -93,30 +103,6 @@ const Settings = () => {
     setAvatarUrl(URL.createObjectURL(file));
   };
 
-  const uploadAvatar = async (): Promise<string | null> => {
-    if (!avatarFile || !user) return null;
-
-    try {
-      const fileExt = avatarFile.name.split('.').pop();
-      const filePath = `avatars/${user.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('user-content')
-        .upload(filePath, avatarFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage
-        .from('user-content')
-        .getPublicUrl(filePath);
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      return null;
-    }
-  };
-
   const onSubmit = async (data: ProfileFormValues) => {
     if (!user) return;
 
@@ -126,7 +112,7 @@ const Settings = () => {
 
       // Upload new avatar if changed
       if (avatarFile) {
-        const uploadedUrl = await uploadAvatar();
+        const uploadedUrl = await uploadAvatar(avatarFile, user.id);
         if (uploadedUrl) {
           newAvatarUrl = uploadedUrl;
         }
@@ -137,6 +123,8 @@ const Settings = () => {
         ...data,
         avatar_url: newAvatarUrl,
         updated_at: new Date().toISOString(),
+        // Supprimer l'ancien champ adresse car nous utilisons maintenant les champs détaillés
+        address: null,
       };
 
       await updateProfile(profileData);
@@ -297,16 +285,56 @@ const Settings = () => {
                           className="w-full"
                         />
                       </div>
-                      
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="address">
-                          <MapPin className="h-4 w-4 inline mr-1" />
-                          Adresse
+                    </div>
+                    
+                    <h4 className="text-md font-medium">Adresse</h4>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="address_line1">
+                        <Home className="h-4 w-4 inline mr-1" />
+                        Adresse
+                      </Label>
+                      <Input
+                        id="address_line1"
+                        {...form.register('address_line1')}
+                        placeholder="123 rue de la Confiture"
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="address_line2">
+                        Complément d'adresse
+                      </Label>
+                      <Input
+                        id="address_line2"
+                        {...form.register('address_line2')}
+                        placeholder="Appartement 4B, Bâtiment C, etc."
+                        className="w-full"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="postal_code">
+                          Code postal
                         </Label>
                         <Input
-                          id="address"
-                          {...form.register('address')}
-                          placeholder="Votre adresse"
+                          id="postal_code"
+                          {...form.register('postal_code')}
+                          placeholder="75001"
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="city">
+                          Ville
+                        </Label>
+                        <Input
+                          id="city"
+                          {...form.register('city')}
+                          placeholder="Paris"
                           className="w-full"
                         />
                       </div>

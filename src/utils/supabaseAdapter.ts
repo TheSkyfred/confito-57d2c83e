@@ -17,7 +17,8 @@ export const supabaseDirect = {
     }
     
     const { data, error } = await query;
-    return { data: data as unknown as T[], error };
+    // Use type assertion to handle the conversion explicitly
+    return { data: data as T[], error };
   },
 
   // Select data with a where clause
@@ -26,7 +27,8 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .eq(column, value);
-    return { data: data as unknown as T[], error };
+    // Use type assertion to handle the conversion explicitly
+    return { data: data as T[], error };
   },
 
   // Select data with a where in clause
@@ -35,7 +37,8 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .in(column, values);
-    return { data: data as unknown as T[], error };
+    // Use type assertion to handle the conversion explicitly
+    return { data: data as T[], error };
   },
 
   // Get a record by ID
@@ -45,7 +48,8 @@ export const supabaseDirect = {
       .select(select)
       .eq('id', id)
       .single();
-    return { data: data as unknown as T, error };
+    // Use type assertion to handle the conversion explicitly
+    return { data: data as T, error };
   },
 
   // Insert data and return the inserted data
@@ -54,7 +58,8 @@ export const supabaseDirect = {
       .from(tableName)
       .insert(data)
       .select();
-    return { data: returnedData as unknown as T[], error };
+    // Use type assertion to handle the conversion explicitly
+    return { data: returnedData as T[], error };
   },
 
   // Insert data without returning
@@ -101,10 +106,8 @@ export const trackProductClick = async (productId: string, articleId: string) =>
     await supabase
       .from('advice_products')
       .update({ 
-        click_count: supabase.rpc('increment', { 
-          row_id: productId,
-          table_name: 'advice_products',
-          column_name: 'click_count' 
+        click_count: supabase.rpc('increment_clicks', { 
+          row_id: productId
         }) as any
       })
       .eq('id', productId);
@@ -121,5 +124,30 @@ export const trackProductClick = async (productId: string, articleId: string) =>
   } catch (error) {
     console.error('Error tracking product click:', error);
     return false;
+  }
+};
+
+// Fonctions d'aide pour le stockage d'avatars sur Supabase
+export const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
+  try {
+    if (!file) return null;
+    
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${userId}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  } catch (error) {
+    console.error("Error uploading avatar:", error);
+    return null;
   }
 };
