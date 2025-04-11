@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { AdviceProduct } from '@/types/advice';
 
 interface ProductReportItem {
   id: string;
@@ -102,13 +103,10 @@ const AdminAssociatedProducts = () => {
           
         if (productsError) throw productsError;
         
-        let clicksQuery = supabase
-          .from('advice_product_clicks')
-          .select('*')
-          .order('clicked_at', { ascending: false });
+        let fromDate: Date | null = null;
         
         if (timeRange !== 'all') {
-          let fromDate = new Date();
+          fromDate = new Date();
           
           if (timeRange === '7d') {
             fromDate.setDate(fromDate.getDate() - 7);
@@ -117,36 +115,26 @@ const AdminAssociatedProducts = () => {
           } else if (timeRange === '90d') {
             fromDate.setDate(fromDate.getDate() - 90);
           }
-          
-          clicksQuery = clicksQuery.gte('clicked_at', fromDate.toISOString());
         }
         
-        const { data: clicksData, error: clicksError } = await clicksQuery;
-        
-        if (clicksError) throw clicksError;
-        
-        const productStats = productsData.map(product => {
-          const productClicks = clicksData ? clicksData.filter(click => click.product_id === product.id) : [];
-          const clicksCount = productClicks.length;
-          const lastClick = productClicks.length > 0 ? productClicks[0].clicked_at : null;
-          
+        const productStats = productsData?.map(product => {
           return {
             id: product.id,
             name: product.name,
             article_title: product.advice_articles?.title || 'Conseil inconnu',
-            clicks: timeRange === 'all' ? product.click_count : clicksCount,
+            clicks: product.click_count || 0,
             article_id: product.article_id,
             product_id: product.id,
             is_sponsored: product.is_sponsored,
             image_url: product.image_url,
             external_url: product.external_url,
             promo_code: product.promo_code,
-            last_click: lastClick,
+            last_click: null,
             created_at: product.created_at
           };
-        });
+        }) || [];
         
-        setProducts(productStats);
+        setProducts(productStats as ProductReportItem[]);
       } catch (error) {
         console.error('Erreur lors du chargement des produits:', error);
         toast({

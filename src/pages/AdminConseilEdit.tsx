@@ -4,9 +4,19 @@ import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { toast } from '@/hooks/use-toast';
 import { AdviceArticle } from '@/types/advice';
-import { Plus } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  AlertCircle, 
+  CheckCircle, 
+  XCircle, 
+  Plus as PlusIcon,
+  ImagePlus, 
+  Trash2, 
+  ExternalLink 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,10 +55,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, AlertCircle, CheckCircle, XCircle, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
-import { ImagePlus, Trash2, ExternalLink } from 'lucide-react';
+import { useAdviceArticle } from '@/hooks/useAdvice';
 
 interface FormData {
   title: string;
@@ -71,6 +79,7 @@ const AdminConseilEdit: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [activeTab, setActiveTab] = useState('general');
   const [products, setProducts] = useState([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -353,6 +362,7 @@ const AdminConseilEdit: React.FC = () => {
       });
       
       refetch && refetch();
+      setShowApproveDialog(false);
     } catch (error) {
       console.error('Error approving conseil:', error);
       toast({
@@ -363,7 +373,7 @@ const AdminConseilEdit: React.FC = () => {
     }
   };
 
-  const handleReject = async (reason: string) => {
+  const handleReject = async () => {
     if (!id) return;
     
     try {
@@ -372,7 +382,7 @@ const AdminConseilEdit: React.FC = () => {
         .update({
           status: 'rejected',
           visible: false,
-          rejection_reason: reason
+          rejection_reason: rejectionReason
         })
         .eq('id', id);
         
@@ -384,6 +394,7 @@ const AdminConseilEdit: React.FC = () => {
       });
       
       refetch && refetch();
+      setShowRejectDialog(false);
     } catch (error) {
       console.error('Error rejecting conseil:', error);
       toast({
@@ -722,7 +733,7 @@ const AdminConseilEdit: React.FC = () => {
                       </label>
                     </div>
                     <Button onClick={handleAddProduct} type="button">
-                      <Plus className="h-4 w-4 mr-2" />
+                      <PlusIcon className="h-4 w-4 mr-2" />
                       Ajouter le produit
                     </Button>
                   </div>
@@ -910,8 +921,14 @@ const AdminConseilEdit: React.FC = () => {
             <AlertDialogTitle>Rejeter ce conseil ?</AlertDialogTitle>
             <AlertDialogDescription>
               Cette action rendra le conseil invisible et marqué comme rejeté.
-              Êtes-vous sûr de vouloir continuer ?
+              Veuillez indiquer une raison pour ce rejet:
             </AlertDialogDescription>
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Raison du rejet"
+              className="mt-2"
+            />
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>

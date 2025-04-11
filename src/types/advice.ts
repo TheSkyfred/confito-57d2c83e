@@ -1,6 +1,13 @@
 
-// If this file doesn't exist, create it
 export type AdviceType = 'fruits' | 'cuisson' | 'recette' | 'conditionnement' | 'sterilisation' | 'materiel';
+
+export interface AdviceFilters {
+  type?: AdviceType[];
+  hasVideo?: boolean;
+  hasProducts?: boolean;
+  searchTerm?: string;
+  sortBy?: 'date' | 'popularity' | 'clicks';
+}
 
 export interface AdviceArticle {
   id: string;
@@ -22,6 +29,10 @@ export interface AdviceArticle {
   published_at?: string;
   products?: AdviceProduct[];
   comments?: any[];
+  // Add these properties to fix the errors
+  has_video?: boolean;
+  has_products?: boolean;
+  comments_count?: number;
 }
 
 export interface AdviceProduct {

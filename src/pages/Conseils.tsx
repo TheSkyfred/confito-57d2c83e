@@ -1,124 +1,56 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAdvice } from '@/hooks/useAdvice';
-import { useAuth } from '@/contexts/AuthContext';
-import { AdviceFilters } from '@/types/advice';
+import { AdviceType, AdviceFilters } from '@/types/advice';
 import AdviceHeader from '@/components/advice/AdviceHeader';
-import AdviceSearch from '@/components/advice/AdviceSearch';
-import AdviceFilterCard from '@/components/advice/AdviceFilterCard';
 import AdviceCard from '@/components/advice/AdviceCard';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from "@/components/ui/use-toast";
+import AdviceFilterCard from '@/components/advice/AdviceFilterCard';
+import AdviceSearch from '@/components/advice/AdviceSearch';
+import { Skeleton } from "@/components/ui/skeleton"
 
 const Conseils = () => {
-  const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<AdviceFilters>({
-    type: [],
-    hasVideo: false,
-    hasProducts: false,
-    sortBy: 'date',
-    searchTerm: ''
-  });
+  const [filters, setFilters] = useState<AdviceFilters>({});
+  const { advice, isLoading, error } = useAdvice(filters);
 
-  // Mettre à jour le terme de recherche dans les filtres
-  React.useEffect(() => {
-    setFilters(prev => ({ ...prev, searchTerm }));
-  }, [searchTerm]);
-
-  const handleFilterChange = (newFilters: AdviceFilters) => {
-    setFilters(newFilters);
+  const handleFilterChange = (newFilters: Partial<AdviceFilters>) => {
+    setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
   };
-
-  const { advice, isLoading, error, refetch } = useAdvice(filters);
-  
-  // Afficher une alerte en cas d'erreur
-  useEffect(() => {
-    if (error) {
-      console.error("Erreur lors du chargement des conseils:", error);
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les conseils. Veuillez réessayer plus tard.",
-        variant: "destructive"
-      });
-    }
-  }, [error]);
-
-  // Recharger les données au premier rendu
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
 
   return (
     <div className="container py-8">
-      <AdviceHeader user={user} />
-      
-      <AdviceSearch 
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        showFilters={showFilters}
-        setShowFilters={setShowFilters}
-        filters={filters}
-      />
-      
-      {showFilters && (
-        <AdviceFilterCard 
-          filters={filters} 
-          setFilters={setFilters}
-          onFilterChange={handleFilterChange}
-          onClose={() => setShowFilters(false)}
-        />
-      )}
-      
-      {error && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-destructive">Erreur de chargement</h3>
-          <p className="text-muted-foreground">
-            Une erreur s'est produite lors du chargement des conseils
-          </p>
-          <button 
-            onClick={() => refetch()} 
-            className="mt-4 px-4 py-2 bg-primary text-white rounded-md"
-          >
-            Réessayer
-          </button>
+      <AdviceHeader />
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="md:col-span-1">
+          <AdviceSearch onSearch={(searchTerm: string) => handleFilterChange({ searchTerm })} />
+          <AdviceFilterCard onFilterChange={handleFilterChange} />
         </div>
-      )}
-      
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-          {Array(6).fill(0).map((_, i) => (
-            <div key={i} className="flex flex-col space-y-3">
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-6 w-3/4 rounded-md" />
-              <Skeleton className="h-4 w-full rounded-md" />
-              <Skeleton className="h-4 w-full rounded-md" />
-              <div className="flex justify-between">
-                <Skeleton className="h-4 w-1/4 rounded-md" />
-                <Skeleton className="h-4 w-1/4 rounded-md" />
-              </div>
+
+        <div className="md:col-span-3">
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <Skeleton className="h-40 w-full rounded-md" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : error ? (
+            <p className="text-red-500">Error: {error.message}</p>
+          ) : advice && advice.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {advice.map(article => (
+                <AdviceCard key={article.id} article={article} />
+              ))}
+            </div>
+          ) : (
+            <p>Aucun conseil trouvé.</p>
+          )}
         </div>
-      ) : advice && advice.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-          {advice.map(item => (
-            <AdviceCard key={item.id} advice={item} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium">Aucun conseil trouvé</h3>
-          <p className="text-muted-foreground">
-            {searchTerm || Object.values(filters).some(f => 
-              Array.isArray(f) ? f.length > 0 : Boolean(f)
-            ) 
-              ? "Essayez de modifier vos filtres ou votre recherche" 
-              : "Des conseils seront ajoutés prochainement"}
-          </p>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

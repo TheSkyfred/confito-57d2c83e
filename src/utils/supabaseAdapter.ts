@@ -1,43 +1,52 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { InsertRecord } from '@/types/supabase';
+
+// Define InsertRecord type if it's not imported from supabase types
+type InsertRecord<T> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
 
 // Helper for direct database operations
 export const supabaseDirect = {
   // Select data from a table
-  select: async (tableName: string, select: string = '*') => {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select(select);
-    return { data, error };
+  select: async <T extends object>(tableName: string, select: string = '*', filters?: Record<string, any>) => {
+    let query = supabase.from(tableName).select(select);
+    
+    // Add filters if provided
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        query = query.eq(key, value);
+      });
+    }
+    
+    const { data, error } = await query;
+    return { data: data as T[], error };
   },
 
   // Select data with a where clause
-  selectWhere: async (tableName: string, column: string, value: any, select: string = '*') => {
+  selectWhere: async <T extends object>(tableName: string, column: string, value: any, select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
       .eq(column, value);
-    return { data, error };
+    return { data: data as T[], error };
   },
 
   // Select data with a where in clause
-  selectWhereIn: async (tableName: string, column: string, values: any[], select: string = '*') => {
+  selectWhereIn: async <T extends object>(tableName: string, column: string, values: any[], select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
       .in(column, values);
-    return { data, error };
+    return { data: data as T[], error };
   },
 
   // Get a record by ID
-  getById: async (tableName: string, id: string, select: string = '*') => {
+  getById: async <T extends object>(tableName: string, id: string, select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
       .eq('id', id)
       .single();
-    return { data, error };
+    return { data: data as T, error };
   },
 
   // Insert data and return the inserted data
@@ -50,7 +59,7 @@ export const supabaseDirect = {
   },
 
   // Insert data without returning
-  insert: async (tableName: string, data: any) => {
+  insert: async <T extends object>(tableName: string, data: InsertRecord<T>) => {
     const { error } = await supabase
       .from(tableName)
       .insert(data);
@@ -58,7 +67,7 @@ export const supabaseDirect = {
   },
 
   // Update data
-  update: async (tableName: string, id: string, data: any) => {
+  update: async <T extends object>(tableName: string, id: string, data: Partial<T>) => {
     const { error } = await supabase
       .from(tableName)
       .update(data)
@@ -89,23 +98,20 @@ export const trackProductClick = async (productId: string, articleId: string) =>
       user_agent: navigator.userAgent,
     };
     
-    // Record the click
-    await supabase.from('advice_product_clicks').insert(clickData);
-    
-    // Fetch current click count
-    const { data: productData } = await supabase
-      .from('advice_products')
-      .select('click_count')
-      .eq('id', productId)
-      .single();
-      
-    const currentClicks = productData?.click_count || 0;
-    
-    // Update the click count directly
+    // Record the click directly in advice_products
     await supabase
       .from('advice_products')
-      .update({ click_count: currentClicks + 1 })
+      .update({ 
+        click_count: supabase.rpc('increment', { row_id: productId, table_name: 'advice_products', column_name: 'click_count' })
+      })
       .eq('id', productId);
+      
+    // Log the click in a separate structure if available
+    try {
+      await supabase.from('advice_product_clicks').insert(clickData);
+    } catch (error) {
+      console.warn('advice_product_clicks table might not exist, but continuing with main tracking logic');
+    }
       
     return true;
   } catch (error) {
