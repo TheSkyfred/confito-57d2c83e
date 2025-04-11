@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { RecipeType, RecipeDifficulty, RecipeStatus, RecipeStyle, RecipeSeason } from '@/types/supabase';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 import {
   Table,
@@ -25,13 +28,23 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { ChevronDown, Filter, Star } from 'lucide-react';
 
 import {
@@ -61,7 +74,7 @@ const AdminRecipes = () => {
   const { data: recipes, isLoading } = useQuery({
     queryKey: ['admin-recipes', currentPage, searchTerm, selectedStatus],
     queryFn: async () => {
-      const { data, error } = await supabase.select<any>(
+      const { data, error } = await supabaseDirect.select<any>(
         'recipes', 
         `*, 
         author:author_id(id, username, full_name)
@@ -105,7 +118,7 @@ const AdminRecipes = () => {
 
   const handleStatusChange = async (recipeId: string, newStatus: string) => {
     try {
-      await supabase.update('recipes', { status: newStatus }, { id: recipeId });
+      await supabaseDirect.update('recipes', { status: newStatus }, { id: recipeId });
     } catch (error) {
       console.error('Error updating recipe status:', error);
     }
@@ -114,7 +127,7 @@ const AdminRecipes = () => {
   const handleDeleteRecipe = async () => {
     if (recipeToDelete) {
       try {
-        await supabase.delete('recipes', { id: recipeToDelete });
+        await supabaseDirect.delete('recipes', { id: recipeToDelete });
         setRecipeToDelete(null);
       } catch (error) {
         console.error('Error deleting recipe:', error);
@@ -125,7 +138,7 @@ const AdminRecipes = () => {
   const handleRejectRecipe = async (rejectionReason: string) => {
     if (recipeToReject) {
       try {
-        await supabase.update(
+        await supabaseDirect.update(
           'recipes',
           { status: 'rejected', rejection_reason: rejectionReason },
           { id: recipeToReject.id }

@@ -1,4 +1,3 @@
-
 import React, {
   useState,
   useEffect,
@@ -17,20 +16,20 @@ interface AuthContextProps {
   user: User | null;
   profile: ProfileType | null;
   loading: boolean;
-  session: Session | null; // Add missing session property
+  session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
   update: (data: Partial<ProfileType>) => Promise<void>;
   error: string | null;
-  isAdmin?: boolean; // Add isAdmin property for AdminRecipes
+  isAdmin?: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   profile: null,
   loading: true,
-  session: null, // Initialize session as null
+  session: null,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
@@ -42,10 +41,10 @@ const AuthContext = createContext<AuthContextProps>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
-  const [session, setSession] = useState<Session | null>(null); // Add session state
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false); // Add isAdmin state
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
     const getInitialSession = async () => {
@@ -72,7 +71,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .single();
         
         if (profileData) {
-          // Create a properly typed profile with all required fields
           const typedProfile: ProfileType = {
             id: profileData.id,
             username: profileData.username,
@@ -210,7 +208,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         throw updateError;
       }
 
-      // Optimistically update the profile in the context
       setProfile((prevProfile) => {
         return prevProfile ? { ...prevProfile, ...data } : null;
       });
