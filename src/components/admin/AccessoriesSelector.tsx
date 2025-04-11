@@ -25,13 +25,27 @@ interface AccessoriesSelectorProps {
 const AccessoriesSelector: React.FC<AccessoriesSelectorProps> = ({ adviceId }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const { accessories, setFilter, isLoading: loadingAccessories } = useProAccessories();
+  const { 
+    accessories, 
+    setFilter, 
+    isLoading: loadingAccessories, 
+    error 
+  } = useProAccessories();
   const { linkedAccessories, linkAccessory, unlinkAccessory, isLoading: loadingLinked } = useAdviceAccessories(adviceId);
 
   // Afficher les données pour le débogage
   console.log("Accessories data:", accessories);
   console.log("Loading state:", loadingAccessories);
-  console.log("Error:", error);
+  console.log("Error state:", error);
+
+  // Gérer l'état d'erreur
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        Erreur de chargement des accessoires : {error.message}
+      </div>
+    );
+  }
 
   // Filtrer les accessoires qui ne sont pas déjà liés au conseil
   const filteredAccessories = accessories?.filter(accessory => {
