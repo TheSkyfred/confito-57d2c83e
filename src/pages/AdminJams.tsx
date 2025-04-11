@@ -153,6 +153,7 @@ const AdminJams = () => {
                 <TableHead>Date de création</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead>Pro</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -175,6 +176,15 @@ const AdminJams = () => {
                       <Badge variant="outline" className="bg-amber-100 text-amber-800">
                         Brouillon
                       </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {jam.is_pro ? (
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        Pro
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
