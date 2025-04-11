@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -84,7 +85,15 @@ const AdminConseils = () => {
           .in('id', uniqueAuthorIds);
           
         const profileMap = (profiles || []).reduce((acc, profile) => {
-          acc[profile.id] = profile;
+          // Ensure profile has all required fields
+          const completeProfile: ProfileType = {
+            ...profile,
+            address_line1: profile.address_line1 || profile.address || '',
+            address_line2: profile.address_line2 || null,
+            postal_code: profile.postal_code || '',
+            city: profile.city || ''
+          };
+          acc[profile.id] = completeProfile;
           return acc;
         }, {} as Record<string, ProfileType>);
         

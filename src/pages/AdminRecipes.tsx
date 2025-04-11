@@ -1,10 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { RecipeType, RecipeDifficulty, RecipeStatus, RecipeStyle, RecipeSeason } from '@/types/supabase';
+import { ProfileDisplay } from '@/components/ProfileDisplay';
+
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ChevronDown, Filter, Star } from 'lucide-react';
+
 import {
   FileText,
   Eye,
@@ -18,26 +47,8 @@ import {
   FileX
 } from 'lucide-react';
 
-import {
-  Card,
-  Button,
-  Badge,
-  Skeleton,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator
-} from '@/components/ui';
-
 const AdminRecipes = () => {
+  const { isAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [recipesPerPage] = useState(10);
@@ -45,13 +56,12 @@ const AdminRecipes = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
   const [recipeToReject, setRecipeToReject] = useState<any | null>(null);
-  const { isAdmin } = useAuth();
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data: recipes, isLoading } = useQuery({
     queryKey: ['admin-recipes', currentPage, searchTerm, selectedStatus],
     queryFn: async () => {
-      // Fetch recipes from supabase with pagination
-      const { data, error } = await supabaseDirect.select<any>(
+      const { data, error } = await supabase.select<any>(
         'recipes', 
         `*, 
         author:author_id(id, username, full_name)
@@ -62,12 +72,10 @@ const AdminRecipes = () => {
       
       let filteredData = [...data];
       
-      // Filter by status if selected
       if (selectedStatus !== 'all') {
         filteredData = filteredData.filter(recipe => recipe.status === selectedStatus);
       }
       
-      // Filter by search term
       if (searchTerm) {
         filteredData = filteredData.filter(recipe => 
           recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,17 +84,14 @@ const AdminRecipes = () => {
         );
       }
       
-      // Calculate pagination
       setTotalPages(Math.ceil(filteredData.length / recipesPerPage));
       
-      // Return paginated results
       return filteredData.slice((currentPage - 1) * recipesPerPage, currentPage * recipesPerPage);
     },
     enabled: isAdmin
   });
 
   useEffect(() => {
-    // Reset to first page when search term or status changes
     setCurrentPage(1);
   }, [searchTerm, selectedStatus]);
 
@@ -100,8 +105,7 @@ const AdminRecipes = () => {
 
   const handleStatusChange = async (recipeId: string, newStatus: string) => {
     try {
-      await supabaseDirect.update('recipes', { status: newStatus }, { id: recipeId });
-      // Invalidate query to refetch data
+      await supabase.update('recipes', { status: newStatus }, { id: recipeId });
     } catch (error) {
       console.error('Error updating recipe status:', error);
     }
@@ -110,8 +114,7 @@ const AdminRecipes = () => {
   const handleDeleteRecipe = async () => {
     if (recipeToDelete) {
       try {
-        await supabaseDirect.delete('recipes', { id: recipeToDelete });
-        // Invalidate query to refetch data
+        await supabase.delete('recipes', { id: recipeToDelete });
         setRecipeToDelete(null);
       } catch (error) {
         console.error('Error deleting recipe:', error);
@@ -122,12 +125,11 @@ const AdminRecipes = () => {
   const handleRejectRecipe = async (rejectionReason: string) => {
     if (recipeToReject) {
       try {
-        await supabaseDirect.update(
+        await supabase.update(
           'recipes',
           { status: 'rejected', rejection_reason: rejectionReason },
           { id: recipeToReject.id }
         );
-        // Invalidate query to refetch data
         setRecipeToReject(null);
       } catch (error) {
         console.error('Error rejecting recipe:', error);
@@ -142,12 +144,12 @@ const AdminRecipes = () => {
       <div className="flex flex-col md:flex-row items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <Input
-              type="search"
-              placeholder="Rechercher une recette..."
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Rechercher par titre ou auteur..." 
+              className="pl-9"
               value={searchTerm}
-              onChange={handleSearchChange}
-              className="pr-10"
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div>
@@ -362,7 +364,6 @@ const AdminRecipes = () => {
         </Button>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={recipeToDelete !== null} onOpenChange={() => setRecipeToDelete(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -382,7 +383,6 @@ const AdminRecipes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Reject Recipe Dialog */}
       <Dialog open={recipeToReject !== null} onOpenChange={() => setRecipeToReject(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -393,9 +393,11 @@ const AdminRecipes = () => {
           </DialogHeader>
           
           <Textarea
-            placeholder="Raison du rejet..."
-            className="min-h-[80px]"
-            onChange={(e) => setRecipeToReject({ ...recipeToReject, rejectionReason: e.target.value })}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Expliquez pourquoi cette recette est refusée..."
+            rows={4}
+            className="mt-2"
           />
           
           <DialogFooter>

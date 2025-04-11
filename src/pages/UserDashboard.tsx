@@ -72,3 +72,41 @@ const getSentOrders = async (userId: string): Promise<OrderType[]> => {
     return order;
   }) as OrderType[];
 };
+
+// Main component
+const UserDashboard = () => {
+  const { user, profile } = useAuth();
+  const [receivedOrders, setReceivedOrders] = useState<OrderType[]>([]);
+  const [sentOrders, setSentOrders] = useState<OrderType[]>([]);
+  
+  useEffect(() => {
+    if (user) {
+      loadOrders();
+    }
+  }, [user]);
+  
+  const loadOrders = async () => {
+    if (user) {
+      const received = await getReceivedOrders(user.id);
+      const sent = await getSentOrders(user.id);
+      
+      setReceivedOrders(received);
+      setSentOrders(sent);
+    }
+  };
+  
+  return (
+    <div className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-6">User Dashboard</h1>
+      
+      {/* User's orders section */}
+      <div className="grid gap-6">
+        {/* Add your order UI components here */}
+        <p>Total received orders: {receivedOrders.length}</p>
+        <p>Total sent orders: {sentOrders.length}</p>
+      </div>
+    </div>
+  );
+};
+
+export default UserDashboard;

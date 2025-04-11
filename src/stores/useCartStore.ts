@@ -393,7 +393,8 @@ export const useCartStore = create<CartState>()(
               // Add required address fields to profile
               const completeProfiles = {
                 ...jamData.profiles,
-                address_line1: jamData.profiles.address_line1 || (jamData.profiles.address || ''),
+                // Ensure all required ProfileType fields are present
+                address_line1: jamData.profiles.address_line1 || jamData.profiles.address || '',
                 address_line2: jamData.profiles.address_line2 || null,
                 postal_code: jamData.profiles.postal_code || '',
                 city: jamData.profiles.city || ''
@@ -418,6 +419,14 @@ export const useCartStore = create<CartState>()(
         } catch (error: any) {
           console.error("Erreur lors de la synchronisation avec la base de données:", error.message);
         }
+      },
+      
+      getTotalItems: () => {
+        return get().items.reduce((total, item) => total + item.quantity, 0);
+      },
+      
+      getTotalCredits: () => {
+        return get().items.reduce((total, item) => total + (item.jam.price_credits * item.quantity), 0);
       }
     }),
     {

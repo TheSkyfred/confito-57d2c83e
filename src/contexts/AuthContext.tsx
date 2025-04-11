@@ -72,14 +72,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .single();
         
         if (profileData) {
-          // Conversion explicite du profil pour s'assurer qu'il correspond au type ProfileType
+          // Create a properly typed profile with all required fields
           const typedProfile: ProfileType = {
-            ...profileData,
-            // Ensure all required properties exist, even if they don't in the database yet
+            id: profileData.id,
+            username: profileData.username,
+            full_name: profileData.full_name || null,
+            avatar_url: profileData.avatar_url || null,
+            bio: profileData.bio || null,
+            address: profileData.address || null,
             address_line1: profileData.address_line1 || profileData.address || '',
             address_line2: profileData.address_line2 || null,
             postal_code: profileData.postal_code || '',
             city: profileData.city || '',
+            phone: profileData.phone || null,
+            website: profileData.website || null,
+            credits: profileData.credits,
+            role: profileData.role,
+            created_at: profileData.created_at,
+            updated_at: profileData.updated_at
           };
           
           setProfile(typedProfile);
