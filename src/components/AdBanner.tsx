@@ -6,16 +6,30 @@ import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useAuth } from '@/contexts/AuthContext';
 import ProJamCard from '@/components/ProJamCard';
 import { Badge } from '@/components/ui/badge';
+import { AdsCampaignType } from '@/types/supabase';
 
 interface AdBannerProps {
   cardIndex: number;
+}
+
+interface AdData {
+  id: string;
+  name: string;
+  campaignType: string;
+  redirectUrl: string | null;
+  jamId: string | null;
+  isPro: boolean;
+  isSponsored: boolean;
+  priceEuros: number;
+  isAvailable: boolean;
+  imageUrl: string | null;
 }
 
 const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [adData, setAdData] = useState<any>(null);
+  const [adData, setAdData] = useState<AdData | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -24,7 +38,9 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
       
       try {
         // Fetch active ad campaigns
-        const { data, error } = await supabaseDirect.select('ads_campaigns', `
+        const { data, error } = await supabaseDirect.select<AdsCampaignType>(
+          'ads_campaigns', 
+          `
           id,
           name,
           display_frequency,
@@ -39,7 +55,9 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
             available_quantity,
             jam_images(url, is_primary)
           )
-        `, { status: 'active', is_visible: true });
+        `, 
+          { status: 'active', is_visible: true }
+        );
           
         if (error) throw error;
         
@@ -49,7 +67,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
         }
         
         // Find ads that match the display frequency based on card index
-        const matchingAds = data.filter((ad: any) => {
+        const matchingAds = data.filter((ad) => {
           return cardIndex % ad.display_frequency === 0;
         });
         
@@ -143,9 +161,9 @@ const AdBanner: React.FC<AdBannerProps> = ({ cardIndex }) => {
   return (
     <div onClick={handleAdClick} className="cursor-pointer">
       <ProJamCard
-        id={adData.jamId}
+        id={adData.jamId || ''}
         name={adData.name}
-        imageUrl={adData.imageUrl}
+        imageUrl={adData.imageUrl || ''}
         priceEuros={adData.priceEuros}
         isPro={adData.isPro}
         isSponsored={adData.isSponsored}

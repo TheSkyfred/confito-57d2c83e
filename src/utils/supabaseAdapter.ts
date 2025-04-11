@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
 import { InsertRecord, TableName, AdsCampaignType, AdsInvoiceType } from '@/types/supabase';
 
 // Helper for direct database operations
@@ -16,7 +17,7 @@ export const supabaseDirect = {
     }
     
     const { data, error } = await query;
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Select data with a where clause
@@ -25,7 +26,7 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .eq(column, value);
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Select data with a where in clause
@@ -34,7 +35,7 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .in(column, values);
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Get a record by ID
@@ -44,7 +45,7 @@ export const supabaseDirect = {
       .select(select)
       .eq('id', id)
       .single();
-    return { data: data as T, error };
+    return { data: data as unknown as T, error };
   },
 
   // Insert data and return the inserted data
@@ -53,7 +54,7 @@ export const supabaseDirect = {
       .from(tableName)
       .insert(data)
       .select();
-    return { data: returnedData as T[], error };
+    return { data: returnedData as unknown as T[], error };
   },
 
   // Insert data without returning
@@ -104,13 +105,12 @@ export const trackProductClick = async (productId: string, articleId: string) =>
           row_id: productId,
           table_name: 'advice_products',
           column_name: 'click_count' 
-        })
+        }) as any
       })
       .eq('id', productId);
       
     // Log the click in a separate structure if available
     try {
-      // We don't use advice_product_clicks since it doesn't exist
       console.log('Recording product click:', clickData);
       // Could implement a different tracking mechanism here if needed
     } catch (error) {

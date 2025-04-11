@@ -1,165 +1,181 @@
 
 import React from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AdviceType, AdviceFilters } from "@/types/advice";
 import { Filter, X } from 'lucide-react';
-import { AdviceType, AdviceFilters } from '@/types/advice';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Label } from '@/components/ui/label';
 
 interface AdviceFilterCardProps {
   filters: AdviceFilters;
   setFilters: React.Dispatch<React.SetStateAction<AdviceFilters>>;
-  onFilterChange: (filters: AdviceFilters) => void;
+  onFilterChange: (newFilters: Partial<AdviceFilters>) => void;
   onClose: () => void;
 }
 
-const AdviceFilterCard: React.FC<AdviceFilterCardProps> = ({ 
-  filters, 
-  setFilters, 
+const AdviceFilterCard: React.FC<AdviceFilterCardProps> = ({
+  filters,
+  setFilters,
   onFilterChange,
   onClose
 }) => {
-  const typeOptions: {label: string, value: AdviceType}[] = [
-    { label: 'Choix des fruits', value: 'fruits' },
-    { label: 'Cuisson', value: 'cuisson' },
-    { label: 'Recette', value: 'recette' },
-    { label: 'Conditionnement', value: 'conditionnement' },
-    { label: 'Stérilisation', value: 'sterilisation' },
-    { label: 'Matériel', value: 'materiel' }
-  ];
-
   const handleTypeChange = (type: AdviceType) => {
-    setFilters(prev => {
-      const currentTypes = prev.type || [];
-      const updatedTypes = currentTypes.includes(type)
-        ? currentTypes.filter(t => t !== type)
-        : [...currentTypes, type];
-      
-      return {
-        ...prev,
-        type: updatedTypes
-      };
-    });
-  };
-
-  const resetFilters = () => {
-    const resetValues: AdviceFilters = {
-      type: [],
-      hasVideo: false,
-      hasProducts: false,
-      sortBy: 'date'
-    };
+    const currentTypes = filters.type || [];
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter(t => t !== type)
+      : [...currentTypes, type];
     
-    setFilters(resetValues);
-    onFilterChange(resetValues);
+    setFilters(prev => ({ ...prev, type: newTypes }));
+    onFilterChange({ type: newTypes });
+  };
+  
+  const handleVideoFilterChange = (checked: boolean) => {
+    setFilters(prev => ({ ...prev, hasVideo: checked }));
+    onFilterChange({ hasVideo: checked });
+  };
+  
+  const handleProductFilterChange = (checked: boolean) => {
+    setFilters(prev => ({ ...prev, hasProducts: checked }));
+    onFilterChange({ hasProducts: checked });
+  };
+  
+  const handleSortChange = (value: string) => {
+    setFilters(prev => ({ ...prev, sortBy: value as 'date' | 'popularity' | 'clicks' }));
+    onFilterChange({ sortBy: value as 'date' | 'popularity' | 'clicks' });
+  };
+  
+  const resetFilters = () => {
+    setFilters({});
+    onFilterChange({
+      type: undefined,
+      hasVideo: undefined,
+      hasProducts: undefined,
+      sortBy: undefined,
+      searchTerm: undefined
+    });
   };
 
   return (
     <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Filtres</CardTitle>
-        <CardDescription>
-          Affinez votre recherche de conseils
-        </CardDescription>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-lg flex items-center">
+              <Filter className="mr-2 h-5 w-5" />
+              Filtrer les conseils
+            </CardTitle>
+            <CardDescription>
+              Affinez votre recherche selon vos critères
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Type de conseil</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {typeOptions.map(option => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <Checkbox 
-                  id={option.value}
-                  checked={(filters.type || []).includes(option.value)}
-                  onCheckedChange={() => handleTypeChange(option.value)}
-                />
-                <label 
-                  htmlFor={option.value}
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  {option.label}
-                </label>
-              </div>
-            ))}
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="font-medium mb-2">Type de conseil</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="fruits-filter"
+                checked={(filters.type || []).includes('fruits')}
+                onCheckedChange={() => handleTypeChange('fruits')}
+              />
+              <label htmlFor="fruits-filter" className="text-sm">Fruits</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="cuisson-filter"
+                checked={(filters.type || []).includes('cuisson')}
+                onCheckedChange={() => handleTypeChange('cuisson')}
+              />
+              <label htmlFor="cuisson-filter" className="text-sm">Cuisson</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="recette-filter"
+                checked={(filters.type || []).includes('recette')}
+                onCheckedChange={() => handleTypeChange('recette')}
+              />
+              <label htmlFor="recette-filter" className="text-sm">Recette</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="conditionnement-filter"
+                checked={(filters.type || []).includes('conditionnement')}
+                onCheckedChange={() => handleTypeChange('conditionnement')}
+              />
+              <label htmlFor="conditionnement-filter" className="text-sm">Conditionnement</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="sterilisation-filter"
+                checked={(filters.type || []).includes('sterilisation')}
+                onCheckedChange={() => handleTypeChange('sterilisation')}
+              />
+              <label htmlFor="sterilisation-filter" className="text-sm">Stérilisation</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="materiel-filter"
+                checked={(filters.type || []).includes('materiel')}
+                onCheckedChange={() => handleTypeChange('materiel')}
+              />
+              <label htmlFor="materiel-filter" className="text-sm">Matériel</label>
+            </div>
           </div>
         </div>
         
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Contenu</h3>
+        <div>
+          <h3 className="font-medium mb-2">Fonctionnalités</h3>
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Checkbox 
-                id="hasVideo"
-                checked={filters.hasVideo || false}
-                onCheckedChange={(checked) => 
-                  setFilters(prev => ({ ...prev, hasVideo: !!checked }))
-                }
+                id="video-filter"
+                checked={!!filters.hasVideo}
+                onCheckedChange={(checked) => handleVideoFilterChange(!!checked)}
               />
-              <label 
-                htmlFor="hasVideo"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Avec vidéo uniquement
-              </label>
+              <label htmlFor="video-filter" className="text-sm">Avec vidéo</label>
             </div>
-            
             <div className="flex items-center space-x-2">
               <Checkbox 
-                id="hasProducts"
-                checked={filters.hasProducts || false}
-                onCheckedChange={(checked) => 
-                  setFilters(prev => ({ ...prev, hasProducts: !!checked }))
-                }
+                id="products-filter"
+                checked={!!filters.hasProducts}
+                onCheckedChange={(checked) => handleProductFilterChange(!!checked)}
               />
-              <label 
-                htmlFor="hasProducts"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Avec produits recommandés
-              </label>
+              <label htmlFor="products-filter" className="text-sm">Avec produits recommandés</label>
             </div>
           </div>
         </div>
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-2">
-            <Label htmlFor="sortBy">Trier par</Label>
-            <Select
-              value={filters.sortBy || 'date'}
-              onValueChange={(value: 'date' | 'popularity' | 'clicks') => 
-                setFilters(prev => ({ ...prev, sortBy: value }))
-              }
-            >
-              <SelectTrigger id="sortBy">
-                <SelectValue placeholder="Trier par" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date de publication</SelectItem>
-                <SelectItem value="popularity">Popularité</SelectItem>
-                <SelectItem value="clicks">Nombre de clics</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div>
+          <Label htmlFor="sort">Trier par</Label>
+          <Select
+            value={filters.sortBy}
+            onValueChange={handleSortChange}
+          >
+            <SelectTrigger id="sort" className="w-full mt-1">
+              <SelectValue placeholder="Choisir un tri" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Plus récents</SelectItem>
+              <SelectItem value="popularity">Plus populaires</SelectItem>
+              <SelectItem value="clicks">Plus consultés</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex justify-between pt-0">
         <Button 
           variant="outline" 
           onClick={resetFilters}
+          className="w-full md:w-auto"
         >
-          Réinitialiser
-        </Button>
-        <Button onClick={onClose}>
-          Appliquer
+          Réinitialiser les filtres
         </Button>
       </CardFooter>
     </Card>

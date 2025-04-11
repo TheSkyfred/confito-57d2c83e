@@ -1,20 +1,19 @@
-import React, { useState, FormEvent } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const ProRegistration = () => {
   const navigate = useNavigate();
@@ -36,7 +35,7 @@ const ProRegistration = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!user) {
@@ -67,7 +66,9 @@ const ProRegistration = () => {
         vat_number: vatNumber,
       };
       
-      const { error: proProfileError } = await supabaseDirect.insertAndReturn('pro_profiles', proProfileData);
+      const { error: proProfileError } = await supabase
+        .from('pro_profiles')
+        .insert(proProfileData);
       
       if (proProfileError) throw proProfileError;
       
@@ -108,221 +109,145 @@ const ProRegistration = () => {
           <span className="block sm:inline">{successMessage}</span>
         </div>
       ) : (
-        <Form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={{}}
-              name="companyName"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Nom de l'entreprise</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Nom de votre entreprise" 
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={{}}
-              name="businessEmail"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Email professionnel</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="email" 
-                      placeholder="Email de contact" 
-                      value={businessEmail}
-                      onChange={(e) => setBusinessEmail(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <FormField
-            control={{}}
-            name="description"
-            render={() => (
-              <FormItem>
-                <FormLabel>Description de l'entreprise</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Décrivez votre entreprise en quelques mots" 
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={{}}
-            name="story"
-            render={() => (
-              <FormItem>
-                <FormLabel>Notre histoire</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    placeholder="Racontez l'histoire de votre entreprise" 
-                    value={story}
-                    onChange={(e) => setStory(e.target.value)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={{}}
-              name="phone"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="tel" 
-                      placeholder="Numéro de téléphone" 
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={{}}
-              name="website"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Site web</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="url" 
-                      placeholder="URL de votre site web" 
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField
-              control={{}}
-              name="facebookUrl"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Facebook</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="url" 
-                      placeholder="URL Facebook" 
-                      value={facebookUrl}
-                      onChange={(e) => setFacebookUrl(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={{}}
-              name="instagramUrl"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Instagram</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="url" 
-                      placeholder="URL Instagram" 
-                      value={instagramUrl}
-                      onChange={(e) => setInstagramUrl(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={{}}
-              name="linkedinUrl"
-              render={() => (
-                <FormItem>
-                  <FormLabel>LinkedIn</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="url" 
-                      placeholder="URL LinkedIn" 
-                      value={linkedinUrl}
-                      onChange={(e) => setLinkedinUrl(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          
-          <FormField
-            control={{}}
-            name="billingAddress"
-            render={() => (
-              <FormItem>
-                <FormLabel>Adresse de facturation</FormLabel>
-                <FormControl>
+        <Card>
+          <CardHeader>
+            <CardTitle>Informations professionnelles</CardTitle>
+            <CardDescription>Remplissez ce formulaire pour demander un compte professionnel</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="companyName" className="text-sm font-medium">Nom de l'entreprise</label>
                   <Input 
-                    placeholder="Adresse de facturation" 
-                    value={billingAddress}
-                    onChange={(e) => setBillingAddress(e.target.value)}
+                    id="companyName"
+                    placeholder="Nom de votre entreprise" 
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    required
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={{}}
-            name="vatNumber"
-            render={() => (
-              <FormItem>
-                <FormLabel>Numéro de TVA</FormLabel>
-                <FormControl>
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="businessEmail" className="text-sm font-medium">Email professionnel</label>
                   <Input 
-                    placeholder="Numéro de TVA" 
-                    value={vatNumber}
-                    onChange={(e) => setVatNumber(e.target.value)}
+                    id="businessEmail"
+                    type="email" 
+                    placeholder="Email de contact" 
+                    value={businessEmail}
+                    onChange={(e) => setBusinessEmail(e.target.value)}
+                    required
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Envoi en cours...' : 'Soumettre la demande'}
-          </Button>
-        </Form>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="description" className="text-sm font-medium">Description de l'entreprise</label>
+                <Textarea 
+                  id="description"
+                  placeholder="Décrivez votre entreprise en quelques mots" 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="story" className="text-sm font-medium">Notre histoire</label>
+                <Textarea 
+                  id="story"
+                  placeholder="Racontez l'histoire de votre entreprise" 
+                  value={story}
+                  onChange={(e) => setStory(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="phone" className="text-sm font-medium">Téléphone</label>
+                  <Input 
+                    id="phone"
+                    type="tel" 
+                    placeholder="Numéro de téléphone" 
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="website" className="text-sm font-medium">Site web</label>
+                  <Input 
+                    id="website"
+                    type="url" 
+                    placeholder="URL de votre site web" 
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="facebookUrl" className="text-sm font-medium">Facebook</label>
+                  <Input 
+                    id="facebookUrl"
+                    type="url" 
+                    placeholder="URL Facebook" 
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="instagramUrl" className="text-sm font-medium">Instagram</label>
+                  <Input 
+                    id="instagramUrl"
+                    type="url" 
+                    placeholder="URL Instagram" 
+                    value={instagramUrl}
+                    onChange={(e) => setInstagramUrl(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="linkedinUrl" className="text-sm font-medium">LinkedIn</label>
+                  <Input 
+                    id="linkedinUrl"
+                    type="url" 
+                    placeholder="URL LinkedIn" 
+                    value={linkedinUrl}
+                    onChange={(e) => setLinkedinUrl(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="billingAddress" className="text-sm font-medium">Adresse de facturation</label>
+                <Input 
+                  id="billingAddress"
+                  placeholder="Adresse de facturation" 
+                  value={billingAddress}
+                  onChange={(e) => setBillingAddress(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="vatNumber" className="text-sm font-medium">Numéro de TVA</label>
+                <Input 
+                  id="vatNumber"
+                  placeholder="Numéro de TVA" 
+                  value={vatNumber}
+                  onChange={(e) => setVatNumber(e.target.value)}
+                />
+              </div>
+              
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? 'Envoi en cours...' : 'Soumettre la demande'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

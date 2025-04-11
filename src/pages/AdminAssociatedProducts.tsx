@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,7 +38,8 @@ import { AdviceProduct } from '@/types/advice';
 interface ProductReportItem {
   id: string;
   name: string;
-  article_title: string;
+  article: string;
+  article_title?: string;
   clicks: number;
   article_id: string;
   product_id: string;
@@ -46,6 +48,8 @@ interface ProductReportItem {
   external_url?: string;
   last_click?: string;
   promo_code?: string;
+  timestamp?: string;
+  created_at: string;
 }
 
 const AdminAssociatedProducts = () => {
@@ -54,13 +58,14 @@ const AdminAssociatedProducts = () => {
   const { isAdmin, isModerator } = useUserRole();
   
   const [isLoading, setIsLoading] = useState(true);
-  const [products, setProducts] = useState<ProductReportItem[]>([]);
+  const [clicks, setClicks] = useState<ProductReportItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeRange, setTimeRange] = useState('all');
   const [sortBy, setSortBy] = useState('clicks');
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterSponsored, setFilterSponsored] = useState('all');
-  
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     if (user && !isAdmin && !isModerator) {
       navigate('/admin');
@@ -76,15 +81,10 @@ const AdminAssociatedProducts = () => {
         description: "Vous devez être connecté pour accéder à cette page",
         variant: "destructive"
       });
+    } else {
+      fetchClicksData();
     }
-  }, [user, isAdmin, isModerator, navigate]);
-  
-  const [clicks, setClicks] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchClicksData();
-  }, [timeRange]);
+  }, [timeRange, user, isAdmin, isModerator, navigate]);
 
   const fetchClicksData = async () => {
     try {
@@ -102,12 +102,10 @@ const AdminAssociatedProducts = () => {
           is_sponsored,
           click_count,
           article_id,
-          promo_code,
           created_at,
           updated_at,
-          advice_articles:article_id(title, id)
-        `)
-        .order('click_count', { ascending: false });
+          advice_articles:article_id (title, id)
+        `);
 
       if (error) {
         console.error("Error fetching click data:", error);
@@ -115,7 +113,7 @@ const AdminAssociatedProducts = () => {
         return;
       }
 
-      const formattedClicks = (productsData || []).map(product => {
+      const formattedClicks = (productsData || []).map((product) => {
         return {
           id: product.id,
           name: product.name, 
@@ -123,10 +121,10 @@ const AdminAssociatedProducts = () => {
           clicks: product.click_count || 0,
           article_id: product.article_id || '',
           product_id: product.id,
-          is_sponsored: product.is_sponsored,
+          is_sponsored: product.is_sponsored || false,
           image_url: product.image_url,
           external_url: product.external_url,
-          promo_code: product.promo_code,
+          promo_code: null, // This field doesn't exist, so set to null
           timestamp: product.created_at,
           created_at: product.created_at
         };

@@ -1,3 +1,4 @@
+
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -52,6 +53,7 @@ export type JamType = {
   profiles?: ProfileType;
   reviews?: ReviewType[];
   avgRating?: number;
+  primaryImage?: string;
 };
 
 export type ReviewType = {
@@ -384,7 +386,7 @@ export type AdsCampaignType = {
   budget_euros: number;
   start_date: string;
   end_date: string;
-  billing_type: 'fixed' | 'cpc' | 'cpm';
+  billing_type: string;
   is_visible: boolean;
   status: string;
   created_by: string;
@@ -416,6 +418,7 @@ export type AdsInvoiceType = {
 
 export type InsertRecord<T> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
 
+// Updated with all table names used in the project
 export type TableName = 
   | "ads_campaigns" 
   | "jams" 
@@ -428,4 +431,11 @@ export type TableName =
   | "advice_comments" 
   | "advice_images"
   | "advice_products"
-  | "user_badges";
+  | "user_badges"
+  | "allergens"
+  | "seasonal_fruits"
+  | "jam_battles_new"
+  | "jam_reviews"
+  | "profiles"
+  | "pro_profiles"
+  | "recipes";

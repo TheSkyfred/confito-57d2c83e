@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAdvice } from '@/hooks/useAdvice';
-import { AdviceType, AdviceFilters } from '@/types/advice';
+import { AdviceFilters } from '@/types/advice';
 import AdviceHeader from '@/components/advice/AdviceHeader';
 import AdviceCard from '@/components/advice/AdviceCard';
 import AdviceFilterCard from '@/components/advice/AdviceFilterCard';
 import AdviceSearch from '@/components/advice/AdviceSearch';
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Conseils = () => {
   const [filters, setFilters] = useState<AdviceFilters>({});

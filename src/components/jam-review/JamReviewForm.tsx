@@ -47,7 +47,8 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
   reviewToEdit,
   onCancelEdit
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comment, setComment] = useState('');
   const [tasteRating, setTasteRating] = useState(0);

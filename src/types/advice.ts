@@ -29,7 +29,7 @@ export interface AdviceArticle {
   published_at?: string;
   products?: AdviceProduct[];
   comments?: any[];
-  // Add these properties to fix the errors
+  // Additional properties
   has_video?: boolean;
   has_products?: boolean;
   comments_count?: number;
@@ -56,4 +56,12 @@ export interface AdviceHeaderProps {
 
 export interface AdviceCardProps {
   article: AdviceArticle;
+}
+
+export interface AdviceSearchProps {
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  showFilters: boolean;
+  setShowFilters: (show: boolean) => void;
+  filters: AdviceFilters;
 }
