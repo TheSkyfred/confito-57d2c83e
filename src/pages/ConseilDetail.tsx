@@ -110,7 +110,7 @@ const ConseilDetail: React.FC = () => {
   
   const handleProductClick = async (productId: string, externalUrl: string) => {
     try {
-      await trackProductClick(productId, id as string);
+      await trackProductClick(productId);
       window.open(externalUrl, '_blank');
     } catch (error) {
       console.error("Error tracking product click:", error);

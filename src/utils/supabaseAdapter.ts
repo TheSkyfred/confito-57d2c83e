@@ -61,8 +61,8 @@ export const supabaseDirect = {
       .insert(data)
       .select();
     
-    // Use proper type casting for safety
-    return { data: (returnedData || []) as unknown as T[], error };
+    // Type cast safely
+    return { data: returnedData as unknown as T[], error };
   },
 
   // Insert data without returning
@@ -104,7 +104,7 @@ export const trackProductClick = async (productId: string) => {
       user_agent: navigator.userAgent,
     };
     
-    // Record the click directly with a raw query instead of using sql template literal
+    // Record the click directly with a raw update query
     const { error } = await supabase
       .from('advice_products')
       .update({ 

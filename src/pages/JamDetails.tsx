@@ -128,7 +128,10 @@ const JamDetails = () => {
         .insert({
           jam_id: id,
           reviewer_id: user.id,
-          rating: rating,
+          taste_rating: rating,
+          texture_rating: rating,
+          originality_rating: rating,
+          balance_rating: rating,
           comment: reviewText,
         });
       
@@ -191,17 +194,17 @@ const JamDetails = () => {
       if (!id || !user) return;
       
       const { data, error } = await supabase
-        .from('user_favorites')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('jam_id', id)
-        .single();
-      
-      setIsFavorite(!!data);
+        .rpc('check_user_favorite', {
+          user_id_param: user.id,
+          jam_id_param: id
+        });
       
       if (error) {
         console.error('Error checking favorite:', error);
+        return;
       }
+      
+      setIsFavorite(!!data);
     };
     
     checkFavorite();
@@ -213,17 +216,19 @@ const JamDetails = () => {
     const isCurrentlyFavorite = isFavorite;
     setIsFavorite(!isCurrentlyFavorite);
     
-    const { error } = isCurrentlyFavorite
-      ? await supabase
-          .from('user_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('jam_id', id)
-      : await supabase
-          .from('user_favorites')
-          .insert([{ user_id: user.id, jam_id: id }]);
-    
-    if (error) {
+    try {
+      if (isCurrentlyFavorite) {
+        await supabase.rpc('remove_user_favorite', {
+          user_id_param: user.id,
+          jam_id_param: id
+        });
+      } else {
+        await supabase.rpc('add_user_favorite', {
+          user_id_param: user.id, 
+          jam_id_param: id
+        });
+      }
+    } catch (error: any) {
       console.error('Error toggling favorite:', error);
       setIsFavorite(isCurrentlyFavorite);
       toast({
@@ -246,7 +251,6 @@ const JamDetails = () => {
         description: `${jam.name} a été ajouté à votre panier.`,
       });
       
-      // Track product click
       trackProductClick(jam.id);
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -284,6 +288,12 @@ const JamDetails = () => {
       });
   };
 
+  const handleDeleteReview = () => {
+    if (reviewToDelete) {
+      deleteReview();
+    }
+  };
+
   if (isLoading) {
     return <div className="container py-10">Chargement de la confiture...</div>;
   }
@@ -299,7 +309,6 @@ const JamDetails = () => {
   return (
     <div className="container py-10">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Image Section */}
         <div>
           {jam.jam_images && jam.jam_images.length > 0 ? (
             <img
@@ -314,7 +323,6 @@ const JamDetails = () => {
           )}
         </div>
 
-        {/* Details Section */}
         <div>
           <h1 className="text-3xl font-bold mb-4">{jam.name}</h1>
           <div className="flex items-center justify-between mb-2">
@@ -450,7 +458,6 @@ const JamDetails = () => {
         </div>
       </div>
 
-      {/* Reviews Section */}
       <div className="mt-12">
         <h2 className="text-2xl font-bold mb-4">Avis</h2>
 
@@ -526,7 +533,6 @@ const JamDetails = () => {
           <div className="text-center py-4">Aucun avis pour le moment.</div>
         )}
 
-        {/* Add Review Form */}
         {user && (
           <div className="mt-8">
             <h3 className="text-xl font-bold mb-2">Ajouter un avis</h3>
@@ -586,7 +592,7 @@ const JamDetails = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteReview()}>Supprimer</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteReview}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

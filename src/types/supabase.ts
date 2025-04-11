@@ -8,10 +8,10 @@ export type ProfileType = {
   avatar_url: string | null;
   bio: string | null;
   address: string | null;
-  address_line1: string;  // Changed from nullable to ensure compatibility
+  address_line1: string;  // Ensuring this is required
   address_line2: string | null;
-  postal_code: string;    // Changed from nullable to ensure compatibility
-  city: string;           // Changed from nullable to ensure compatibility
+  postal_code: string;    // Ensuring this is required
+  city: string;           // Ensuring this is required
   phone: string | null;
   website: string | null;
   credits: number;

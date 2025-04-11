@@ -1,10 +1,8 @@
-
 import React, {
   useState,
   useEffect,
   createContext,
   useContext,
-  ReactNode,
 } from 'react';
 import {
   Session,
@@ -72,7 +70,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .single();
         
         if (profileData) {
-          // Ensure the profile has all required fields
           const typedProfile: ProfileType = {
             id: profileData.id,
             username: profileData.username,
@@ -80,7 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             avatar_url: profileData.avatar_url || null,
             bio: profileData.bio || null,
             address: profileData.address || null,
-            // Make sure to handle potential missing address fields
             address_line1: profileData.address_line1 || profileData.address || '',
             address_line2: profileData.address_line2 || null,
             postal_code: profileData.postal_code || '',
