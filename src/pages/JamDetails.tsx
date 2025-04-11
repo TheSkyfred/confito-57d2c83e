@@ -193,18 +193,22 @@ const JamDetails = () => {
     const checkFavorite = async () => {
       if (!id || !user) return;
       
-      const { data, error } = await supabase
-        .rpc('check_user_favorite', {
-          user_id_param: user.id,
-          jam_id_param: id
-        });
-      
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .rpc('check_user_favorite', {
+            user_id_param: user.id,
+            jam_id_param: id
+          });
+        
+        if (error) {
+          console.error('Error checking favorite:', error);
+          return;
+        }
+        
+        setIsFavorite(!!data);
+      } catch (error) {
         console.error('Error checking favorite:', error);
-        return;
       }
-      
-      setIsFavorite(!!data);
     };
     
     checkFavorite();
@@ -592,7 +596,7 @@ const JamDetails = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteReview}>Supprimer</AlertDialogAction>
+            <AlertDialogAction onClick={() => handleDeleteReview()}>Supprimer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

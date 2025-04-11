@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useEffect,
@@ -70,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .single();
         
         if (profileData) {
+          // Transform the profile data to ensure all required fields are present
           const typedProfile: ProfileType = {
             id: profileData.id,
             username: profileData.username,

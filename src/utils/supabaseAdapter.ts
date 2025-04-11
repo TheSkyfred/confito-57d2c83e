@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { InsertRecord, TableName, AdsCampaignType, AdsInvoiceType } from '@/types/supabase';
@@ -16,7 +17,7 @@ export const supabaseDirect = {
     }
     
     const { data, error } = await query;
-    // Use proper type casting for safety
+    // Use safe type casting with unknown first
     return { data: (data || []) as unknown as T[], error };
   },
 
@@ -27,7 +28,7 @@ export const supabaseDirect = {
       .select(select)
       .eq(column, value);
     
-    // Use proper type casting for safety
+    // Use safe type casting with unknown first
     return { data: (data || []) as unknown as T[], error };
   },
 
@@ -38,7 +39,7 @@ export const supabaseDirect = {
       .select(select)
       .in(column, values);
     
-    // Use proper type casting for safety
+    // Use safe type casting with unknown first
     return { data: (data || []) as unknown as T[], error };
   },
 
@@ -50,7 +51,7 @@ export const supabaseDirect = {
       .eq('id', id)
       .single();
     
-    // Use proper type casting for safety
+    // Use safe type casting with unknown first
     return { data: data as unknown as T, error };
   },
 
@@ -61,7 +62,7 @@ export const supabaseDirect = {
       .insert(data)
       .select();
     
-    // Type cast safely
+    // Safe type cast
     return { data: returnedData as unknown as T[], error };
   },
 
@@ -104,13 +105,9 @@ export const trackProductClick = async (productId: string) => {
       user_agent: navigator.userAgent,
     };
     
-    // Record the click directly with a raw update query
-    const { error } = await supabase
-      .from('advice_products')
-      .update({ 
-        click_count: supabase.rpc('increment_click_count', { row_id: productId })
-      })
-      .eq('id', productId);
+    // Call the RPC function to increment the click count
+    const { data, error } = await supabase
+      .rpc('increment_click_count', { row_id: productId });
       
     if (error) throw error;
       
@@ -129,7 +126,7 @@ export const trackProductClick = async (productId: string) => {
   }
 };
 
-// Fonctions d'aide pour le stockage d'avatars sur Supabase
+// Functions for avatar storage with Supabase
 export const uploadAvatar = async (file: File, userId: string): Promise<string | null> => {
   try {
     if (!file) return null;
