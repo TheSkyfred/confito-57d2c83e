@@ -24,6 +24,7 @@ export interface JamFormData {
   shelf_life_months: number;
   special_edition: boolean;
   price_credits: number;
+  price_euros?: number; // Added price_euros field for pro jams
   recipe_steps: RecipeStep[];
   is_active: boolean;
   images: File[];
@@ -61,6 +62,7 @@ export const useJamForm = ({
     shelf_life_months: 12,
     special_edition: false,
     price_credits: 10,
+    price_euros: isProJam ? 10 : undefined, // Initialize price_euros if pro
     recipe_steps: [],
     is_active: false,
     images: [],
@@ -94,6 +96,11 @@ export const useJamForm = ({
       
       const recipeString = JSON.stringify(formData.recipe_steps);
       
+      // Determine which price field to use based on is_pro
+      const priceField = formData.is_pro 
+        ? { price_euros: formData.price_euros || formData.price_credits }
+        : { price_credits: formData.price_credits };
+      
       const jamData = {
         name: formData.name,
         description: formData.description,
@@ -106,7 +113,7 @@ export const useJamForm = ({
         production_date: formData.production_date,
         shelf_life_months: formData.shelf_life_months,
         special_edition: formData.special_edition,
-        price_credits: formData.price_credits,
+        ...priceField, // Use the appropriate price field
         recipe: recipeString,
         is_active: publish,
         is_pro: formData.is_pro, // Add the is_pro value when saving

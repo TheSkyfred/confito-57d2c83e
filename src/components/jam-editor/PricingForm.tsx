@@ -6,25 +6,41 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
-import { AlertCircle, Lightbulb } from 'lucide-react';
+import { AlertCircle, Lightbulb, EuroIcon } from 'lucide-react';
+import { CreditBadge } from '@/components/ui/credit-badge';
 
 export interface PricingFormProps {
   formData: {
     price_credits: number;
+    price_euros?: number;
     [key: string]: any;
   };
   updateFormData: (key: string, value: any) => void;
   suggestedPrice?: number | null;
+  isPro?: boolean;
 }
 
-const PricingForm: React.FC<PricingFormProps> = ({ formData, updateFormData, suggestedPrice }) => {
+const PricingForm: React.FC<PricingFormProps> = ({ 
+  formData, 
+  updateFormData, 
+  suggestedPrice, 
+  isPro = false 
+}) => {
   const handleSliderChange = (values: number[]) => {
-    updateFormData('price_credits', values[0]);
+    const key = isPro ? 'price_euros' : 'price_credits';
+    updateFormData(key, values[0]);
   };
+
+  const currentPrice = isPro 
+    ? (formData.price_euros || formData.price_credits) 
+    : formData.price_credits;
+
+  const priceUnit = isPro ? "€" : "crédits";
+  const priceKey = isPro ? "price_euros" : "price_credits";
 
   return (
     <div className="space-y-6">
-      {suggestedPrice && (
+      {suggestedPrice && !isPro && (
         <div className="bg-muted rounded-md p-4 flex items-start space-x-3">
           <Lightbulb className="h-5 w-5 text-jam-honey mt-0.5" />
           <div>
@@ -36,7 +52,7 @@ const PricingForm: React.FC<PricingFormProps> = ({ formData, updateFormData, sug
             <button
               type="button"
               className="text-sm text-primary hover:text-primary/80 transition-colors"
-              onClick={() => updateFormData('price_credits', suggestedPrice)}
+              onClick={() => updateFormData(priceKey, suggestedPrice)}
             >
               Appliquer cette suggestion
             </button>
@@ -45,13 +61,13 @@ const PricingForm: React.FC<PricingFormProps> = ({ formData, updateFormData, sug
       )}
 
       <div>
-        <FormLabel>Prix en crédits *</FormLabel>
+        <FormLabel>Prix en {priceUnit} *</FormLabel>
         <div className="space-y-4">
           <Slider
             min={1}
-            max={100}
-            step={1}
-            value={[formData.price_credits]}
+            max={isPro ? 50 : 100}
+            step={isPro ? 0.5 : 1}
+            value={[currentPrice]}
             onValueChange={handleSliderChange}
             className="py-4"
           />
@@ -59,16 +75,29 @@ const PricingForm: React.FC<PricingFormProps> = ({ formData, updateFormData, sug
             <Input 
               type="number"
               min={1}
+              step={isPro ? 0.5 : 1}
               className="w-24"
-              value={formData.price_credits}
-              onChange={(e) => updateFormData('price_credits', Number(e.target.value))}
+              value={currentPrice}
+              onChange={(e) => updateFormData(priceKey, Number(e.target.value))}
             />
-            <span className="text-lg font-medium">crédits</span>
+            {isPro ? (
+              <div className="flex items-center">
+                <EuroIcon className="h-4 w-4 mr-1" />
+                <span className="text-lg font-medium">euros</span>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <CreditBadge amount={0} size="sm" />
+                <span className="text-lg font-medium ml-1">crédits</span>
+              </div>
+            )}
           </div>
         </div>
         <FormDescription>
-          Définissez le prix en crédits pour votre confiture. 
-          Le prix minimum est de 1 crédit.
+          Définissez le prix en {priceUnit} pour votre confiture. 
+          {isPro 
+            ? " Les confitures professionnelles sont vendues en euros."
+            : " Le prix minimum est de 1 crédit."}
         </FormDescription>
       </div>
 

@@ -10,11 +10,17 @@ import { JamFormData } from "@/hooks/useJamForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Crown, Loader2 } from "lucide-react";
+import { ArrowLeft, Crown, Loader2, Info, AlertTriangle } from "lucide-react";
 import JamEditorAccordion from "@/components/jam-editor/JamEditorAccordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const AdminJamEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +64,15 @@ const AdminJamEdit: React.FC = () => {
   
   // Toggle PRO status
   const handleToggleProStatus = () => {
+    // When changing from pro to non-pro or vice versa, we need to handle price conversion
+    if (formData.is_pro && formData.price_euros) {
+      // Convert euros to credits (simple 1:1 conversion for example)
+      updateFormData('price_credits', Math.round(formData.price_euros));
+    } else if (!formData.is_pro && formData.price_credits) {
+      // Convert credits to euros (simple 1:1 conversion)
+      updateFormData('price_euros', formData.price_credits);
+    }
+    
     updateFormData('is_pro', !formData.is_pro);
   };
   
@@ -133,30 +148,68 @@ const AdminJamEdit: React.FC = () => {
           
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <div className="flex items-center space-x-2 bg-slate-50 p-3 rounded-md">
-                <Checkbox 
-                  id="is_pro"
-                  checked={formData.is_pro || false}
-                  onCheckedChange={handleToggleProStatus}
-                />
-                <div className="grid gap-1">
-                  <div className="flex items-center">
-                    <Label 
-                      htmlFor="is_pro" 
-                      className="font-medium cursor-pointer flex items-center"
-                    >
-                      <Crown className="h-4 w-4 mr-1.5 text-amber-500" />
-                      Statut Pro
-                    </Label>
+              <div className={`flex items-center space-x-2 p-3 rounded-md ${formData.is_pro ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="is_pro"
+                    checked={formData.is_pro || false}
+                    onCheckedChange={handleToggleProStatus}
+                  />
+                  <div className="grid gap-1">
+                    <div className="flex items-center">
+                      <Label 
+                        htmlFor="is_pro" 
+                        className="font-medium cursor-pointer flex items-center"
+                      >
+                        {formData.is_pro ? (
+                          <>
+                            <Crown className="h-4 w-4 mr-1.5 text-amber-500" />
+                            <span className="font-semibold text-amber-700">Confiture Pro</span>
+                          </>
+                        ) : (
+                          <>
+                            <Crown className="h-4 w-4 mr-1.5 text-slate-400" />
+                            <span>Statut Pro</span>
+                          </>
+                        )}
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 ml-1.5 text-slate-400" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="w-64 text-sm">
+                              Les confitures professionnelles sont vendues en euros plutôt qu'en crédits.
+                              Elles sont réservées aux producteurs ayant un statut pro validé.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.is_pro 
+                        ? "Prix en euros pour les confitures pro" 
+                        : "Réservé aux producteurs professionnels"}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Réservé aux producteurs professionnels
-                  </p>
                 </div>
               </div>
             )}
           </div>
         </div>
+        
+        {formData.is_pro && (
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mr-3 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-amber-800">Confiture Professionnelle</h3>
+              <p className="text-sm text-amber-700">
+                Cette confiture est vendue en euros et non en crédits. Le prix sera affiché en euros sur la plateforme.
+              </p>
+            </div>
+          </div>
+        )}
         
         <div className="flex flex-col gap-6">
           {jamCreatorId && (
