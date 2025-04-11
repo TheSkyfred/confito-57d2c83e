@@ -41,7 +41,7 @@ const AdminRecipes = () => {
   const { session } = useAuth();
   const { toast } = useToast();
   
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [rejectionReason, setRejectionReason] = useState<Record<string, string>>({});
   
@@ -50,7 +50,7 @@ const AdminRecipes = () => {
     queryFn: async () => {
       // Utiliser supabaseDirect pour éviter les erreurs de type avec les relations
       let filter: Record<string, any> = {};
-      if (statusFilter) {
+      if (statusFilter && statusFilter !== 'all') {
         filter = { status: statusFilter };
       }
       
@@ -167,7 +167,7 @@ const AdminRecipes = () => {
               <SelectValue placeholder="Tous les statuts" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les statuts</SelectItem>
+              <SelectItem value="all">Tous les statuts</SelectItem>
               <SelectItem value="brouillon">Brouillon</SelectItem>
               <SelectItem value="pending">En attente</SelectItem>
               <SelectItem value="approved">Approuvée</SelectItem>
