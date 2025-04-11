@@ -210,6 +210,45 @@ export type Database = {
           },
         ]
       }
+      advice_accessory_links: {
+        Row: {
+          accessory_id: string
+          advice_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+        }
+        Insert: {
+          accessory_id: string
+          advice_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+        }
+        Update: {
+          accessory_id?: string
+          advice_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advice_accessory_links_accessory_id_fkey"
+            columns: ["accessory_id"]
+            isOneToOne: false
+            referencedRelation: "pro_accessories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advice_accessory_links_advice_id_fkey"
+            columns: ["advice_id"]
+            isOneToOne: false
+            referencedRelation: "advice_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advice_articles: {
         Row: {
           author_id: string

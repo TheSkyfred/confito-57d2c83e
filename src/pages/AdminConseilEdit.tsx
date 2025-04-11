@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -46,7 +45,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import AccessoriesSelector from '@/components/admin/AccessoriesSelector';
 
 interface FormData {
   title: string;
@@ -69,6 +75,7 @@ const AdminConseilEdit = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -83,7 +90,6 @@ const AdminConseilEdit = () => {
     }
   });
   
-  // Redirect non-admin users
   useEffect(() => {
     if (user && !isAdmin && !isModerator) {
       navigate('/admin');
@@ -102,7 +108,6 @@ const AdminConseilEdit = () => {
     }
   }, [user, isAdmin, isModerator, navigate]);
   
-  // Initialize form with advice data
   useEffect(() => {
     if (advice) {
       form.reset({
@@ -287,202 +292,225 @@ const AdminConseilEdit = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations du conseil</CardTitle>
-              <CardDescription>
-                Modifiez les détails du conseil
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    rules={{ required: "Le titre est requis" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Titre</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Titre du conseil" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="type"
-                      rules={{ required: "Le type est requis" }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Type de conseil</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="general">Informations générales</TabsTrigger>
+              <TabsTrigger value="accessories">Accessoires associés</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="general">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informations du conseil</CardTitle>
+                  <CardDescription>
+                    Modifiez les détails du conseil
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        rules={{ required: "Le titre est requis" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Titre</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionner un type" />
-                              </SelectTrigger>
+                              <Input placeholder="Titre du conseil" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              {typeOptions.map(option => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      rules={{ required: "Le statut est requis" }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Statut</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="type"
+                          rules={{ required: "Le type est requis" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Type de conseil</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                defaultValue={field.value}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner un type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {typeOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="status"
+                          rules={{ required: "Le statut est requis" }}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Statut</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                defaultValue={field.value}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionner un statut" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {statusOptions.map(option => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="cover_image_url"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL de l'image de couverture</FormLabel>
                             <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionner un statut" />
-                              </SelectTrigger>
+                              <Input placeholder="https://example.com/image.jpg" {...field} />
                             </FormControl>
-                            <SelectContent>
-                              {statusOptions.map(option => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="cover_image_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL de l'image de couverture</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/image.jpg" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          URL de l'image de couverture
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="video_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>URL de la vidéo</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://youtube.com/watch?v=..." {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Lien YouTube (optionnel)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="content"
-                    rules={{ required: "Le contenu est requis" }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contenu</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Contenu du conseil..." 
-                            className="min-h-[200px]" 
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="tags"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tags</FormLabel>
-                        <FormControl>
-                          <Input placeholder="fraises, été, conservation..." {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          Séparez les tags par des virgules
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="visible"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Visible
-                          </FormLabel>
-                          <FormDescription>
-                            Si désactivé, le conseil ne sera pas visible même s'il est approuvé
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => navigate('/admin/conseils')}
-                    >
-                      Annuler
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+                            <FormDescription>
+                              URL de l'image de couverture
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="video_url"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>URL de la vidéo</FormLabel>
+                            <FormControl>
+                              <Input placeholder="https://youtube.com/watch?v=..." {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Lien YouTube (optionnel)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="content"
+                        rules={{ required: "Le contenu est requis" }}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contenu</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Contenu du conseil..." 
+                                className="min-h-[200px]" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="tags"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tags</FormLabel>
+                            <FormControl>
+                              <Input placeholder="fraises, été, conservation..." {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Séparez les tags par des virgules
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="visible"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>
+                                Visible
+                              </FormLabel>
+                              <FormDescription>
+                                Si désactivé, le conseil ne sera pas visible même s'il est approuvé
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex justify-end gap-4">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => navigate('/admin/conseils')}
+                        >
+                          Annuler
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="accessories">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Accessoires associés</CardTitle>
+                  <CardDescription>
+                    Gérez les accessoires associés à ce conseil
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {id && <AccessoriesSelector adviceId={id} />}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
         
         <div className="space-y-6">
@@ -564,7 +592,6 @@ const AdminConseilEdit = () => {
         </div>
       </div>
       
-      {/* Boîte de dialogue de confirmation pour l'approbation */}
       <AlertDialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -583,7 +610,6 @@ const AdminConseilEdit = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Boîte de dialogue de confirmation pour le rejet */}
       <AlertDialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

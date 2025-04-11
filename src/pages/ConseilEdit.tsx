@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -50,6 +49,7 @@ import {
   ExternalLink,
   Upload
 } from 'lucide-react';
+import AccessoriesSelector from '@/components/admin/AccessoriesSelector';
 
 interface FormData {
   title: string;
@@ -441,6 +441,7 @@ const ConseilEdit: React.FC = () => {
             <TabsList className="mb-6">
               <TabsTrigger value="general">Informations générales</TabsTrigger>
               <TabsTrigger value="products">Produits associés</TabsTrigger>
+              <TabsTrigger value="accessories">Accessoires associés</TabsTrigger>
             </TabsList>
             
             <TabsContent value="general">
@@ -794,6 +795,10 @@ const ConseilEdit: React.FC = () => {
                   )}
                 </div>
               </div>
+            </TabsContent>
+            
+            <TabsContent value="accessories">
+              {id && <AccessoriesSelector adviceId={id} />}
             </TabsContent>
           </Tabs>
         </CardContent>
