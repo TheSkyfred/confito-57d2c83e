@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +44,7 @@ interface ProductReportItem {
   image_url?: string;
   external_url?: string;
   last_click?: string;
+  promo_code?: string;
 }
 
 const AdminAssociatedProducts = () => {
@@ -60,7 +60,6 @@ const AdminAssociatedProducts = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterSponsored, setFilterSponsored] = useState('all');
   
-  // Redirect non-admin users
   useEffect(() => {
     if (user && !isAdmin && !isModerator) {
       navigate('/admin');
@@ -83,7 +82,6 @@ const AdminAssociatedProducts = () => {
     const fetchProductsData = async () => {
       setIsLoading(true);
       try {
-        // First get all products
         const { data: productsData, error: productsError } = await supabase
           .from('advice_products')
           .select(`
@@ -91,6 +89,7 @@ const AdminAssociatedProducts = () => {
             name,
             image_url,
             external_url,
+            promo_code,
             click_count,
             is_sponsored,
             article_id,
@@ -103,13 +102,11 @@ const AdminAssociatedProducts = () => {
           
         if (productsError) throw productsError;
         
-        // Then get click data for time filtering
-        let clicksQuery = supabase
+        const clicksQuery = supabase
           .from('advice_product_clicks')
-          .select('product_id, clicked_at')
+          .select('*')
           .order('clicked_at', { ascending: false });
         
-        // Apply time range filter to clicks
         if (timeRange !== 'all') {
           let fromDate = new Date();
           
@@ -128,10 +125,8 @@ const AdminAssociatedProducts = () => {
         
         if (clicksError) throw clicksError;
         
-        // Process and transform data
         const productStats = productsData.map(product => {
-          // Count clicks for this product in the selected time period
-          const productClicks = clicksData.filter(click => click.product_id === product.id);
+          const productClicks = clicksData ? clicksData.filter(click => click.product_id === product.id) : [];
           const clicksCount = productClicks.length;
           const lastClick = productClicks.length > 0 ? productClicks[0].clicked_at : null;
           
@@ -145,6 +140,7 @@ const AdminAssociatedProducts = () => {
             is_sponsored: product.is_sponsored,
             image_url: product.image_url,
             external_url: product.external_url,
+            promo_code: product.promo_code,
             last_click: lastClick,
             created_at: product.created_at
           };
@@ -166,15 +162,12 @@ const AdminAssociatedProducts = () => {
     fetchProductsData();
   }, [timeRange]);
   
-  // Filter and sort products
   const filteredProducts = products
     .filter(product => {
-      // Apply search filter
       const matchesSearch = searchTerm === '' || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.article_title.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Apply sponsored filter
       const matchesSponsored = 
         filterSponsored === 'all' || 
         (filterSponsored === 'sponsored' && product.is_sponsored) ||
@@ -183,7 +176,6 @@ const AdminAssociatedProducts = () => {
       return matchesSearch && matchesSponsored;
     })
     .sort((a, b) => {
-      // Apply sorting
       if (sortBy === 'clicks') {
         return sortOrder === 'desc' ? b.clicks - a.clicks : a.clicks - b.clicks;
       } else if (sortBy === 'name') {
@@ -195,7 +187,6 @@ const AdminAssociatedProducts = () => {
           ? b.article_title.localeCompare(a.article_title) 
           : a.article_title.localeCompare(b.article_title);
       } else if (sortBy === 'last_click') {
-        // Handle null values
         if (!a.last_click) return sortOrder === 'desc' ? 1 : -1;
         if (!b.last_click) return sortOrder === 'desc' ? -1 : 1;
         return sortOrder === 'desc' 
@@ -206,7 +197,6 @@ const AdminAssociatedProducts = () => {
     });
     
   const exportToCSV = () => {
-    // Create CSV content
     const headers = ['Nom', 'Conseil', 'Clics', 'Sponsorisé', 'URL Externe'];
     const rows = filteredProducts.map(product => [
       product.name,
@@ -216,13 +206,11 @@ const AdminAssociatedProducts = () => {
       product.external_url || ''
     ]);
     
-    // Build CSV string
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    // Create a blob and download link
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

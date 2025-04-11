@@ -1,29 +1,9 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
-type InsertRecord<T> = T extends { id: any } ? Omit<T, 'id' | 'created_at' | 'updated_at'> : T;
-
-/**
- * Insert a record and return the inserted record
- */
-export const supabaseDirect = {
-  insertAndReturn: async <T extends object>(
-    tableName: string, 
-    data: InsertRecord<T>
-  ): Promise<{ data: T[], error: any }> => {
-    const { data: insertedData, error } = await supabase
-      .from(tableName)
-      .insert(data)
-      .select('*');
-      
-    return { data: insertedData || [], error };
-  }
-};
-
 // Track product clicks
 export const trackProductClick = async (productId: string, articleId: string) => {
   try {
-    const { user } = await supabase.auth.getUser();
+    const { data: userResponse } = await supabase.auth.getUser();
+    const user = userResponse?.user;
     
     const clickData = {
       product_id: productId,
@@ -35,12 +15,19 @@ export const trackProductClick = async (productId: string, articleId: string) =>
     // Record the click
     await supabase.from('advice_product_clicks').insert(clickData);
     
-    // Update the click count on the product
+    // Fetch current click count
+    const { data: productData } = await supabase
+      .from('advice_products')
+      .select('click_count')
+      .eq('id', productId)
+      .single();
+      
+    const currentClicks = productData?.click_count || 0;
+    
+    // Update the click count directly
     await supabase
       .from('advice_products')
-      .update({ 
-        click_count: supabase.rpc('increment', { row_id: productId, table_name: 'advice_products', column_name: 'click_count' })
-      })
+      .update({ click_count: currentClicks + 1 })
       .eq('id', productId);
       
     return true;

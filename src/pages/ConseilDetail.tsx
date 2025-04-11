@@ -215,8 +215,10 @@ const ConseilDetail: React.FC = () => {
                 </div>
                 <p className="text-gray-600 text-sm mb-3">{product.description}</p>
                 {product.promo_code && (
-                  <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
-                    <span className="text-sm font-semibold text-blue-700">Code promo: {product.promo_code}</span>
+                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200 text-center">
+                    <p className="text-sm font-semibold text-blue-700">
+                      Code promo: {product.promo_code || ""}
+                    </p>
                   </div>
                 )}
                 <Button 

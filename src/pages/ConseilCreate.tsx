@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from '@/hooks/useUserRole';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
 import { AdviceType } from '@/types/advice';
 import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Form, 
   FormControl, 
@@ -16,17 +18,13 @@ import {
   FormLabel, 
   FormMessage 
 } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -34,7 +32,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ArrowLeft, Upload } from 'lucide-react';
+import {
+  ArrowLeft,
+  Upload,
+} from 'lucide-react';
 
 interface FormData {
   title: string;
@@ -49,28 +50,9 @@ interface FormData {
 const ConseilCreate = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin, isModerator } = useUserRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
-  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
-  
-  React.useEffect(() => {
-    if (user && !isAdmin && !isModerator) {
-      navigate('/conseils');
-      toast({
-        title: "Accès refusé",
-        description: "Vous n'avez pas les permissions nécessaires pour cette page",
-        variant: "destructive"
-      });
-    } else if (!user) {
-      navigate('/auth');
-      toast({
-        title: "Connexion requise",
-        description: "Vous devez être connecté pour accéder à cette page",
-        variant: "destructive"
-      });
-    }
-  }, [user, isAdmin, isModerator, navigate]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -78,13 +60,22 @@ const ConseilCreate = () => {
       cover_image_url: '',
       video_url: '',
       content: '',
-      type: 'fruits' as AdviceType,
+      type: 'fruits',
       tags: '',
       visible: true,
     }
   });
   
-  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const typeOptions = [
+    { label: 'Choix des fruits', value: 'fruits' },
+    { label: 'Cuisson', value: 'cuisson' },
+    { label: 'Recette', value: 'recette' },
+    { label: 'Conditionnement', value: 'conditionnement' },
+    { label: 'Stérilisation', value: 'sterilisation' },
+    { label: 'Matériel', value: 'materiel' }
+  ];
+  
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     
     const file = event.target.files[0];
@@ -92,7 +83,7 @@ const ConseilCreate = () => {
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `cover_images/${fileName}`;
     
-    setUploadingCoverImage(true);
+    setUploadingImage(true);
     
     try {
       console.log("Uploading to bucket: advice_images, path:", filePath);
@@ -113,7 +104,7 @@ const ConseilCreate = () => {
       console.log("File uploaded successfully, public URL:", publicUrl);
       
       form.setValue('cover_image_url', publicUrl);
-      setCoverImagePreview(publicUrl);
+      setImagePreview(publicUrl);
       
       toast({
         title: "Image téléchargée",
@@ -127,12 +118,20 @@ const ConseilCreate = () => {
         variant: "destructive"
       });
     } finally {
-      setUploadingCoverImage(false);
+      setUploadingImage(false);
     }
   };
   
   const onSubmit = async (data: FormData) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour créer un conseil",
+        variant: "destructive"
+      });
+      navigate('/auth');
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -142,30 +141,34 @@ const ConseilCreate = () => {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
       
-      const status = user.role === 'user' ? 'pending' : 'approved';
+      const { data: insertedData, error } = await supabase
+        .from('advice_articles')
+        .insert({
+          title: data.title,
+          author_id: user.id,
+          cover_image_url: data.cover_image_url || null,
+          video_url: data.video_url || null,
+          content: data.content,
+          type: data.type,
+          tags: tagsArray,
+          visible: data.visible,
+          status: 'pending',
+          published_at: new Date().toISOString()
+        })
+        .select('id');
       
-      const { data: articleData, error } = await supabaseDirect.insertAndReturn('advice_articles', {
-        title: data.title,
-        author_id: user.id,
-        cover_image_url: data.cover_image_url || null,
-        video_url: data.video_url || null,
-        content: data.content,
-        type: data.type,
-        tags: tagsArray,
-        visible: data.visible,
-        status: status
-      });
-        
       if (error) throw error;
       
       toast({
         title: "Conseil créé",
-        description: status === 'pending' 
-          ? "Votre conseil est en attente de validation" 
-          : "Votre conseil a été publié avec succès"
+        description: "Votre conseil a été créé avec succès"
       });
       
-      navigate(`/conseils/${articleData[0].id}`);
+      if (insertedData && insertedData.length > 0 && insertedData[0]) {
+        navigate(`/conseils/edit/${insertedData[0].id}`);
+      } else {
+        navigate('/conseils');
+      }
     } catch (error: any) {
       console.error('Erreur lors de la création du conseil:', error);
       toast({
@@ -177,15 +180,6 @@ const ConseilCreate = () => {
       setIsSubmitting(false);
     }
   };
-  
-  const typeOptions = [
-    { label: 'Choix des fruits', value: 'fruits' },
-    { label: 'Cuisson', value: 'cuisson' },
-    { label: 'Recette', value: 'recette' },
-    { label: 'Conditionnement', value: 'conditionnement' },
-    { label: 'Stérilisation', value: 'sterilisation' },
-    { label: 'Matériel', value: 'materiel' }
-  ];
   
   return (
     <div className="container py-8">
@@ -264,10 +258,10 @@ const ConseilCreate = () => {
                   <FormItem>
                     <FormLabel>Image de couverture</FormLabel>
                     <div className="space-y-4">
-                      {(coverImagePreview || field.value) && (
+                      {(imagePreview || field.value) && (
                         <div className="relative w-full max-w-md h-48 overflow-hidden rounded-md border">
                           <img 
-                            src={coverImagePreview || field.value} 
+                            src={imagePreview || field.value} 
                             alt="Aperçu de l'image de couverture" 
                             className="w-full h-full object-cover"
                           />
@@ -278,23 +272,23 @@ const ConseilCreate = () => {
                           <Input
                             type="file"
                             id="cover-image-upload"
-                            onChange={handleCoverImageUpload}
+                            onChange={handleImageUpload}
                             className="absolute inset-0 opacity-0 w-full cursor-pointer"
                             accept="image/*"
-                            disabled={uploadingCoverImage}
+                            disabled={uploadingImage}
                           />
                           <Button 
                             type="button" 
                             variant="outline"
-                            disabled={uploadingCoverImage}
+                            disabled={uploadingImage}
                             className="w-full"
                           >
-                            {uploadingCoverImage ? (
+                            {uploadingImage ? (
                               "Téléchargement..."
                             ) : (
                               <>
                                 <Upload className="h-4 w-4 mr-2" />
-                                {(coverImagePreview || field.value) ? "Changer l'image" : "Télécharger une image"}
+                                {(imagePreview || field.value) ? "Changer l'image" : "Télécharger une image"}
                               </>
                             )}
                           </Button>

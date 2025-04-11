@@ -163,7 +163,6 @@ const ConseilEdit: React.FC = () => {
         visible: advice.visible
       });
       
-      // Set cover image preview if available
       if (advice.cover_image_url) {
         setCoverImagePreview(advice.cover_image_url);
       }
@@ -201,14 +200,12 @@ const ConseilEdit: React.FC = () => {
         throw uploadError;
       }
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
       console.log("File uploaded successfully, public URL:", publicUrl);
       
-      // Update the form and preview
       form.setValue('cover_image_url', publicUrl);
       setCoverImagePreview(publicUrl);
       
@@ -250,7 +247,6 @@ const ConseilEdit: React.FC = () => {
         throw uploadError;
       }
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
@@ -291,7 +287,7 @@ const ConseilEdit: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabaseDirect.insertAndReturn('advice_products', {
+      const { data, error } = await supabaseDirect.insertAndReturn<AdviceProduct>('advice_products', {
         article_id: id,
         name: productForm.name,
         description: productForm.description,
@@ -303,7 +299,7 @@ const ConseilEdit: React.FC = () => {
       
       if (error) throw error;
       
-      setProducts(prev => [...prev, data[0]]);
+      setProducts(prev => [...prev, ...data]);
       
       setProductForm({
         name: '',

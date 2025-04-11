@@ -45,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, CheckCircle, XCircle, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { ImagePlus, Trash2, ExternalLink } from 'lucide-react';
@@ -83,6 +83,19 @@ const AdminConseilEdit = () => {
     promo_code: ''
   });
   const [uploadingProductImage, setUploadingProductImage] = useState(false);
+
+  const form = useForm<FormData>({
+    defaultValues: {
+      title: '',
+      cover_image_url: '',
+      video_url: '',
+      content: '',
+      type: 'fruits' as AdviceType,
+      tags: '',
+      visible: true,
+      status: 'pending'
+    }
+  });
 
   useEffect(() => {
     if (user && !isAdmin && !isModerator) {
@@ -273,90 +286,6 @@ const AdminConseilEdit = () => {
     { label: 'Approuvé', value: 'approved' },
     { label: 'Rejeté', value: 'rejected' }
   ];
-
-  const form = useForm<FormData>({
-    defaultValues: {
-      title: '',
-      cover_image_url: '',
-      video_url: '',
-      content: '',
-      type: 'fruits' as AdviceType,
-      tags: '',
-      visible: true,
-      status: 'pending'
-    }
-  });
-
-  const handleApprove = async () => {
-    if (!id) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { error } = await supabase
-        .from('advice_articles')
-        .update({
-          status: 'approved',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Conseil approuvé",
-        description: "Le conseil a été approuvé et est maintenant visible publiquement"
-      });
-      
-      setShowApproveDialog(false);
-      refetch();
-    } catch (error: any) {
-      console.error('Erreur lors de l\'approbation du conseil:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible d'approuver le conseil",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!id) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const { error } = await supabase
-        .from('advice_articles')
-        .update({
-          status: 'rejected',
-          visible: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Conseil rejeté",
-        description: "Le conseil a été rejeté et n'est pas visible publiquement"
-      });
-      
-      setShowRejectDialog(false);
-      refetch();
-    } catch (error: any) {
-      console.error('Erreur lors du rejet du conseil:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de rejeter le conseil",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const onSubmit = async (data: FormData) => {
     if (!user || !id) return;
