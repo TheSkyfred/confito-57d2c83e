@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -20,7 +21,8 @@ import Checkout from './pages/Checkout';
 import Credits from './pages/Credits';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
-import AdminJams from './pages/AdminJams'; // Import the new AdminJams page
+import AdminJams from './pages/AdminJams';
+import AdminJamEdit from './pages/AdminJamEdit'; // Import the new AdminJamEdit page
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
 import BattleAdmin from './pages/BattleAdmin';
@@ -47,7 +49,7 @@ import AdminConseils from './pages/AdminConseils';
 import Conseils from './pages/Conseils';
 import ConseilDetail from './pages/ConseilDetail'; 
 import ConseilEdit from './pages/ConseilEdit';
-import ConseilCreate from './pages/ConseilCreate'; // Add this missing import
+import ConseilCreate from './pages/ConseilCreate';
 
 const queryClient = new QueryClient();
 
@@ -80,6 +82,7 @@ function App() {
                   <Route path="/battles/admin" element={<BattleAdmin />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />
+                  <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} /> {/* New route for admin jam editing */}
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />

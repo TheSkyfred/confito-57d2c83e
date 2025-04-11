@@ -31,7 +31,8 @@ import {
   FilterIcon,
   AlertCircle,
   Pencil,
-  PlusCircle
+  PlusCircle,
+  Settings
 } from 'lucide-react';
 
 // Updated interface to correctly handle the profiles property
@@ -196,6 +197,11 @@ const AdminJams = () => {
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/jam/edit/${jam.id}`}>
                         <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild className="text-slate-800">
+                      <Link to={`/admin/jams/edit/${jam.id}`}>
+                        <Settings className="h-4 w-4" />
                       </Link>
                     </Button>
                   </TableCell>

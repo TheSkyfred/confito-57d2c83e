@@ -28,6 +28,7 @@ export interface JamFormData {
   is_active: boolean;
   images: File[];
   main_image_index: number;
+  is_pro?: boolean; // Added is_pro flag
 }
 
 export interface UseJamFormProps {
@@ -64,6 +65,7 @@ export const useJamForm = ({
     is_active: false,
     images: [],
     main_image_index: 0,
+    is_pro: isProJam, // Initialize with the provided value
   });
 
   const updateFormData = (key: string, value: any) => {
@@ -107,6 +109,7 @@ export const useJamForm = ({
         price_credits: formData.price_credits,
         recipe: recipeString,
         is_active: publish,
+        is_pro: formData.is_pro, // Add the is_pro value when saving
       };
       
       let jam_id = initialJamId;
@@ -145,7 +148,12 @@ export const useJamForm = ({
           : "Votre confiture a été enregistrée en brouillon",
       });
       
-      navigate(publish ? `/jam/${jam_id}` : "/dashboard");
+      // Redirect to admin path if admin, else user path
+      if (isAdmin) {
+        navigate(`/admin/jams`);
+      } else {
+        navigate(publish ? `/jam/${jam_id}` : "/dashboard");
+      }
       return true;
     } catch (error: any) {
       console.error("Error saving jam:", error);
