@@ -32,7 +32,10 @@ import {
   EyeIcon,
   FilterIcon,
   AlertCircle,
-  Pencil
+  Pencil,
+  ShieldCheck,
+  ShieldOff,
+  ShieldQuestion
 } from 'lucide-react';
 
 // Define a more specific interface for what Supabase actually returns
@@ -47,10 +50,11 @@ const AdminConseils = () => {
   const { toast } = useToast();
   
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [approvalFilter, setApprovalFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
   const { data: conseils, isLoading, error, refetch } = useQuery({
-    queryKey: ['adminConseils', statusFilter],
+    queryKey: ['adminConseils', statusFilter, approvalFilter],
     queryFn: async () => {
       let query = supabase.from('advice_articles').select('*');
       
@@ -58,7 +62,11 @@ const AdminConseils = () => {
         query = query.eq('visible', statusFilter === 'visible');
       }
       
-      const { data, error } = await query;
+      if (approvalFilter !== 'all') {
+        query = query.eq('status', approvalFilter);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       
@@ -132,6 +140,20 @@ const AdminConseils = () => {
           </Select>
         </div>
         
+        <div className="w-full sm:w-48">
+          <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Tous les niveaux d'approbation" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les niveaux</SelectItem>
+              <SelectItem value="pending">En attente</SelectItem>
+              <SelectItem value="approved">Approuvé</SelectItem>
+              <SelectItem value="rejected">Rejeté</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
         <div className="relative flex-1">
           <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
@@ -161,6 +183,7 @@ const AdminConseils = () => {
                 <TableHead>Auteur</TableHead>
                 <TableHead>Date de création</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead>Approbation</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -183,6 +206,24 @@ const AdminConseils = () => {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {conseil.status === 'approved' ? (
+                      <Badge variant="outline" className="bg-green-100 text-green-800 flex items-center gap-1">
+                        <ShieldCheck className="h-3 w-3" />
+                        Approuvé
+                      </Badge>
+                    ) : conseil.status === 'rejected' ? (
+                      <Badge variant="outline" className="bg-red-100 text-red-800 flex items-center gap-1">
+                        <ShieldOff className="h-3 w-3" />
+                        Rejeté
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+                        <ShieldQuestion className="h-3 w-3" />
+                        En attente
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/conseils/${conseil.id}`}>
@@ -190,7 +231,7 @@ const AdminConseils = () => {
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/conseils/edit/${conseil.id}`}>
+                      <Link to={`/admin/conseils/edit/${conseil.id}`}>
                         <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -205,8 +246,8 @@ const AdminConseils = () => {
           <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <h3 className="text-xl font-medium mb-2">Aucun conseil trouvé</h3>
           <p className="text-muted-foreground">
-            {statusFilter !== 'all' ? 
-              `Aucun conseil avec le statut "${statusFilter}" trouvé.` : 
+            {statusFilter !== 'all' || approvalFilter !== 'all' ? 
+              `Aucun conseil correspondant aux filtres sélectionnés.` : 
               'Aucun conseil trouvé.'}
           </p>
         </div>

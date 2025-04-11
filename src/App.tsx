@@ -46,6 +46,7 @@ import FruitDetail from './pages/FruitDetail';
 import AdminUsers from './pages/AdminUsers';
 import Settings from './pages/Settings';
 import AdminConseils from './pages/AdminConseils';
+import AdminConseilEdit from './pages/AdminConseilEdit';
 import Conseils from './pages/Conseils';
 import ConseilDetail from './pages/ConseilDetail'; 
 import ConseilEdit from './pages/ConseilEdit';
@@ -102,6 +103,7 @@ function App() {
                   <Route path="/recipes/create" element={<RecipeCreate />} />
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
+                  <Route path="/admin/conseils/edit/:id" element={<AdminConseilEdit />} />
                   <Route path="/conseils" element={<Conseils />} />
                   <Route path="/conseils/create" element={<ConseilCreate />} />
                   <Route path="/conseils/edit/:id" element={<ConseilEdit />} />
