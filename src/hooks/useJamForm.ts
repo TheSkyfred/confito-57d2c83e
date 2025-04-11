@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +95,7 @@ export const useJamForm = ({
       
       const recipeString = JSON.stringify(formData.recipe_steps);
       
+      // Ensure both price fields are included, but one will be null based on is_pro
       const jamData = {
         name: formData.name,
         description: formData.description,

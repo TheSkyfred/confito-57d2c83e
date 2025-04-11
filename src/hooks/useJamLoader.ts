@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -102,7 +103,10 @@ export const useJamLoader = ({
         
         const { data: jam, error } = await query.single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error loading jam:", error);
+          throw error;
+        }
         
         if (!jam) {
           toast({
@@ -117,6 +121,9 @@ export const useJamLoader = ({
         // Set the creator ID and isProJam flag explicitly from the jam data
         setJamCreatorId(jam.creator_id);
         setIsProJam(jam.is_pro || false);
+        
+        console.log("Loaded jam data:", jam);
+        console.log("Is pro jam:", jam.is_pro);
 
         const jamWithTypes = jam as unknown as JamType;
 
@@ -163,7 +170,7 @@ export const useJamLoader = ({
           setMainImagePreview(mainImageUrl);
         }
         
-        // Make sure to retrieve the price_euros field for pro jams
+        // Ensure we explicitly set the is_pro flag from the database when initializing the form
         setInitialFormData({
           name: jamWithTypes.name || "",
           description: jamWithTypes.description || "",

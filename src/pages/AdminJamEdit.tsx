@@ -60,7 +60,9 @@ const AdminJamEdit: React.FC = () => {
   
   useEffect(() => {
     if (initialFormData && initialFormData.name && !formData.name) {
-      updateFormData('is_pro', initialFormData.is_pro || false);
+      Object.keys(initialFormData).forEach(key => {
+        updateFormData(key, initialFormData[key as keyof JamFormData]);
+      });
     }
   }, [initialFormData]);
   
