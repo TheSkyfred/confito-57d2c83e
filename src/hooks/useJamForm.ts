@@ -23,7 +23,7 @@ export interface JamFormData {
   shelf_life_months: number;
   special_edition: boolean;
   price_credits: number;
-  price_euros?: number; // Added price_euros field for pro jams
+  price_euros?: number | null; // Added price_euros field for pro jams
   recipe_steps: RecipeStep[];
   is_active: boolean;
   images: File[];
@@ -61,7 +61,7 @@ export const useJamForm = ({
     shelf_life_months: 12,
     special_edition: false,
     price_credits: 10,
-    price_euros: isProJam ? 10 : undefined, // Initialize price_euros if pro
+    price_euros: isProJam ? 10 : null, // Initialize price_euros if pro
     recipe_steps: [],
     is_active: false,
     images: [],
@@ -84,7 +84,6 @@ export const useJamForm = ({
     }
   };
 
-  // Return type now allows void and boolean to match the interface requirements
   const handleSubmit = async (publish: boolean = false): Promise<boolean | void> => {
     try {
       setSaving(true);
@@ -95,8 +94,6 @@ export const useJamForm = ({
       
       const recipeString = JSON.stringify(formData.recipe_steps);
       
-      // Always include both price fields in the data object
-      // but set appropriate values based on is_pro flag
       const jamData = {
         name: formData.name,
         description: formData.description,
@@ -126,7 +123,6 @@ export const useJamForm = ({
           
         if (updateError) throw updateError;
       } else {
-        // Need to include all the required fields when creating a new jam
         const { data: newJam, error: insertError } = await supabase
           .from("jams")
           .insert({
@@ -152,7 +148,6 @@ export const useJamForm = ({
           : "Votre confiture a été enregistrée en brouillon",
       });
       
-      // Redirect to admin path if admin, else user path
       if (isAdmin) {
         navigate(`/admin/jams`);
       } else {
@@ -209,7 +204,6 @@ export const useJamForm = ({
         });
         
         if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
-          // Fallback pour quand la fonction RPC n'existe pas
           const { error: directInsertError } = await supabase
             .from("jam_images")
             .insert({

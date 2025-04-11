@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -28,13 +27,11 @@ const AdminJamEdit: React.FC = () => {
   const { toast } = useToast();
   const { isAdmin, isModerator } = useUserRole();
   
-  // Add state for expanded sections in the accordion
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "basic-info",
     "pricing"
   ]);
   
-  // Load the jam data with admin privileges
   const {
     loading,
     jamCreatorId,
@@ -43,12 +40,11 @@ const AdminJamEdit: React.FC = () => {
     initialFormData,
   } = useJamLoader({
     jamId: id,
-    userId: null, // Don't filter by user since we're admin
+    userId: null,
     isAdmin,
     isModerator,
   });
   
-  // Initialize the form with the loaded data
   const {
     formData,
     updateFormData,
@@ -59,29 +55,29 @@ const AdminJamEdit: React.FC = () => {
     initialJamId: id,
     jamCreatorId: jamCreatorId,
     isProJam: isProJam,
-    isAdmin: true, // Enable admin features
+    isAdmin: true,
   });
   
-  // Toggle PRO status
+  useEffect(() => {
+    if (initialFormData && initialFormData.name && !formData.name) {
+      updateFormData('is_pro', initialFormData.is_pro || false);
+    }
+  }, [initialFormData]);
+  
   const handleToggleProStatus = () => {
-    // When changing from pro to non-pro or vice versa, we need to handle price conversion
     if (formData.is_pro && formData.price_euros) {
-      // Convert euros to credits (simple 1:1 conversion for example)
       updateFormData('price_credits', Math.round(formData.price_euros));
     } else if (!formData.is_pro && formData.price_credits) {
-      // Convert credits to euros (simple 1:1 conversion)
       updateFormData('price_euros', formData.price_credits);
     }
     
     updateFormData('is_pro', !formData.is_pro);
   };
   
-  // Navigate back to the admin jams list
   const handleGoBack = () => {
     navigate('/admin/jams');
   };
   
-  // Check access permissions
   if (!isAdmin && !isModerator) {
     return (
       <div className="container mx-auto py-8">
@@ -98,7 +94,6 @@ const AdminJamEdit: React.FC = () => {
     );
   }
   
-  // Special rule for moderators who cannot edit PRO jams
   if (isModerator && !isAdmin && isProJam) {
     return (
       <div className="container mx-auto py-8">
@@ -115,7 +110,6 @@ const AdminJamEdit: React.FC = () => {
     );
   }
   
-  // Loading state
   if (loading) {
     return (
       <div className="container mx-auto py-8">
