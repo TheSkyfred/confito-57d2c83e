@@ -1,531 +1,246 @@
-
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
-import { useToast } from '@/hooks/use-toast';
-import { AdsCampaignType, AdsInvoiceType } from '@/types/recipes';
+import { ArrowLeft, ExternalLink, FileText, Image, Type, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  BarChart,
-  Calendar,
-  Clock,
-  DollarSign,
-  Edit,
-  EyeOff,
-  FileText,
-  MousePointer,
-  Percent,
-  ShoppingCart,
-  Target,
-  Trash2,
-  TrendingUp,
-  User,
-  Users,
-  Activity,
-  ArrowLeft,
-  Eye,
-} from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Separator } from '@/components/ui/separator';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { AdsCampaignType, AdsInvoiceType } from '@/types/supabase';
+import { CreditBadge } from '@/components/ui/credit-badge';
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-interface AdsCampaignDetailsProps {
-  campaignId: string;
-}
-
-const AdsCampaignDetails: React.FC<AdsCampaignDetailsProps> = ({ campaignId }) => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [campaign, setCampaign] = useState<AdsCampaignType | null>(null);
+const AdsCampaignDetails = () => {
+  const { id } = useParams<{ id: string }>();
   const [invoices, setInvoices] = useState<AdsInvoiceType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [loadingInvoices, setLoadingInvoices] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchCampaign = async () => {
-      setLoading(true);
+  const { data: campaign, isLoading, error } = useQuery({
+    queryKey: ['campaign', id],
+    queryFn: async () => {
+      const { data, error } = await supabaseDirect.select<AdsCampaignType>(
+        'ads_campaigns', 
+        `*, clicks:ads_clicks(*), conversions:ads_conversions(*), jam:jam_id(name, profiles(username))`
+      );
       
-      try {
-        const { data, error } = await supabaseDirect.getById('ads_campaigns', campaignId, `
-          *,
-          jam:jam_id (
-            id,
-            name,
-            price_euros,
-            creator_id,
-            profiles:creator_id (username, full_name)
-          ),
-          creator:created_by (
-            id, 
-            username, 
-            full_name
-          ),
-          clicks:ads_clicks (id),
-          conversions:ads_conversions (id)
-        `);
-          
-        if (error) throw error;
-        
-        if (!data) {
-          throw new Error('Campagne non trouvée');
-        }
+      const campaignData = data?.find(item => item.id === id);
+      if (!campaignData) throw new Error('Campaign not found');
+      
+      // Ajout d'un typecasting explicite pour assurer la compatibilité avec AdsCampaignType
+      const typedCampaign = campaignData as unknown as AdsCampaignType & {
+        clicks?: any[];
+        conversions?: any[];
+        jam?: any;
+      };
+      
+      // Calcul des métriques pour l'affichage
+      if (typedCampaign) {
+        const clicks = typedCampaign.clicks || [];
+        const conversions = typedCampaign.conversions || [];
+        typedCampaign.clicks_count = clicks.length;
+        typedCampaign.ctr = clicks.length / (typedCampaign.planned_impressions || 1) * 100;
+        typedCampaign.conversions_count = conversions.length;
+        typedCampaign.conversion_rate = clicks.length > 0 ? 
+          conversions.length / clicks.length * 100 : 0;
+      }
+      
+      return typedCampaign;
+    },
+    enabled: !!id
+  });
 
-        // Calculer les métriques
-        const campaignData = {
-          ...data,
-          clicks_count: data.clicks?.length || 0,
-          conversions_count: data.conversions?.length || 0,
-          ctr: data.clicks?.length ? 
-            (data.clicks.length / data.planned_impressions) * 100 : 0,
-          conversion_rate: data.clicks?.length && data.conversions?.length ? 
-            (data.conversions.length / data.clicks.length) * 100 : 0
-        };
-        
-        setCampaign(campaignData as AdsCampaignType);
-      } catch (error: any) {
-        toast({
-          title: 'Erreur',
-          description: error.message || 'Impossible de charger les détails de la campagne',
-          variant: 'destructive',
-        });
-        navigate('/admin/campaigns');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    const fetchInvoices = async () => {
-      setLoadingInvoices(true);
-      
-      try {
-        const { data, error } = await supabaseDirect.selectWhere('ads_invoices', 'campaign_id', campaignId);
-          
-        if (error) throw error;
-        
-        setInvoices(data || []);
-      } catch (error: any) {
-        console.error('Erreur lors du chargement des factures:', error);
-      } finally {
-        setLoadingInvoices(false);
-      }
-    };
-    
-    fetchCampaign();
-    fetchInvoices();
-  }, [campaignId, navigate, toast]);
-  
-  const handleDelete = async () => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
-      return;
-    }
-    
-    try {
-      const { error } = await supabaseDirect.delete('ads_campaigns', { id: campaignId });
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Campagne supprimée',
-        description: 'La campagne a été supprimée avec succès',
-      });
-      
-      navigate('/admin/campaigns');
-    } catch (error: any) {
-      toast({
-        title: 'Erreur',
-        description: error.message || 'Une erreur est survenue',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  const toggleVisibility = async () => {
-    if (!campaign) return;
-    
-    try {
-      const { error } = await supabaseDirect.update(
-        'ads_campaigns',
-        { is_visible: !campaign.is_visible },
-        { id: campaign.id }
+  const { data: invoicesData, isLoading: isLoadingInvoices } = useQuery({
+    queryKey: ['campaign_invoices', id],
+    queryFn: async () => {
+      const { data, error } = await supabaseDirect.selectWhere<AdsInvoiceType>(
+        'ads_invoices', 
+        'campaign_id', 
+        id as string
       );
       
       if (error) throw error;
-      
-      toast({
-        title: campaign.is_visible ? 'Campagne masquée' : 'Campagne visible',
-        description: campaign.is_visible 
-          ? 'La campagne a été masquée et ne sera plus affichée' 
-          : 'La campagne est maintenant visible',
-      });
-      
-      setCampaign({
-        ...campaign,
-        is_visible: !campaign.is_visible
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Erreur',
-        description: error.message || 'Une erreur est survenue',
-        variant: 'destructive',
-      });
+      return data || [];
+    },
+    enabled: !!id
+  });
+
+  useEffect(() => {
+    if (invoicesData) {
+      setInvoices(invoicesData);
     }
-  };
-  
-  if (loading) {
-    return <div className="text-center py-8">Chargement des détails...</div>;
+  }, [invoicesData]);
+
+  if (isLoading) {
+    return <div className="container py-8">Chargement...</div>;
   }
-  
-  if (!campaign) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-red-500">Erreur</CardTitle>
-          <CardDescription>Campagne non trouvée</CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button asChild>
-            <Link to="/admin/campaigns">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Retour aux campagnes
-            </Link>
-          </Button>
-        </CardFooter>
-      </Card>
-    );
+
+  if (error || !campaign) {
+    return <div className="container py-8">Erreur: Campagne non trouvée.</div>;
   }
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-600">Active</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="border-amber-500 text-amber-500">En attente</Badge>;
-      case 'completed':
-        return <Badge variant="secondary">Terminée</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
-  
-  const getInvoiceStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-600">Payée</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="border-amber-500 text-amber-500">En attente</Badge>;
-      case 'cancelled':
-        return <Badge variant="destructive">Annulée</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
-    }
-  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => navigate('/admin/campaigns')}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Retour
+    <div className="container py-8">
+      <div className="flex items-center justify-between mb-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/admin/ads">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Retour à la liste
+          </Link>
         </Button>
-        
-        <div className="flex gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link to={`/admin/campaigns/edit/${campaign.id}`}>
-              <Edit className="mr-2 h-4 w-4" />
-              Modifier
-            </Link>
-          </Button>
-          
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={toggleVisibility}
-          >
-            {campaign.is_visible ? (
-              <>
-                <EyeOff className="mr-2 h-4 w-4" />
-                Masquer
-              </>
-            ) : (
-              <>
-                <Eye className="mr-2 h-4 w-4" />
-                Rendre visible
-              </>
-            )}
-          </Button>
-          
-          <Button 
-            size="sm" 
-            variant="destructive" 
-            onClick={handleDelete}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Supprimer
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/admin/ads/edit/${campaign.id}`}>
+            Modifier la campagne
+          </Link>
+        </Button>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-2xl font-bold">{campaign.name}</CardTitle>
-                <CardDescription>
-                  Campagne {campaign.campaign_type === 'pro' ? 'professionnelle' : 'sponsorisée'}
-                </CardDescription>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Détails de la campagne</CardTitle>
+              <CardDescription>
+                Informations générales sur la campagne publicitaire.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Type className="h-4 w-4 text-muted-foreground" />
+                <span>{campaign.campaign_type === 'pro' ? 'Campagne Pro' : 'Campagne Sponsorisée'}</span>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                {getStatusBadge(campaign.status)}
-                {!campaign.is_visible && (
-                  <Badge variant="outline" className="border-gray-500 text-gray-500">
-                    Masquée
-                  </Badge>
-                )}
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span>{campaign.name}</span>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-muted/50 p-3 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Période</span>
+              {campaign.jam && (
+                <div className="flex items-center space-x-2">
+                  <Image className="h-4 w-4 text-muted-foreground" />
+                  <span>Confiture: {campaign.jam.name}</span>
+                </div>
+              )}
+              {campaign.redirect_url && (
+                <div className="flex items-center space-x-2">
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  <a href={campaign.redirect_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    Lien de redirection
+                  </a>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                <span>Visible: {campaign.is_visible ? 'Oui' : 'Non'}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <span>Statut: {campaign.status}</span>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Impressions planifiées</p>
+                  <p className="font-medium">{campaign.planned_impressions}</p>
                 </div>
                 <div>
-                  <div className="text-sm">
-                    Du {format(new Date(campaign.start_date), 'dd/MM/yyyy', { locale: fr })}
-                  </div>
-                  <div className="text-sm">
-                    Au {format(new Date(campaign.end_date), 'dd/MM/yyyy', { locale: fr })}
-                  </div>
+                  <p className="text-sm text-muted-foreground">Fréquence d'affichage</p>
+                  <p className="font-medium">{campaign.display_frequency}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Budget</p>
+                  <p className="font-medium">{campaign.budget_euros} €</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Type de facturation</p>
+                  <p className="font-medium">{campaign.billing_type}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date de début</p>
+                  <p className="font-medium">
+                    {format(new Date(campaign.start_date), 'PPP', { locale: fr })}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date de fin</p>
+                  <p className="font-medium">
+                    {format(new Date(campaign.end_date), 'PPP', { locale: fr })}
+                  </p>
                 </div>
               </div>
-              
-              <div className="bg-muted/50 p-3 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <DollarSign className="h-4 w-4" />
-                  <span>Budget</span>
-                </div>
-                <div className="font-semibold">{campaign.budget_euros} €</div>
-                <div className="text-xs text-muted-foreground">
-                  Mode: {campaign.billing_type === 'fixed' ? 'Forfait' : 
-                         campaign.billing_type === 'cpc' ? 'Coût par clic' : 
-                         'Coût par mille impressions'}
-                </div>
-              </div>
-              
-              <div className="bg-muted/50 p-3 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Target className="h-4 w-4" />
-                  <span>Performance</span>
-                </div>
-                <div className="text-sm">
-                  <span className="font-semibold">{campaign.clicks_count}</span> clics
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  CTR: {campaign.ctr.toFixed(2)}%
-                </div>
-              </div>
-              
-              <div className="bg-muted/50 p-3 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <ShoppingCart className="h-4 w-4" />
-                  <span>Conversions</span>
-                </div>
-                <div className="text-sm">
-                  <span className="font-semibold">{campaign.conversions_count}</span> conversions
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Taux: {campaign.conversion_rate.toFixed(2)}%
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+            </CardContent>
+          </Card>
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Performances</CardTitle>
+              <CardDescription>
+                Suivi des performances de la campagne.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <h3 className="text-sm font-medium mb-2">Confiture promue</h3>
-                <div className="bg-muted/50 p-3 rounded-md">
-                  {campaign.jam ? (
-                    <Link to={`/jams/${campaign.jam.id}`} className="hover:underline flex items-center justify-between">
-                      <span>{campaign.jam.name}</span>
-                      <Badge variant="outline">
-                        {campaign.jam.price_euros?.toFixed(2)} €
-                      </Badge>
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground">Confiture non disponible</span>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">Nombre de Clics</p>
+                <p className="font-medium">{campaign.clicks_count || 0}</p>
               </div>
-              
               <div>
-                <h3 className="text-sm font-medium mb-2">Configuration</h3>
-                <div className="bg-muted/50 p-3 rounded-md space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Impressions planifiées:</span>
-                    <span>{campaign.planned_impressions}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Fréquence d'affichage:</span>
-                    <span>Toutes les {campaign.display_frequency} cartes</span>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Nombre de Conversions</p>
+                <p className="font-medium">{campaign.conversions_count || 0}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        
+              <div>
+                <p className="text-sm text-muted-foreground">CTR (Click-Through Rate)</p>
+                <p className="font-medium">{(campaign.ctr || 0).toFixed(2)}%</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Taux de Conversion</p>
+                <p className="font-medium">{(campaign.conversion_rate || 0).toFixed(2)}%</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className="mt-8">
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader>
             <CardTitle>Factures</CardTitle>
+            <CardDescription>
+              Liste des factures associées à cette campagne.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingInvoices ? (
-              <div className="text-center py-2 text-sm text-muted-foreground">
-                Chargement...
-              </div>
-            ) : invoices.length === 0 ? (
-              <div className="text-center py-6 text-sm text-muted-foreground">
-                <FileText className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-                Aucune facture disponible
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {invoices.map((invoice) => (
-                  <div 
-                    key={invoice.id} 
-                    className="p-3 border rounded-md flex justify-between items-center"
-                  >
-                    <div>
-                      <div className="font-semibold">{invoice.invoice_number}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {format(new Date(invoice.invoice_date), 'dd/MM/yyyy', { locale: fr })}
+            <ScrollArea className="h-[300px] w-full rounded-md border">
+              <div className="divide-y divide-border">
+                {isLoadingInvoices ? (
+                  <div className="p-4">Chargement des factures...</div>
+                ) : invoices.length > 0 ? (
+                  invoices.map(invoice => (
+                    <div key={invoice.id} className="p-4">
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Facture #{invoice.invoice_number}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Date: {format(new Date(invoice.invoice_date), 'PPP', { locale: fr })}
+                          </p>
+                        </div>
+                        <div>
+                          <CreditBadge amount={invoice.amount_euros} />
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">{invoice.amount_euros} €</div>
-                      <div className="mt-1">{getInvoiceStatusBadge(invoice.status)}</div>
-                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-muted-foreground">
+                    Aucune facture disponible pour cette campagne.
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </ScrollArea>
           </CardContent>
-          <CardFooter>
-            <Button asChild variant="outline" className="w-full">
-              <Link to={`/admin/campaigns/${campaign.id}/invoices`}>
-                <FileText className="mr-2 h-4 w-4" />
-                Toutes les factures
-              </Link>
-            </Button>
-          </CardFooter>
         </Card>
       </div>
-      
-      <Tabs defaultValue="statistics">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="statistics">
-            <BarChart className="h-4 w-4 mr-2" />
-            Statistiques
-          </TabsTrigger>
-          <TabsTrigger value="clicks">
-            <MousePointer className="h-4 w-4 mr-2" />
-            Clics
-          </TabsTrigger>
-          <TabsTrigger value="conversions">
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Conversions
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="statistics">
-          <Card className="border-t-0 rounded-t-none">
-            <CardContent className="py-6">
-              <div className="mb-4 text-sm text-muted-foreground">
-                Statistiques de la campagne du {format(new Date(campaign.start_date), 'dd/MM/yyyy', { locale: fr })}
-                {' '}au {format(new Date(campaign.end_date), 'dd/MM/yyyy', { locale: fr })}
-              </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="border rounded-md p-4">
-                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
-                    <Activity className="h-4 w-4" /> 
-                    <span className="text-xs">Impressions</span>
-                  </div>
-                  <div className="text-2xl font-bold">{campaign.planned_impressions}</div>
-                </div>
-                
-                <div className="border rounded-md p-4">
-                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
-                    <MousePointer className="h-4 w-4" /> 
-                    <span className="text-xs">Clics</span>
-                  </div>
-                  <div className="text-2xl font-bold">{campaign.clicks_count}</div>
-                </div>
-                
-                <div className="border rounded-md p-4">
-                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
-                    <Percent className="h-4 w-4" /> 
-                    <span className="text-xs">CTR</span>
-                  </div>
-                  <div className="text-2xl font-bold">{campaign.ctr.toFixed(2)}%</div>
-                </div>
-                
-                <div className="border rounded-md p-4">
-                  <div className="flex gap-2 items-center text-muted-foreground mb-1">
-                    <TrendingUp className="h-4 w-4" /> 
-                    <span className="text-xs">Conv. Rate</span>
-                  </div>
-                  <div className="text-2xl font-bold">{campaign.conversion_rate.toFixed(2)}%</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="clicks">
-          <Card className="border-t-0 rounded-t-none">
-            <CardContent className="py-6">
-              <div className="text-center py-8 text-muted-foreground">
-                Les données détaillées des clics seront disponibles prochainement
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="conversions">
-          <Card className="border-t-0 rounded-t-none">
-            <CardContent className="py-6">
-              <div className="text-center py-8 text-muted-foreground">
-                Les données détaillées des conversions seront disponibles prochainement
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
     </div>
   );
 };

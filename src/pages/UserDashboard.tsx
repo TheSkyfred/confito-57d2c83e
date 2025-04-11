@@ -53,14 +53,90 @@ const UserDashboard = () => {
   const [sales, setSales] = useState<OrderType[]>([]);
   const [favorites, setFavorites] = useState<Jam[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [userOrders, setUserOrders] = useState<OrderType[]>([]);
+  const [sellerOrders, setSellerOrders] = useState<OrderType[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchUserData();
+      const fetchOrders = async () => {
+        try {
+          // Récupérer les commandes effectuées par l'utilisateur
+          const { data: buyerOrders, error: buyerError } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              jam:jam_id(*),
+              seller:seller_id(*)
+            `)
+            .eq('buyer_id', user.id);
+
+          if (buyerError) throw buyerError;
+
+          // Traitement des profils pour les rendre compatibles avec ProfileType
+          const processedBuyerOrders = buyerOrders.map(order => {
+            if (order.seller) {
+              const completeSeller = {
+                ...order.seller,
+                address_line1: order.seller.address_line1 || (order.seller.address || ''),
+                address_line2: order.seller.address_line2 || null,
+                postal_code: order.seller.postal_code || '',
+                city: order.seller.city || ''
+              };
+              return { ...order, seller: completeSeller };
+            }
+            return order;
+          });
+
+          setUserOrders(processedBuyerOrders as OrderType[]);
+
+          // Récupérer les commandes à expédier
+          const { data: sellerOrders, error: sellerError } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              jam:jam_id(*),
+              buyer:buyer_id(*)
+            `)
+            .eq('seller_id', user.id);
+
+          if (sellerError) throw sellerError;
+
+          // Traitement des profils pour les rendre compatibles avec ProfileType
+          const processedSellerOrders = sellerOrders.map(order => {
+            if (order.buyer) {
+              const completeBuyer = {
+                ...order.buyer,
+                address_line1: order.buyer.address_line1 || (order.buyer.address || ''),
+                address_line2: order.buyer.address_line2 || null,
+                postal_code: order.buyer.postal_code || '',
+                city: order.buyer.city || ''
+              };
+              return { ...order, buyer: completeBuyer };
+            }
+            return order;
+          });
+
+          setSellerOrders(processedSellerOrders as OrderType[]);
+
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          toast({
+            title: "Erreur",
+            description: "Impossible de récupérer vos commandes.",
+            variant: "destructive",
+          });
+        } finally {
+          setLoadingOrders(false);
+        }
+      };
+
+      fetchOrders();
+      fetchUserJams();
     }
   }, [user]);
 
-  const fetchUserData = async () => {
+  const fetchUserJams = async () => {
     try {
       setLoading(true);
 

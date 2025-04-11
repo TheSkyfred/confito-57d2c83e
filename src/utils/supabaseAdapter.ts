@@ -18,7 +18,7 @@ export const supabaseDirect = {
     
     const { data, error } = await query;
     // Use type assertion to handle the conversion explicitly
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Select data with a where clause
@@ -28,7 +28,7 @@ export const supabaseDirect = {
       .select(select)
       .eq(column, value);
     // Use type assertion to handle the conversion explicitly
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Select data with a where in clause
@@ -38,7 +38,7 @@ export const supabaseDirect = {
       .select(select)
       .in(column, values);
     // Use type assertion to handle the conversion explicitly
-    return { data: data as T[], error };
+    return { data: data as unknown as T[], error };
   },
 
   // Get a record by ID
@@ -49,7 +49,7 @@ export const supabaseDirect = {
       .eq('id', id)
       .single();
     // Use type assertion to handle the conversion explicitly
-    return { data: data as T, error };
+    return { data: data as unknown as T, error };
   },
 
   // Insert data and return the inserted data
@@ -59,7 +59,7 @@ export const supabaseDirect = {
       .insert(data)
       .select();
     // Use type assertion to handle the conversion explicitly
-    return { data: returnedData as T[], error };
+    return { data: returnedData as unknown as T[], error };
   },
 
   // Insert data without returning

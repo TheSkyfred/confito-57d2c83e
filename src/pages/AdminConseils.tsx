@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,7 +37,6 @@ import {
   ShieldQuestion
 } from 'lucide-react';
 
-// Define a more specific interface for what Supabase actually returns
 interface ConseilWithAuthor extends Omit<AdviceArticle, 'author'> {
   author?: ProfileType | null;
   profiles?: ProfileType | null;
@@ -52,7 +50,13 @@ const AdminConseils = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [approvalFilter, setApprovalFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [authorSearchQuery, setAuthorSearchQuery] = useState('');
+  const [authorSearchResults, setAuthorSearchResults] = useState<ProfileType[]>([]);
+  const [formData, setFormData] = useState({
+    author_id: '',
+    author: null
+  });
+
   const { data: conseils, isLoading, error, refetch } = useQuery({
     queryKey: ['adminConseils', statusFilter, approvalFilter],
     queryFn: async () => {
@@ -70,7 +74,6 @@ const AdminConseils = () => {
       
       if (error) throw error;
       
-      // Fetch author profiles separately
       if (data && data.length > 0) {
         const authorIds = data.map(item => item.author_id);
         const uniqueAuthorIds = [...new Set(authorIds)];
@@ -85,32 +88,46 @@ const AdminConseils = () => {
           return acc;
         }, {} as Record<string, ProfileType>);
         
-        // Merge profiles into conseils data
         return data.map((conseil: any) => ({
           ...conseil,
           profiles: profileMap[conseil.author_id] || null
         }));
       }
       
-      // Handle the case where there's no data
       return (data || []) as ConseilWithAuthor[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
-  
-  // Filter conseils based on search term
+
   const filteredConseils = conseils?.filter(conseil => {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
     const titleMatch = conseil.title?.toLowerCase().includes(searchLower);
     
-    // Use profiles property since we've added it to the data
     const authorMatch = conseil.profiles?.username?.toLowerCase().includes(searchLower);
     
     return titleMatch || authorMatch;
   });
-  
+
+  const handleAuthorChange = (authorProfile: any) => {
+    const completeAuthor = {
+      ...authorProfile,
+      address_line1: authorProfile.address_line1 || (authorProfile.address || ''),
+      address_line2: authorProfile.address_line2 || null,
+      postal_code: authorProfile.postal_code || '',
+      city: authorProfile.city || ''
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      author_id: completeAuthor.id,
+      author: completeAuthor as ProfileType
+    }));
+    setAuthorSearchQuery('');
+    setAuthorSearchResults([]);
+  };
+
   if (!isAdmin && !isModerator) {
     return (
       <div className="container mx-auto py-8">
@@ -121,7 +138,7 @@ const AdminConseils = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-serif font-bold mb-4">Administration des conseils</h1>

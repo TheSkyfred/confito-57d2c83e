@@ -441,6 +441,4 @@ export type TableName =
   | "jam_reviews"
   | "profiles"
   | "pro_profiles"
-  | "recipes"
-  | "cart_items"
-  | "carts";
+  | "recipes";

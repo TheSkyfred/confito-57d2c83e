@@ -1,16 +1,16 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { JamType } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { createJSONStorage } from 'zustand/middleware';
 
 interface CartItem {
   jam: JamType;
   quantity: number;
 }
 
-interface CartStore {
+interface CartState {
   items: CartItem[];
   addItem: (jam: JamType, quantity?: number) => Promise<void>;
   removeItem: (jamId: string) => Promise<void>;
@@ -21,7 +21,82 @@ interface CartStore {
   syncWithDatabase: () => Promise<void>;
 }
 
-export const useCartStore = create<CartStore>()(
+const loadCartFromSupabase = async (userId: string): Promise<CartItem[]> => {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (user) {
+      const { data: cartData, error: cartError } = await supabase
+        .from('carts')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (cartError) {
+        console.error("Erreur lors de la récupération du panier:", cartError.message);
+        return [];
+      }
+
+      if (!cartData) {
+        return [];
+      }
+
+      const { data: cartItemsData, error: itemsError } = await supabase
+        .from('cart_items')
+        .select(`
+          quantity,
+          jams!inner (
+            id, name, description, price_credits, available_quantity, creator_id,
+            weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
+            status, rejection_reason,
+            created_at, updated_at,
+            jam_images (id, url, is_primary, jam_id, created_at),
+            profiles!inner (
+              id, username, full_name, avatar_url, bio, address, phone, website,
+              credits, role, created_at, updated_at
+            )
+          )
+        `)
+        .eq('cart_id', cartData.id);
+
+      if (itemsError) {
+        console.error("Erreur lors de la récupération des articles du panier:", itemsError.message);
+        return [];
+      }
+
+      const completeItems = items.map(item => {
+        if (item.jam && item.jam.profiles) {
+          const completeProfiles = {
+            ...item.jam.profiles,
+            address_line1: item.jam.profiles.address_line1 || (item.jam.profiles.address || ''),
+            address_line2: item.jam.profiles.address_line2 || null,
+            postal_code: item.jam.profiles.postal_code || '',
+            city: item.jam.profiles.city || ''
+          };
+
+          return {
+            ...item,
+            jam: {
+              ...item.jam,
+              profiles: completeProfiles
+            }
+          };
+        }
+        return item;
+      });
+
+      return completeItems as CartItem[];
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error loading cart from Supabase:', error);
+    return [];
+  }
+};
+
+export const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
@@ -29,11 +104,9 @@ export const useCartStore = create<CartStore>()(
       addItem: async (jam, quantity = 1) => {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData?.session?.user;
+          const user = sessionData.session?.user;
           
           if (user) {
-            // Utilisateur connecté - utiliser la base de données
-            // Vérifier si un panier existe déjà pour cet utilisateur
             const { data: existingCarts, error: cartsError } = await supabase
               .from('carts')
               .select('id')
@@ -48,7 +121,6 @@ export const useCartStore = create<CartStore>()(
             let cartId: string;
             
             if (!existingCarts) {
-              // Créer un nouveau panier si aucun n'existe
               const { data: newCart, error: cartError } = await supabase
                 .from('carts')
                 .insert({ user_id: user.id })
@@ -61,7 +133,6 @@ export const useCartStore = create<CartStore>()(
               cartId = existingCarts.id;
             }
             
-            // Vérifier si l'article existe déjà dans le panier
             const { data: existingItems, error: itemsError } = await supabase
               .from('cart_items')
               .select('id, quantity')
@@ -75,7 +146,6 @@ export const useCartStore = create<CartStore>()(
             }
             
             if (existingItems) {
-              // Mettre à jour la quantité si l'article existe
               const newQuantity = Math.min(
                 existingItems.quantity + quantity,
                 jam.available_quantity
@@ -87,7 +157,6 @@ export const useCartStore = create<CartStore>()(
                 .eq('id', existingItems.id);
               
               if (updateError) {
-                // Si l'erreur est liée à la disponibilité du stock
                 if (updateError.message.includes('Quantité demandée')) {
                   toast({
                     title: "Quantité limitée",
@@ -99,7 +168,6 @@ export const useCartStore = create<CartStore>()(
                 }
               }
             } else {
-              // Ajouter un nouvel article si n'existe pas
               const { error: insertError } = await supabase
                 .from('cart_items')
                 .insert({
@@ -109,7 +177,6 @@ export const useCartStore = create<CartStore>()(
                 });
               
               if (insertError) {
-                // Si l'erreur est liée à la disponibilité du stock
                 if (insertError.message.includes('Quantité demandée')) {
                   toast({
                     title: "Quantité limitée",
@@ -122,10 +189,8 @@ export const useCartStore = create<CartStore>()(
               }
             }
             
-            // Synchroniser le store local avec la base de données
             await get().syncWithDatabase();
           } else {
-            // Utilisateur non connecté - utiliser le stockage local
             set((state) => {
               const existingItem = state.items.find(item => item.jam.id === jam.id);
               
@@ -165,7 +230,6 @@ export const useCartStore = create<CartStore>()(
           const user = sessionData.session?.user;
           
           if (user) {
-            // Utilisateur connecté - utiliser la base de données
             const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
@@ -186,11 +250,9 @@ export const useCartStore = create<CartStore>()(
               
               if (error) throw error;
               
-              // Synchroniser le store local avec la base de données
               await get().syncWithDatabase();
             }
           } else {
-            // Utilisateur non connecté - utiliser le stockage local
             set((state) => ({
               items: state.items.filter(item => item.jam.id !== jamId)
             }));
@@ -213,7 +275,6 @@ export const useCartStore = create<CartStore>()(
           const user = sessionData.session?.user;
           
           if (user) {
-            // Utilisateur connecté - utiliser la base de données
             const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
@@ -245,9 +306,7 @@ export const useCartStore = create<CartStore>()(
                   .eq('id', itemData.id);
                 
                 if (error) {
-                  // Si l'erreur est liée à la disponibilité du stock
                   if (error.message.includes('Quantité demandée')) {
-                    // Trouver la confiture dans le store local pour afficher la quantité max disponible
                     const jam = get().items.find(item => item.jam.id === jamId)?.jam;
                     toast({
                       title: "Quantité limitée",
@@ -256,7 +315,6 @@ export const useCartStore = create<CartStore>()(
                     });
                     
                     if (jam) {
-                      // Mettre à jour avec la quantité max disponible
                       const { error: retryError } = await supabase
                         .from('cart_items')
                         .update({ quantity: jam.available_quantity })
@@ -275,20 +333,19 @@ export const useCartStore = create<CartStore>()(
               }
             }
           } else {
-            // Utilisateur non connecté - utiliser le stockage local
+            const jam = get().items.find(item => item.jam.id === jamId)?.jam;
+            
+            if (!jam) return;
+            
+            if (quantity > jam.available_quantity) {
+              toast({
+                title: "Quantité limitée",
+                description: `Il ne reste que ${jam.available_quantity} exemplaires disponibles.`,
+                variant: "destructive"
+              });
+            }
+            
             set((state) => {
-              const jam = state.items.find(item => item.jam.id === jamId)?.jam;
-              
-              if (!jam) return state;
-              
-              if (quantity > jam.available_quantity) {
-                toast({
-                  title: "Quantité limitée",
-                  description: `Il ne reste que ${jam.available_quantity} exemplaires disponibles.`,
-                  variant: "destructive"
-                });
-              }
-              
               return {
                 items: state.items.map(item => 
                   item.jam.id === jamId 
@@ -314,7 +371,6 @@ export const useCartStore = create<CartStore>()(
           const user = sessionData.session?.user;
           
           if (user) {
-            // Utilisateur connecté - utiliser la base de données
             const { data: cartData, error: cartError } = await supabase
               .from('carts')
               .select('id')
@@ -334,11 +390,9 @@ export const useCartStore = create<CartStore>()(
               
               if (error) throw error;
               
-              // Synchroniser le store local avec la base de données
               set({ items: [] });
             }
           } else {
-            // Utilisateur non connecté - utiliser le stockage local
             set({ items: [] });
           }
         } catch (error: any) {
@@ -366,7 +420,6 @@ export const useCartStore = create<CartStore>()(
           
           if (!user) return;
           
-          // Récupérer le panier de l'utilisateur
           const { data: cartData, error: cartError } = await supabase
             .from('carts')
             .select('id')
@@ -383,7 +436,6 @@ export const useCartStore = create<CartStore>()(
             return;
           }
           
-          // Récupérer les articles du panier avec les détails des confitures
           const { data: cartItemsData, error: itemsError } = await supabase
             .from('cart_items')
             .select(`
@@ -407,34 +459,41 @@ export const useCartStore = create<CartStore>()(
             return;
           }
           
-          // Transformer les données pour correspondre à la structure CartItem
-          if (cartItemsData) {
-            const formattedItems: CartItem[] = cartItemsData.map(item => ({
-              jam: {
-                ...item.jams,
-                profiles: item.jams.profiles,
-                jam_images: item.jams.jam_images || [],
-                status: (item.jams.status || 'pending') as 'pending' | 'approved' | 'rejected'
-              },
-              quantity: item.quantity
-            }));
-            
-            set({ items: formattedItems });
-          }
+          const completeItems = items.map(item => {
+            if (item.jam && item.jam.profiles) {
+              const completeProfiles = {
+                ...item.jam.profiles,
+                address_line1: item.jam.profiles.address_line1 || (item.jam.profiles.address || ''),
+                address_line2: item.jam.profiles.address_line2 || null,
+                postal_code: item.jam.profiles.postal_code || '',
+                city: item.jam.profiles.city || ''
+              };
+              
+              return {
+                ...item,
+                jam: {
+                  ...item.jam,
+                  profiles: completeProfiles
+                }
+              };
+            }
+            return item;
+          });
+          
+          set({ items: completeItems });
         } catch (error: any) {
           console.error("Erreur lors de la synchronisation avec la base de données:", error.message);
         }
       }
     }),
     {
-      name: 'jam-cart-storage'
+      name: 'cart-storage',
+      storage: createJSONStorage(() => localStorage)
     }
   )
 );
 
-// Synchroniser le panier au chargement de l'application
 if (typeof window !== 'undefined') {
-  // S'assurer que le code s'exécute uniquement dans le navigateur
   setTimeout(() => {
     useCartStore.getState().syncWithDatabase();
   }, 1000);

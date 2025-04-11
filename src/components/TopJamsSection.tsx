@@ -7,6 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { getProfileUsername } from '@/utils/profileTypeGuards';
+import { JamType } from '@/types/supabase';
+
+// Type pour les jams avec notation moyenne
+interface JamWithRating extends JamType {
+  avgRating: number;
+  primaryImage: string;
+  reviews: any[];
+}
 
 const TopJamsSection = () => {
   // Safe toFixed function to handle undefined/null values
@@ -18,7 +26,7 @@ const TopJamsSection = () => {
   const { data: topJams, isLoading } = useQuery({
     queryKey: ['topJams'],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select(
+      const { data, error } = await supabaseDirect.select<any>(
         'jams', 
         `
           id,
@@ -34,9 +42,9 @@ const TopJamsSection = () => {
       if (error) throw error;
       
       // Calculer la note moyenne pour chaque confiture en excluant les zéros
-      const jamsWithRatings = data.map(jam => {
+      const jamsWithRatings = data.map((jam: any) => {
         // Calculate average rating for each review
-        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map(review => {
+        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map((review: any) => {
           const ratings = [
             review.taste_rating || 0,
             review.texture_rating || 0, 
@@ -45,16 +53,16 @@ const TopJamsSection = () => {
           ].filter(r => r > 0);
           
           return ratings.length > 0 ? 
-            ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
-        }).filter(score => score > 0) : [];
+            ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length : 0;
+        }).filter((score: number) => score > 0) : [];
         
         // Calculate overall average from review scores
         const avgRating = reviewScores.length > 0 ?
-          reviewScores.reduce((sum, score) => sum + score, 0) / reviewScores.length : 0;
+          reviewScores.reduce((sum: number, score: number) => sum + score, 0) / reviewScores.length : 0;
         
         // Find primary image or use the first one
         const primaryImage = jam.jam_images && jam.jam_images.length > 0
-          ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url)
+          ? (jam.jam_images.find((img: any) => img.is_primary)?.url || jam.jam_images[0]?.url)
           : null;
         
         return {
@@ -67,8 +75,8 @@ const TopJamsSection = () => {
       
       // Trier par note moyenne et ne garder que les 4 meilleures
       return jamsWithRatings
-        .sort((a, b) => b.avgRating - a.avgRating)
-        .slice(0, 4);
+        .sort((a: any, b: any) => b.avgRating - a.avgRating)
+        .slice(0, 4) as JamWithRating[];
     },
   });
 
@@ -97,7 +105,7 @@ const TopJamsSection = () => {
               </Card>
             ))
           ) : topJams && topJams.length > 0 ? (
-            topJams.map(jam => (
+            topJams.map((jam: JamWithRating) => (
               <Card key={jam.id} className="overflow-hidden">
                 <div className="h-48 overflow-hidden">
                   <img 
