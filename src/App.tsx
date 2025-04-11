@@ -23,7 +23,7 @@ import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJams from './pages/AdminJams';
 import AdminJamEdit from './pages/AdminJamEdit';
-import AdminBattles from './pages/AdminBattles';
+import AdminBattles from './pages/AdminBattles'; // Import the new AdminBattles page
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
 import BattlesList from './pages/BattlesList';
@@ -51,7 +51,6 @@ import Conseils from './pages/Conseils';
 import ConseilDetail from './pages/ConseilDetail'; 
 import ConseilEdit from './pages/ConseilEdit';
 import ConseilCreate from './pages/ConseilCreate';
-import AdminAssociatedProducts from './pages/AdminAssociatedProducts';
 
 const queryClient = new QueryClient();
 
@@ -84,7 +83,7 @@ function App() {
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />
                   <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} />
-                  <Route path="/admin/battles" element={<AdminBattles />} />
+                  <Route path="/admin/battles" element={<AdminBattles />} /> {/* New route */}
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
@@ -105,7 +104,6 @@ function App() {
                   <Route path="/recipes/edit/:id" element={<RecipeEdit />} />
                   <Route path="/admin/conseils" element={<AdminConseils />} />
                   <Route path="/admin/conseils/edit/:id" element={<AdminConseilEdit />} />
-                  <Route path="/admin/associatedproducts" element={<AdminAssociatedProducts />} />
                   <Route path="/conseils" element={<Conseils />} />
                   <Route path="/conseils/create" element={<ConseilCreate />} />
                   <Route path="/conseils/edit/:id" element={<ConseilEdit />} />

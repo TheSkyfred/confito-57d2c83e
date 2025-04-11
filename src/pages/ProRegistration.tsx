@@ -1,254 +1,343 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
+const proFormSchema = z.object({
+  company_name: z.string().min(2, 'Le nom de l\'entreprise est requis'),
+  business_email: z.string().email('Email professionnel invalide'),
+  phone: z.string().optional(),
+  description: z.string().optional(),
+  story: z.string().optional(),
+  website: z.string().url().optional().or(z.literal('')),
+  facebook_url: z.string().url().optional().or(z.literal('')),
+  instagram_url: z.string().url().optional().or(z.literal('')),
+  linkedin_url: z.string().url().optional().or(z.literal('')),
+  billing_address: z.string().optional(),
+  vat_number: z.string().optional()
+});
 
 const ProRegistration = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   
-  const [companyName, setCompanyName] = useState('');
-  const [businessEmail, setBusinessEmail] = useState('');
-  const [description, setDescription] = useState('');
-  const [story, setStory] = useState('');
-  const [phone, setPhone] = useState('');
-  const [website, setWebsite] = useState('');
-  const [facebookUrl, setFacebookUrl] = useState('');
-  const [instagramUrl, setInstagramUrl] = useState('');
-  const [linkedinUrl, setLinkedinUrl] = useState('');
-  const [billingAddress, setBillingAddress] = useState('');
-  const [vatNumber, setVatNumber] = useState('');
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    
-    if (!user) {
-      toast({
-        title: "Erreur",
-        description: "Vous devez être connecté pour continuer",
-        variant: "destructive",
-      });
-      return;
+  const form = useForm<z.infer<typeof proFormSchema>>({
+    resolver: zodResolver(proFormSchema),
+    defaultValues: {
+      company_name: '',
+      business_email: '',
+      phone: '',
+      description: '',
+      story: '',
+      website: '',
+      facebook_url: '',
+      instagram_url: '',
+      linkedin_url: '',
+      billing_address: '',
+      vat_number: ''
     }
-    
-    setIsSubmitting(true);
+  });
+  
+  const onSubmit = async (data: z.infer<typeof proFormSchema>) => {
+    setLoading(true);
     
     try {
-      // Create pro profile
-      const proProfileData = {
+      if (!user) {
+        toast({
+          title: "Non connecté",
+          description: "Vous devez être connecté pour créer un profil professionnel",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const proProfileResult = await supabaseDirect.insertAndReturn('pro_profiles', {
         id: user.id,
-        company_name: companyName,
-        business_email: businessEmail,
-        description,
-        story,
-        phone,
-        website,
-        facebook_url: facebookUrl,
-        instagram_url: instagramUrl,
-        linkedin_url: linkedinUrl,
-        billing_address: billingAddress,
-        vat_number: vatNumber,
-      };
+        company_name: data.company_name,
+        business_email: data.business_email,
+        description: data.description,
+        story: data.story,
+        phone: data.phone,
+        website: data.website,
+        facebook_url: data.facebook_url,
+        instagram_url: data.instagram_url,
+        linkedin_url: data.linkedin_url,
+        billing_address: data.billing_address,
+        vat_number: data.vat_number
+      });
       
-      const { error: proProfileError } = await supabase
-        .from('pro_profiles')
-        .insert(proProfileData);
+      if (proProfileResult.error) throw proProfileResult.error;
       
-      if (proProfileError) throw proProfileError;
+      const profileUpdateResult = await supabaseDirect.update('profiles', { role: 'pro' }, { id: user.id });
       
-      // Update user role
-      const { error: roleError } = await supabase
-        .from('profiles')
-        .update({ role: 'pro' })
-        .eq('id', user.id);
+      if (profileUpdateResult.error) throw profileUpdateResult.error;
       
-      if (roleError) throw roleError;
+      toast({
+        title: "Profil pro créé",
+        description: "Votre profil professionnel a été créé avec succès.",
+      });
       
-      setSuccessMessage("Votre demande a été soumise avec succès.");
+      // Définir le flag pour rediriger vers le dashboard pro
+      localStorage.setItem("pro_registration_complete", "true");
       
-      // Redirect after a delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
-      
-    } catch (error) {
-      console.error("Error:", error);
+      navigate('/pro-dashboard');
+    } catch (error: any) {
+      console.error('Erreur lors de la création du profil pro:', error);
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de l'enregistrement",
-        variant: "destructive",
+        description: error.message || "Une erreur est survenue lors de la création du profil professionnel.",
+        variant: "destructive"
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
   
-  return (
-    <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-4">Inscription Compte Professionnel</h1>
-      
-      {successMessage ? (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Succès!</strong>
-          <span className="block sm:inline">{successMessage}</span>
+  if (!user) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-3xl font-serif font-bold mb-4">Créer un compte professionnel</h1>
+            <p className="mb-6">Vous devez être connecté pour accéder à cette page</p>
+            <Button onClick={() => navigate('/auth')}>
+              Se connecter
+            </Button>
+          </div>
         </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations professionnelles</CardTitle>
-            <CardDescription>Remplissez ce formulaire pour demander un compte professionnel</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="companyName" className="text-sm font-medium">Nom de l'entreprise</label>
-                  <Input 
-                    id="companyName"
-                    placeholder="Nom de votre entreprise" 
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="businessEmail" className="text-sm font-medium">Email professionnel</label>
-                  <Input 
-                    id="businessEmail"
-                    type="email" 
-                    placeholder="Email de contact" 
-                    value={businessEmail}
-                    onChange={(e) => setBusinessEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto py-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-serif font-bold">Créer un compte professionnel</h1>
+          <p className="text-muted-foreground mt-2">
+            Complétez les informations ci-dessous pour créer votre profil professionnel
+          </p>
+        </div>
+        
+        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <h2 className="text-xl font-semibold border-b pb-2">Informations essentielles</h2>
               
-              <div className="space-y-2">
-                <label htmlFor="description" className="text-sm font-medium">Description de l'entreprise</label>
-                <Textarea 
-                  id="description"
-                  placeholder="Décrivez votre entreprise en quelques mots" 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="company_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom de l'entreprise *</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="business_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email professionnel *</FormLabel>
+                      <FormControl>
+                        <Input type="email" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Site web</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
               
-              <div className="space-y-2">
-                <label htmlFor="story" className="text-sm font-medium">Notre histoire</label>
-                <Textarea 
-                  id="story"
-                  placeholder="Racontez l'histoire de votre entreprise" 
-                  value={story}
-                  onChange={(e) => setStory(e.target.value)}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description de l'entreprise</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Une brève description de votre entreprise..." 
+                        className="min-h-[80px]" 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Cette description apparaîtra sur votre profil public
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="story"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Histoire de l'entreprise</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Racontez l'histoire de votre entreprise..." 
+                        className="min-h-[120px]" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <h2 className="text-xl font-semibold border-b pb-2 pt-4">Réseaux sociaux</h2>
+              
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="facebook_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Facebook</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://facebook.com/..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="instagram_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instagram</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://instagram.com/..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="linkedin_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="https://linkedin.com/..." />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="phone" className="text-sm font-medium">Téléphone</label>
-                  <Input 
-                    id="phone"
-                    type="tel" 
-                    placeholder="Numéro de téléphone" 
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="website" className="text-sm font-medium">Site web</label>
-                  <Input 
-                    id="website"
-                    type="url" 
-                    placeholder="URL de votre site web" 
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                  />
-                </div>
-              </div>
+              <h2 className="text-xl font-semibold border-b pb-2 pt-4">Informations de facturation</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label htmlFor="facebookUrl" className="text-sm font-medium">Facebook</label>
-                  <Input 
-                    id="facebookUrl"
-                    type="url" 
-                    placeholder="URL Facebook" 
-                    value={facebookUrl}
-                    onChange={(e) => setFacebookUrl(e.target.value)}
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="billing_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresse de facturation</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} className="min-h-[80px]" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
-                <div className="space-y-2">
-                  <label htmlFor="instagramUrl" className="text-sm font-medium">Instagram</label>
-                  <Input 
-                    id="instagramUrl"
-                    type="url" 
-                    placeholder="URL Instagram" 
-                    value={instagramUrl}
-                    onChange={(e) => setInstagramUrl(e.target.value)}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label htmlFor="linkedinUrl" className="text-sm font-medium">LinkedIn</label>
-                  <Input 
-                    id="linkedinUrl"
-                    type="url" 
-                    placeholder="URL LinkedIn" 
-                    value={linkedinUrl}
-                    onChange={(e) => setLinkedinUrl(e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="billingAddress" className="text-sm font-medium">Adresse de facturation</label>
-                <Input 
-                  id="billingAddress"
-                  placeholder="Adresse de facturation" 
-                  value={billingAddress}
-                  onChange={(e) => setBillingAddress(e.target.value)}
-                  required
+                <FormField
+                  control={form.control}
+                  name="vat_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Numéro de TVA</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
               
-              <div className="space-y-2">
-                <label htmlFor="vatNumber" className="text-sm font-medium">Numéro de TVA</label>
-                <Input 
-                  id="vatNumber"
-                  placeholder="Numéro de TVA" 
-                  value={vatNumber}
-                  onChange={(e) => setVatNumber(e.target.value)}
-                />
+              <div className="flex justify-end gap-4 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate(-1)}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                >
+                  {loading ? 'Création en cours...' : 'Créer mon profil professionnel'}
+                </Button>
               </div>
-              
-              <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? 'Envoi en cours...' : 'Soumettre la demande'}
-              </Button>
             </form>
-          </CardContent>
-        </Card>
-      )}
+          </Form>
+        </div>
+      </div>
     </div>
   );
 };

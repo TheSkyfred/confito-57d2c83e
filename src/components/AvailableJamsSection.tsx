@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -14,7 +15,7 @@ const AvailableJamsSection = () => {
     queryKey: ['availableTopRatedJams'],
     queryFn: async () => {
       // Récupérer les confitures disponibles (avec stock > 0)
-      const { data: jams, error } = await supabaseDirect.select<any>(
+      const { data: jams, error } = await supabaseDirect.select(
         'jams', 
         `
           id,
@@ -33,12 +34,12 @@ const AvailableJamsSection = () => {
       if (error) throw error;
       
       // Filtrer les confitures avec un stock disponible
-      const availableJams = jams.filter((jam: any) => jam.available_quantity > 0);
+      const availableJams = jams.filter(jam => jam.available_quantity > 0);
       
       // Calculer la note moyenne pour chaque confiture en excluant les zéros
-      const jamsWithRatings = availableJams.map((jam: any) => {
+      const jamsWithRatings = availableJams.map(jam => {
         // Calculate average rating for each review
-        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map((review: any) => {
+        const reviewScores = jam.jam_reviews ? jam.jam_reviews.map(review => {
           const ratings = [
             review.taste_rating || 0,
             review.texture_rating || 0, 
@@ -47,18 +48,18 @@ const AvailableJamsSection = () => {
           ].filter(r => r > 0);
           
           return ratings.length > 0 ? 
-            ratings.reduce((sum: number, r: number) => sum + r, 0) / ratings.length : 0;
-        }).filter((score: number) => score > 0) : [];
+            ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
+        }).filter(score => score > 0) : [];
         
         // Calculate overall average from review scores
         const avgRating = reviewScores.length > 0 ?
-          reviewScores.reduce((sum: number, score: number) => sum + score, 0) / reviewScores.length : 0;
+          reviewScores.reduce((sum, score) => sum + score, 0) / reviewScores.length : 0;
         
         return {
           ...jam,
           avgRating,
           primaryImage: jam.jam_images && jam.jam_images.length > 0 
-            ? (jam.jam_images.find((img: any) => img.is_primary)?.url || jam.jam_images[0]?.url)
+            ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url)
             : '/placeholder.svg',
           reviews: jam.jam_reviews || []
         };
@@ -66,8 +67,8 @@ const AvailableJamsSection = () => {
       
       // Trier par note moyenne décroissante et ne prendre que les 4 premières
       return jamsWithRatings
-        .sort((a: any, b: any) => b.avgRating - a.avgRating)
-        .slice(0, 4) as unknown as JamType[];
+        .sort((a, b) => b.avgRating - a.avgRating)
+        .slice(0, 4) as JamType[];
     },
   });
 

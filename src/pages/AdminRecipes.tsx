@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 import { supabaseDirect } from '@/utils/supabaseAdapter';
-import { RecipeType, RecipeDifficulty, RecipeStatus, RecipeStyle, RecipeSeason } from '@/types/supabase';
-import { ProfileDisplay } from '@/components/ProfileDisplay';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 import {
   Table,
@@ -24,405 +23,342 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
-import { ChevronDown, Filter, Star } from 'lucide-react';
-
 import {
-  FileText,
-  Eye,
-  Trash2,
-  MoreHorizontal,
+  CheckIcon,
+  XIcon,
+  EyeIcon,
+  FilterIcon,
   CheckCircle,
   XCircle,
-  Send,
-  RotateCcw,
-  FileEdit,
-  FileX
+  AlertCircle
 } from 'lucide-react';
 
 const AdminRecipes = () => {
-  const { isAdmin } = useAuth();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [recipesPerPage] = useState(10);
+  const { isAdmin, isModerator } = useUserRole();
+  const { session } = useAuth();
+  const { toast } = useToast();
+  
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
-  const [recipeToReject, setRecipeToReject] = useState<any | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const { data: recipes, isLoading } = useQuery({
-    queryKey: ['admin-recipes', currentPage, searchTerm, selectedStatus],
+  const [rejectionReason, setRejectionReason] = useState<Record<string, string>>({});
+  
+  const { data: recipes, isLoading, error, refetch } = useQuery({
+    queryKey: ['adminRecipes', statusFilter],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select<any>(
-        'recipes', 
-        `*, 
-        author:author_id(id, username, full_name)
-        `
+      // Utiliser supabaseDirect pour éviter les erreurs de type avec les relations
+      let filter: Record<string, any> = {};
+      if (statusFilter && statusFilter !== 'all') {
+        filter = { status: statusFilter };
+      }
+      
+      const { data, error } = await supabaseDirect.select(
+        'recipes',
+        `*, author:profiles!recipes_author_id_fkey (username, avatar_url)`,
+        filter
       );
       
       if (error) throw error;
-      
-      let filteredData = [...data];
-      
-      if (selectedStatus !== 'all') {
-        filteredData = filteredData.filter(recipe => recipe.status === selectedStatus);
-      }
-      
-      if (searchTerm) {
-        filteredData = filteredData.filter(recipe => 
-          recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          recipe.author?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          recipe.author?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      
-      setTotalPages(Math.ceil(filteredData.length / recipesPerPage));
-      
-      return filteredData.slice((currentPage - 1) * recipesPerPage, currentPage * recipesPerPage);
+      return data || [];
     },
-    enabled: isAdmin
+    enabled: Boolean(session && (isAdmin || isModerator))
   });
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedStatus]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleStatusChange = async (recipeId: string, newStatus: string) => {
+  
+  const handleApprove = async (recipeId: string) => {
+    if (!session) return;
+    
     try {
-      await supabaseDirect.update('recipes', { status: newStatus }, { id: recipeId });
-    } catch (error) {
-      console.error('Error updating recipe status:', error);
-    }
-  };
-
-  const handleDeleteRecipe = async () => {
-    if (recipeToDelete) {
-      try {
-        await supabaseDirect.delete('recipes', { id: recipeToDelete });
-        setRecipeToDelete(null);
-      } catch (error) {
-        console.error('Error deleting recipe:', error);
-      }
-    }
-  };
-
-  const handleRejectRecipe = async (rejectionReason: string) => {
-    if (recipeToReject) {
-      try {
-        await supabaseDirect.update(
-          'recipes',
-          { status: 'rejected', rejection_reason: rejectionReason },
-          { id: recipeToReject.id }
-        );
-        setRecipeToReject(null);
-      } catch (error) {
-        console.error('Error rejecting recipe:', error);
-      }
-    }
-  };
-
-  return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">Gestion des recettes</h1>
+      await supabase
+        .from('recipes')
+        .update({ 
+          status: 'approved',
+          rejection_reason: null
+        })
+        .eq('id', recipeId);
+        
+      toast({
+        title: "Succès",
+        description: "La recette a été approuvée",
+      });
       
-      <div className="flex flex-col md:flex-row items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Rechercher par titre ou auteur..." 
-              className="pl-9"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="border rounded px-4 py-2"
-            >
-              <option value="all">Tous les status</option>
-              <option value="brouillon">Brouillon</option>
-              <option value="pending">En attente</option>
-              <option value="approved">Approuvé</option>
-              <option value="rejected">Rejeté</option>
-            </select>
-          </div>
+      refetch();
+    } catch (error) {
+      console.error('Error approving recipe:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleReject = async (recipeId: string) => {
+    if (!session) return;
+    
+    const reason = rejectionReason[recipeId];
+    if (!reason || reason.trim() === '') {
+      toast({
+        title: "Erreur",
+        description: "Veuillez fournir une raison pour le rejet",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await supabase
+        .from('recipes')
+        .update({ 
+          status: 'rejected',
+          rejection_reason: reason
+        })
+        .eq('id', recipeId);
+        
+      toast({
+        title: "Succès",
+        description: "La recette a été rejetée",
+      });
+      
+      setRejectionReason(prev => {
+        const newState = { ...prev };
+        delete newState[recipeId];
+        return newState;
+      });
+      
+      refetch();
+    } catch (error) {
+      console.error('Error rejecting recipe:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const filteredRecipes = searchTerm && recipes ? 
+    recipes.filter(recipe => 
+      recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (recipe.author?.username && recipe.author.username.toLowerCase().includes(searchTerm.toLowerCase()))
+    ) :
+    recipes;
+  
+  if (!isAdmin && !isModerator) {
+    return (
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-serif font-bold mb-4">Administration des recettes</h1>
+        <div className="bg-yellow-50 text-yellow-800 p-4 rounded-md">
+          <p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="container mx-auto py-8">
+      <h1 className="text-3xl font-serif font-bold mb-4">Administration des recettes</h1>
+      
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="w-full sm:w-48">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Tous les statuts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="brouillon">Brouillon</SelectItem>
+              <SelectItem value="pending">En attente</SelectItem>
+              <SelectItem value="approved">Approuvée</SelectItem>
+              <SelectItem value="rejected">Rejetée</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         
-        <Button asChild>
-          <Link to="/recipe/new">Ajouter une recette</Link>
-        </Button>
-      </div>
-      
-      <div className="mt-6">
-        {isLoading ? (
-          <div className="space-y-4">
-            {Array(5).fill(0).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        ) : recipes && recipes.length > 0 ? (
-          <div className="space-y-4">
-            {recipes.map((recipe: any) => (
-              <Card key={recipe.id} className="overflow-hidden">
-                <div className="flex flex-col sm:flex-row">
-                  <div className="w-full sm:w-1/4 md:w-1/6 h-32 sm:h-auto">
-                    <div className="h-full bg-muted relative">
-                      {recipe.image_url ? (
-                        <img 
-                          src={recipe.image_url} 
-                          alt={recipe.title} 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <FileText className="h-12 w-12 text-muted-foreground/40" />
-                        </div>
-                      )}
-                      {recipe.status === 'brouillon' && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="secondary">Brouillon</Badge>
-                        </div>
-                      )}
-                      {recipe.status === 'pending' && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">En attente</Badge>
-                        </div>
-                      )}
-                      {recipe.status === 'rejected' && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="destructive">Rejeté</Badge>
-                        </div>
-                      )}
-                      {recipe.status === 'approved' && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="default" className="bg-green-600">Approuvé</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="p-4 w-full sm:w-3/4 md:w-5/6">
-                    <div className="flex flex-col md:flex-row md:justify-between">
-                      <div>
-                        <Link to={`/recipe/${recipe.id}`} className="text-lg font-medium hover:text-jam-raspberry">
-                          {recipe.title}
-                        </Link>
-                        <p className="text-sm text-muted-foreground">
-                          Par {recipe.author?.username || 'Utilisateur inconnu'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(new Date(recipe.created_at), 'PPP', { locale: fr })}
-                        </p>
-                      </div>
-                      <div className="mt-3 md:mt-0 flex flex-wrap gap-2">
-                        {recipe.status === 'pending' && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-green-500 text-green-600 hover:bg-green-50"
-                              onClick={() => handleStatusChange(recipe.id, 'approved')}
-                            >
-                              <CheckCircle className="mr-1 h-4 w-4" />
-                              Approuver
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="border-red-500 text-red-600 hover:bg-red-50"
-                              onClick={() => setRecipeToReject(recipe)}
-                            >
-                              <XCircle className="mr-1 h-4 w-4" />
-                              Rejeter
-                            </Button>
-                          </>
-                        )}
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/recipe/${recipe.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Voir
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setRecipeToDelete(recipe.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Supprimer
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            
-                            {recipe.status === 'brouillon' && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(recipe.id, 'pending')}>
-                                <Send className="mr-2 h-4 w-4" />
-                                Soumettre
-                              </DropdownMenuItem>
-                            )}
-                            
-                            {recipe.status === 'rejected' && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(recipe.id, 'pending')}>
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Re-soumettre
-                              </DropdownMenuItem>
-                            )}
-                            
-                            {recipe.status === 'approved' && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(recipe.id, 'pending')}>
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Mettre en révision
-                              </DropdownMenuItem>
-                            )}
-                            
-                            {recipe.status === 'pending' && (
-                              <DropdownMenuItem onClick={() => handleStatusChange(recipe.id, 'brouillon')}>
-                                <FileEdit className="mr-2 h-4 w-4" />
-                                Mettre en brouillon
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {recipe.status === 'approved' && (
-                        <Badge variant="default" className="bg-green-600">Approuvé</Badge>
-                      )}
-                      {recipe.status === 'pending' && (
-                        <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">En attente</Badge>
-                      )}
-                      {recipe.status === 'rejected' && (
-                        <Badge variant="destructive">Rejeté</Badge>
-                      )}
-                      {recipe.status === 'brouillon' && (
-                        <Badge variant="secondary">Brouillon</Badge>
-                      )}
-                      
-                      <Badge variant="outline" className="capitalize">{recipe.difficulty}</Badge>
-                      <Badge variant="outline" className="capitalize">{recipe.season}</Badge>
-                      <Badge variant="outline" className="capitalize">{recipe.style}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <FileX className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium">Aucune recette trouvée</h3>
-            <p className="text-muted-foreground mt-1">
-              {searchTerm ? `Aucun résultat pour "${searchTerm}"` : "Il n'y a pas encore de recettes."}
-            </p>
-          </div>
-        )}
-      </div>
-      
-      <div className="flex justify-between items-center mt-8">
-        <Button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          variant="outline"
-        >
-          Précédent
-        </Button>
-        
-        <span>Page {currentPage} sur {totalPages}</span>
-        
-        <Button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          variant="outline"
-        >
-          Suivant
-        </Button>
-      </div>
-
-      <Dialog open={recipeToDelete !== null} onOpenChange={() => setRecipeToDelete(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Supprimer la recette</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette recette ? Cette action est irréversible.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setRecipeToDelete(null)}>
-              Annuler
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleDeleteRecipe}>
-              Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={recipeToReject !== null} onOpenChange={() => setRecipeToReject(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Rejeter la recette</DialogTitle>
-            <DialogDescription>
-              Veuillez indiquer la raison du rejet de cette recette.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="Expliquez pourquoi cette recette est refusée..."
-            rows={4}
-            className="mt-2"
+        <div className="relative flex-1">
+          <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Rechercher par titre ou auteur..." 
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+      </div>
+      
+      {isLoading ? (
+        <div className="text-center py-8">
+          Chargement des recettes...
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 text-red-800 p-4 rounded-md">
+          <p>Erreur lors du chargement des recettes</p>
+          <p className="text-sm">{(error as Error).message}</p>
+        </div>
+      ) : filteredRecipes && filteredRecipes.length > 0 ? (
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Titre</TableHead>
+                <TableHead>Auteur</TableHead>
+                <TableHead>Date de création</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRecipes.map((recipe) => (
+                <TableRow key={recipe.id}>
+                  <TableCell className="font-medium">{recipe.title}</TableCell>
+                  <TableCell>{recipe.author?.username || "Utilisateur anonyme"}</TableCell>
+                  <TableCell>
+                    {new Date(recipe.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {recipe.status === 'pending' && (
+                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
+                        En attente
+                      </Badge>
+                    )}
+                    {recipe.status === 'approved' && (
+                      <Badge variant="outline" className="bg-green-100 text-green-800">
+                        Approuvée
+                      </Badge>
+                    )}
+                    {recipe.status === 'rejected' && (
+                      <Badge variant="outline" className="bg-red-100 text-red-800">
+                        Rejetée
+                      </Badge>
+                    )}
+                    {recipe.status === 'brouillon' && (
+                      <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                        Brouillon
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to={`/recipes/${recipe.id}`}>
+                        <EyeIcon className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    
+                    {recipe.status === 'pending' && (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleApprove(recipe.id)}
+                          className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                        >
+                          <CheckIcon className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="group relative inline-block">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <XIcon className="h-4 w-4" />
+                          </Button>
+                          <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 hidden group-hover:block">
+                            <div className="p-2">
+                              <Input 
+                                placeholder="Raison du rejet" 
+                                value={rejectionReason[recipe.id] || ''}
+                                onChange={(e) => setRejectionReason(prev => ({
+                                  ...prev,
+                                  [recipe.id]: e.target.value
+                                }))}
+                                className="mb-2"
+                              />
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                onClick={() => handleReject(recipe.id)}
+                              >
+                                Rejeter
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <AlertCircle className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-xl font-medium mb-2">Aucune recette trouvée</h3>
+          <p className="text-muted-foreground">
+            {statusFilter ? 
+              `Aucune recette avec le statut "${statusFilter}" trouvée.` : 
+              'Aucune recette trouvée.'}
+          </p>
+        </div>
+      )}
+      
+      <div className="mt-8 p-6 bg-gray-50 rounded-lg">
+        <h2 className="text-xl font-medium mb-4">Statistiques</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
+              <div>
+                <p className="text-sm text-muted-foreground">Approuvées</p>
+                <p className="text-2xl font-bold">
+                  {recipes?.filter(r => r.status === 'approved').length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
           
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setRecipeToReject(null)}>
-              Annuler
-            </Button>
-            <Button type="button" variant="destructive" onClick={() => handleRejectRecipe(recipeToReject?.rejectionReason || '')}>
-              Rejeter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <AlertCircle className="h-8 w-8 text-yellow-500 mr-3" />
+              <div>
+                <p className="text-sm text-muted-foreground">En attente</p>
+                <p className="text-2xl font-bold">
+                  {recipes?.filter(r => r.status === 'pending').length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <XCircle className="h-8 w-8 text-red-500 mr-3" />
+              <div>
+                <p className="text-sm text-muted-foreground">Rejetées</p>
+                <p className="text-2xl font-bold">
+                  {recipes?.filter(r => r.status === 'rejected').length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="h-8 w-8 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 mr-3">
+                B
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Brouillons</p>
+                <p className="text-2xl font-bold">
+                  {recipes?.filter(r => r.status === 'brouillon').length || 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

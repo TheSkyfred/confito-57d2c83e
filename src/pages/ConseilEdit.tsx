@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
@@ -66,7 +67,6 @@ interface ProductFormData {
   image_url: string;
   external_url: string;
   is_sponsored: boolean;
-  promo_code: string;
 }
 
 const ConseilEdit: React.FC = () => {
@@ -101,8 +101,7 @@ const ConseilEdit: React.FC = () => {
     description: '',
     image_url: '',
     external_url: '',
-    is_sponsored: false,
-    promo_code: ''
+    is_sponsored: false
   });
 
   useEffect(() => {
@@ -163,6 +162,7 @@ const ConseilEdit: React.FC = () => {
         visible: advice.visible
       });
       
+      // Set cover image preview if available
       if (advice.cover_image_url) {
         setCoverImagePreview(advice.cover_image_url);
       }
@@ -200,12 +200,14 @@ const ConseilEdit: React.FC = () => {
         throw uploadError;
       }
       
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
       console.log("File uploaded successfully, public URL:", publicUrl);
       
+      // Update the form and preview
       form.setValue('cover_image_url', publicUrl);
       setCoverImagePreview(publicUrl);
       
@@ -247,6 +249,7 @@ const ConseilEdit: React.FC = () => {
         throw uploadError;
       }
       
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
@@ -287,31 +290,24 @@ const ConseilEdit: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('advice_products')
-        .insert({
-          article_id: id,
-          name: productForm.name,
-          description: productForm.description,
-          image_url: productForm.image_url,
-          external_url: productForm.external_url,
-          is_sponsored: productForm.is_sponsored,
-          promo_code: productForm.promo_code
-        })
-        .select();
+      const { data, error } = await supabaseDirect.insertAndReturn('advice_products', {
+        article_id: id,
+        name: productForm.name,
+        description: productForm.description,
+        image_url: productForm.image_url,
+        external_url: productForm.external_url,
+        is_sponsored: productForm.is_sponsored
+      });
       
       if (error) throw error;
       
-      if (data) {
-        setProducts(prev => [...prev, ...data]);
-      }
+      setProducts(prev => [...prev, data[0]]);
       
       setProductForm({
         name: '',
         description: '',
         image_url: '',
         external_url: '',
-        promo_code: '',
         is_sponsored: false
       });
       
@@ -717,14 +713,6 @@ const ConseilEdit: React.FC = () => {
                         className="h-20"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Code promo</label>
-                      <Input 
-                        placeholder="CODE10" 
-                        value={productForm.promo_code || ''} 
-                        onChange={(e) => handleProductInputChange('promo_code', e.target.value)}
-                      />
-                    </div>
                   </div>
                   <div className="flex items-center space-x-2 mb-4">
                     <Checkbox 
@@ -786,11 +774,6 @@ const ConseilEdit: React.FC = () => {
                                 <p className="text-sm text-muted-foreground mt-2">
                                   {product.description}
                                 </p>
-                              )}
-                              {product.promo_code && (
-                                <div className="mt-2 p-1.5 bg-blue-50 rounded border border-blue-200 inline-flex items-center">
-                                  <span className="text-xs font-semibold text-blue-700">PROMO: {product.promo_code}</span>
-                                </div>
                               )}
                               {product.external_url && (
                                 <a 

@@ -1,221 +1,197 @@
-
-import React, {
-  useState,
-  useEffect,
-  createContext,
-  useContext,
-} from 'react';
-import {
-  Session,
-  User,
-} from '@supabase/supabase-js';
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { ProfileType } from '@/types/supabase';
+import { isNullOrUndefined } from '@/utils/supabaseHelpers';
 
 interface AuthContextProps {
   user: User | null;
+  session: Session | null;
   profile: ProfileType | null;
   loading: boolean;
-  session: Session | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<void>;
+  signUp: (email: string, password: string, metadata?: AccountMetadata) => Promise<void>;
   signOut: () => Promise<void>;
-  update: (data: Partial<ProfileType>) => Promise<void>;
-  error: string | null;
-  isAdmin?: boolean;
+  updateProfile: (profileData: Partial<ProfileType>) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextProps>({
-  user: null,
-  profile: null,
-  loading: true,
-  session: null,
-  signIn: async () => {},
-  signUp: async () => {},
-  signOut: async () => {},
-  update: async () => {},
-  error: null,
-  isAdmin: false,
-});
+interface AccountMetadata {
+  accountType: 'standard' | 'professional';
+  fullName?: string;
+  username?: string;
+  [key: string]: any;
+}
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      if (!userId) {
+        console.error('No user ID provided to fetchUserProfile');
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      if (data) {
+        setProfile(data as ProfileType);
+        
+        if (data.role === 'user' && localStorage.getItem('redirect_to_pro_registration') === 'true') {
+          localStorage.removeItem('redirect_to_pro_registration');
+          window.location.href = '/pro-registration';
+        }
+        else if (data.role === 'pro' && localStorage.getItem('pro_registration_complete') === 'true') {
+          localStorage.removeItem('pro_registration_complete');
+          window.location.href = '/pro-dashboard';
+        }
+        
+        return data as ProfileType;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    const getInitialSession = async () => {
-      setLoading(true);
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
-      
-      setSession(currentSession);
-      setUser(currentSession?.user || null);
+    let isMounted = true;
 
-      if (currentSession?.user) {
-        await fetchProfile(currentSession.user.id);
-      }
-      setLoading(false);
-    };
-
-    const fetchProfile = async (userId: string) => {
+    const setupAuth = async () => {
       try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, currentSession) => {
+            if (!isMounted) return;
+            
+            setSession(currentSession);
+            setUser(currentSession?.user ?? null);
+            
+            if (currentSession?.user) {
+              setTimeout(() => {
+                if (isMounted) {
+                  fetchUserProfile(currentSession.user.id);
+                }
+              }, 0);
+            } else {
+              setProfile(null);
+            }
+
+            if (event === 'SIGNED_OUT') {
+              setProfile(null);
+            }
+
+            setLoading(false);
+          }
+        );
+
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (profileData) {
-          // Transform the profile data to ensure all required fields are present
-          const typedProfile: ProfileType = {
-            id: profileData.id,
-            username: profileData.username,
-            full_name: profileData.full_name || null,
-            avatar_url: profileData.avatar_url || null,
-            bio: profileData.bio || null,
-            address: profileData.address || null,
-            address_line1: profileData.address_line1 || profileData.address || '',
-            address_line2: profileData.address_line2 || null,
-            postal_code: profileData.postal_code || '',
-            city: profileData.city || '',
-            phone: profileData.phone || null,
-            website: profileData.website || null,
-            credits: profileData.credits,
-            role: profileData.role,
-            created_at: profileData.created_at,
-            updated_at: profileData.updated_at
-          };
+        if (isMounted) {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
           
-          setProfile(typedProfile);
-          setIsAdmin(typedProfile.role === 'admin');
+          if (currentSession?.user) {
+            await fetchUserProfile(currentSession.user.id);
+          }
+          
+          setLoading(false);
         }
+
+        return () => {
+          isMounted = false;
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error setting up auth:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    getInitialSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
-        
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
-      }
-    );
+    setupAuth();
 
     return () => {
-      subscription?.unsubscribe();
+      isMounted = false;
     };
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        throw error;
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+  };
+
+  const signUp = async (email: string, password: string, metadata?: AccountMetadata) => {
+    const { error, data } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: metadata },
+    });
+    
+    if (error) throw error;
+    
+    if (metadata && metadata.accountType === 'professional' && data.user) {
+      try {
+        const { error: proProfileError } = await supabase.from('pro_profiles').insert({
+          id: data.user.id,
+          company_name: metadata.fullName || 'Company Name',
+          business_email: email,
+        });
+        
+        if (proProfileError) {
+          console.error('Error creating pro_profile:', proProfileError);
+        }
+      } catch (err) {
+        console.error('Error in pro_profile creation process:', err);
       }
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      setUser(null);
-      setProfile(null);
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string, username: string) => {
-    setLoading(true);
-    setError(null);
+  const updateProfile = async (profileData: Partial<ProfileType>) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username: username,
-            full_name: '',
-          },
-        },
-      });
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              username: username,
-            },
-          ]);
-
-        if (profileError) {
-          throw profileError;
-        }
-      }
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const update = async (data: Partial<ProfileType>) => {
-    setLoading(true);
-    setError(null);
-    try {
-      if (!user) throw new Error('No user is signed in');
-
-      const { error: updateError } = await supabase
+      if (!user) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
         .from('profiles')
-        .update(data)
+        .update(profileData)
         .eq('id', user.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      setProfile((prevProfile) => {
-        return prevProfile ? { ...prevProfile, ...data } : null;
+      
+      if (error) throw error;
+      
+      setProfile(prev => {
+        if (!prev) return profileData as ProfileType;
+        return { ...prev, ...profileData };
       });
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
     }
   };
 
@@ -223,15 +199,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        profile,
         session,
+        profile,
         loading,
         signIn,
         signUp,
         signOut,
-        update,
-        error,
-        isAdmin
+        updateProfile,
       }}
     >
       {children}
@@ -241,7 +215,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

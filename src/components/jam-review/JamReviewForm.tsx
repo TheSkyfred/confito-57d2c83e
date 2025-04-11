@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,13 +48,14 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
   onCancelEdit
 }) => {
   const { user } = useAuth();
-  const isAuthenticated = !!user;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [comment, setComment] = useState('');
-  const [tasteRating, setTasteRating] = useState(0);
-  const [textureRating, setTextureRating] = useState(0);
-  const [originalityRating, setOriginalityRating] = useState(0);
-  const [balanceRating, setBalanceRating] = useState(0);
+  const [ratings, setRatings] = useState({
+    taste: 0,
+    texture: 0,
+    originality: 0,
+    balance: 0
+  });
   
   const isEditing = !!reviewToEdit;
   
@@ -62,106 +63,108 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
   useEffect(() => {
     if (reviewToEdit) {
       setComment(reviewToEdit.comment || '');
-      setTasteRating(reviewToEdit.taste_rating || 0);
-      setTextureRating(reviewToEdit.texture_rating || 0);
-      setOriginalityRating(reviewToEdit.originality_rating || 0);
-      setBalanceRating(reviewToEdit.balance_rating || 0);
+      setRatings({
+        taste: reviewToEdit.taste_rating || 0,
+        texture: reviewToEdit.texture_rating || 0,
+        originality: reviewToEdit.originality_rating || 0,
+        balance: reviewToEdit.balance_rating || 0
+      });
     }
   }, [reviewToEdit]);
   
   const handleRatingChange = (criteriaId: string, value: number) => {
-    if (criteriaId === 'taste') {
-      setTasteRating(value);
-    } else if (criteriaId === 'texture') {
-      setTextureRating(value);
-    } else if (criteriaId === 'originality') {
-      setOriginalityRating(value);
-    } else if (criteriaId === 'balance') {
-      setBalanceRating(value);
-    }
+    setRatings(prev => ({
+      ...prev,
+      [criteriaId]: value
+    }));
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isAuthenticated) {
+  const handleSubmit = async () => {
+    if (!user) {
       toast({
-        title: "Vous devez être connecté",
-        description: "Veuillez vous connecter pour laisser un avis",
-        variant: "destructive",
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour laisser un avis.",
+        variant: "destructive"
       });
       return;
     }
-
-    if (isSubmitting) return;
     
-    setIsSubmitting(true);
-
+    // Vérifier que tous les critères ont été notés
+    const hasZeroRating = Object.values(ratings).some(rating => rating === 0);
+    if (hasZeroRating) {
+      toast({
+        title: "Notation incomplète",
+        description: "Veuillez noter tous les critères avant de soumettre votre avis.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
-      // Check if user already reviewed this jam
-      const { data: existingReviews } = await supabase
-        .from('jam_reviews')
-        .select('id')
-        .eq('jam_id', jamId)
-        .eq('reviewer_id', user.id);
-
+      setIsSubmitting(true);
+      
       const reviewData = {
         jam_id: jamId,
         reviewer_id: user.id,
-        taste_rating: tasteRating,
-        texture_rating: textureRating,
-        originality_rating: originalityRating,
-        balance_rating: balanceRating,
-        comment: comment.trim() || null,
+        taste_rating: ratings.taste,
+        texture_rating: ratings.texture,
+        originality_rating: ratings.originality,
+        balance_rating: ratings.balance,
+        comment: comment.trim() || null
       };
-
-      let result;
-
-      if (existingReviews && existingReviews.length > 0) {
-        // Update existing review
-        result = await supabase
-          .from('jam_reviews')
-          .update(reviewData)
-          .eq('id', existingReviews[0].id);
+      
+      if (isEditing && reviewToEdit) {
+        // Mise à jour d'un avis existant
+        const { error } = await supabaseDirect.update(
+          'jam_reviews',
+          reviewData,
+          { id: reviewToEdit.id }
+        );
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Avis modifié",
+          description: "Votre avis a été mis à jour avec succès !",
+        });
       } else {
-        // Create new review
-        result = await supabase
-          .from('jam_reviews')
-          .insert([reviewData]);
+        // Création d'un nouvel avis
+        const { error } = await supabaseDirect.insert('jam_reviews', reviewData);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Avis ajouté",
+          description: "Merci d'avoir partagé votre avis sur cette confiture !",
+        });
+        
+        setComment('');
+        setRatings({ taste: 0, texture: 0, originality: 0, balance: 0 });
       }
-
-      if (result.error) throw result.error;
-
-      toast({
-        title: "Avis envoyé",
-        description: "Merci pour votre avis !",
-      });
-
-      // Reset form
-      setTasteRating(0);
-      setTextureRating(0);
-      setOriginalityRating(0);
-      setBalanceRating(0);
-      setComment('');
-
-      // Trigger refresh of jam data
-      if (onReviewSubmitted) {
-        onReviewSubmitted();
+      
+      // Rafraîchir les avis
+      onReviewSubmitted();
+      
+      // Si nous étions en mode édition, revenir au mode normal
+      if (isEditing && onCancelEdit) {
+        onCancelEdit();
       }
       
     } catch (error: any) {
-      console.error(error);
+      console.error('Error submitting review:', error);
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur est survenue",
-        variant: "destructive",
+        description: isEditing 
+          ? "Impossible de modifier votre avis." 
+          : "Impossible d'ajouter votre avis. Vous avez peut-être déjà noté cette confiture.",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  const isSaveDisabled = isSubmitting || !isAuthenticated || Object.values({ tasteRating, textureRating, originalityRating, balanceRating }).some(r => r === 0);
+  const isSaveDisabled = isSubmitting || !user || Object.values(ratings).some(r => r === 0);
   
   return (
     <Card>
@@ -183,27 +186,20 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
                 <p className="text-sm text-muted-foreground">{criteria.description}</p>
               </div>
               <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((value) => {
-                  const currentRating = criteria.id === 'taste' ? tasteRating :
-                                        criteria.id === 'texture' ? textureRating :
-                                        criteria.id === 'originality' ? originalityRating :
-                                        balanceRating;
-                  
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      className="p-1"
-                      onClick={() => handleRatingChange(criteria.id, value)}
-                    >
-                      <Star
-                        className="h-5 w-5 transition-colors"
-                        fill={value <= currentRating ? "#FFA000" : "transparent"}
-                        stroke={value <= currentRating ? "#FFA000" : "currentColor"}
-                      />
-                    </button>
-                  );
-                })}
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`p-1`}
+                    onClick={() => handleRatingChange(criteria.id, value)}
+                  >
+                    <Star
+                      className="h-5 w-5 transition-colors"
+                      fill={value <= ratings[criteria.id as keyof typeof ratings] ? "#FFA000" : "transparent"}
+                      stroke={value <= ratings[criteria.id as keyof typeof ratings] ? "#FFA000" : "currentColor"}
+                    />
+                  </button>
+                ))}
               </div>
             </div>
             <Separator />

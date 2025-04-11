@@ -1,5 +1,81 @@
 
+import { ProfileType } from './supabase';
+
 export type AdviceType = 'fruits' | 'cuisson' | 'recette' | 'conditionnement' | 'sterilisation' | 'materiel';
+
+export interface AdviceArticle {
+  id: string;
+  title: string;
+  author_id: string;
+  cover_image_url: string | null;
+  video_url: string | null;
+  content: string | null;
+  type: AdviceType;
+  tags: string[];
+  visible: boolean;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  author?: ProfileType;
+  images?: AdviceImage[];
+  products?: AdviceProduct[];
+  comments?: AdviceComment[];
+  
+  // Calculated fields
+  has_video?: boolean;
+  has_products?: boolean;
+  comments_count?: number;
+}
+
+export interface AdviceImage {
+  id: string;
+  article_id: string;
+  image_url: string;  // Utiliser image_url au lieu de url
+  description: string | null;
+  created_at: string;
+}
+
+export interface AdviceProduct {
+  id: string;
+  article_id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  external_url: string | null;
+  is_sponsored: boolean;
+  click_count: number;
+  conversion_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdviceComment {
+  id: string;
+  article_id: string;
+  user_id: string;
+  content: string;
+  parent_comment_id: string | null;
+  likes_count: number;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
+  user?: ProfileType;
+  replies?: AdviceComment[];
+  
+  // UI state
+  is_replying?: boolean;
+  is_liked_by_user?: boolean;
+}
+
+export interface AdviceCommentLike {
+  id: string;
+  user_id: string;
+  comment_id: string;
+  created_at: string;
+}
 
 export interface AdviceFilters {
   type?: AdviceType[];
@@ -7,61 +83,4 @@ export interface AdviceFilters {
   hasProducts?: boolean;
   searchTerm?: string;
   sortBy?: 'date' | 'popularity' | 'clicks';
-}
-
-export interface AdviceArticle {
-  id: string;
-  title: string;
-  content?: string;
-  cover_image_url?: string;
-  video_url?: string;
-  type: AdviceType;
-  author_id: string;
-  author?: {
-    full_name?: string;
-    avatar_url?: string;
-  };
-  tags?: string[];
-  visible?: boolean;
-  status?: string;
-  created_at?: string;
-  updated_at?: string;
-  published_at?: string;
-  products?: AdviceProduct[];
-  comments?: any[];
-  // Additional properties
-  has_video?: boolean;
-  has_products?: boolean;
-  comments_count?: number;
-}
-
-export interface AdviceProduct {
-  id: string;
-  name: string;
-  description?: string;
-  image_url?: string;
-  external_url?: string;
-  is_sponsored?: boolean;
-  article_id?: string;
-  click_count?: number;
-  conversion_count?: number;
-  created_at: string;
-  updated_at: string;
-  promo_code?: string;
-}
-
-export interface AdviceHeaderProps {
-  user: any;
-}
-
-export interface AdviceCardProps {
-  article: AdviceArticle;
-}
-
-export interface AdviceSearchProps {
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  showFilters: boolean;
-  setShowFilters: (show: boolean) => void;
-  filters: AdviceFilters;
 }

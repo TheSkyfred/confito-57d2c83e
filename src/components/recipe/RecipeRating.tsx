@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,11 +25,11 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
   const [comment, setComment] = useState<string>(existingComment || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { user } = useAuth();
+  const { session } = useAuth();
   const { toast } = useToast();
   
   const handleRatingSubmit = async () => {
-    if (!user) {
+    if (!session?.user) {
       toast({
         title: "Erreur",
         description: "Vous devez être connecté pour noter cette recette",
@@ -54,7 +55,7 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
         .from('recipe_ratings')
         .select('id')
         .eq('recipe_id', recipeId)
-        .eq('user_id', user.id);
+        .eq('user_id', session.user.id);
         
       if (existingRatings && existingRatings.length > 0) {
         // Update the existing rating
@@ -75,7 +76,7 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
           .from('recipe_ratings')
           .insert({
             recipe_id: recipeId,
-            user_id: user.id,
+            user_id: session.user.id,
             rating: rating
           });
           
@@ -92,7 +93,7 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
           .from('recipe_comments')
           .select('id')
           .eq('recipe_id', recipeId)
-          .eq('user_id', user.id);
+          .eq('user_id', session.user.id);
           
         if (existingComments && existingComments.length > 0) {
           // Update the existing comment
@@ -108,7 +109,7 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
             .from('recipe_comments')
             .insert({
               recipe_id: recipeId,
-              user_id: user.id,
+              user_id: session.user.id,
               content: comment.trim()
             });
         }
@@ -166,11 +167,11 @@ const RecipeRating: React.FC<RecipeRatingProps> = ({
         />
       </div>
       
-      <Button onClick={handleRatingSubmit} disabled={isSubmitting || !user}>
+      <Button onClick={handleRatingSubmit} disabled={isSubmitting || !session?.user}>
         {isSubmitting ? "Envoi en cours..." : "Envoyer mon avis"}
       </Button>
       
-      {!user && (
+      {!session?.user && (
         <p className="text-sm text-muted-foreground">
           Vous devez être connecté pour noter cette recette
         </p>
