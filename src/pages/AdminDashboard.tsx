@@ -26,7 +26,8 @@ import {
   Medal,
   MessageCircle,
   FileText,
-  Leaf
+  Leaf,
+  ShoppingBag
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -98,6 +99,13 @@ const AdminDashboard = () => {
       icon: <ShoppingCart className="h-5 w-5 mr-2" />,
       description: "Voir et gérer les commandes",
       link: "/admin/orders",
+    },
+    {
+      title: "Pro Accessories",
+      icon: <ShoppingBag className="h-5 w-5 mr-2" />,
+      description: "Gérer les accessoires pour les pros",
+      link: "/admin/pro-accessories",
+      new: true,
     },
   ];
   
