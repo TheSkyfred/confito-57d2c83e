@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { InsertRecord, TableName, AdsCampaignType, AdsInvoiceType } from '@/types/supabase';
@@ -17,8 +16,8 @@ export const supabaseDirect = {
     }
     
     const { data, error } = await query;
-    // Use a safer type assertion
-    return { data: data as T[], error };
+    // Use proper type casting for safety
+    return { data: (data || []) as unknown as T[], error };
   },
 
   // Select data with a where clause
@@ -28,8 +27,8 @@ export const supabaseDirect = {
       .select(select)
       .eq(column, value);
     
-    // Use a safer type assertion
-    return { data: data as T[], error };
+    // Use proper type casting for safety
+    return { data: (data || []) as unknown as T[], error };
   },
 
   // Select data with a where in clause
@@ -39,8 +38,8 @@ export const supabaseDirect = {
       .select(select)
       .in(column, values);
     
-    // Use a safer type assertion
-    return { data: data as T[], error };
+    // Use proper type casting for safety
+    return { data: (data || []) as unknown as T[], error };
   },
 
   // Get a record by ID
@@ -51,8 +50,8 @@ export const supabaseDirect = {
       .eq('id', id)
       .single();
     
-    // Use a safer type assertion
-    return { data: data as T, error };
+    // Use proper type casting for safety
+    return { data: data as unknown as T, error };
   },
 
   // Insert data and return the inserted data
@@ -62,8 +61,8 @@ export const supabaseDirect = {
       .insert(data)
       .select();
     
-    // Use a safer type assertion
-    return { data: returnedData as T[], error };
+    // Use proper type casting for safety
+    return { data: (returnedData || []) as unknown as T[], error };
   },
 
   // Insert data without returning
@@ -94,23 +93,22 @@ export const supabaseDirect = {
 };
 
 // Track product clicks
-export const trackProductClick = async (productId: string, articleId: string) => {
+export const trackProductClick = async (productId: string) => {
   try {
     const { data: userResponse } = await supabase.auth.getUser();
     const user = userResponse?.user;
     
     const clickData = {
       product_id: productId,
-      article_id: articleId,
       user_id: user?.id || null,
       user_agent: navigator.userAgent,
     };
     
-    // Record the click directly without using rpc
+    // Record the click directly with a raw query instead of using sql template literal
     const { error } = await supabase
       .from('advice_products')
       .update({ 
-        click_count: supabase.sql`click_count + 1`
+        click_count: supabase.rpc('increment_click_count', { row_id: productId })
       })
       .eq('id', productId);
       

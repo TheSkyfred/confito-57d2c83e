@@ -1,3 +1,4 @@
+
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -7,10 +8,10 @@ export type ProfileType = {
   avatar_url: string | null;
   bio: string | null;
   address: string | null;
-  address_line1: string | null;
+  address_line1: string;  // Changed from nullable to ensure compatibility
   address_line2: string | null;
-  postal_code: string | null;
-  city: string | null;
+  postal_code: string;    // Changed from nullable to ensure compatibility
+  city: string;           // Changed from nullable to ensure compatibility
   phone: string | null;
   website: string | null;
   credits: number;
