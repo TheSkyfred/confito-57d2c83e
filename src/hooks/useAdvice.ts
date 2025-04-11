@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +17,6 @@ export const useAdvice = (filters?: AdviceFilters) => {
         *
       `);
     
-    // Si l'utilisateur n'est pas admin ou modérateur, ne montrer que les articles approuvés
     if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
       query = query.eq('status', 'approved');
     }
@@ -71,22 +69,18 @@ export const useAdvice = (filters?: AdviceFilters) => {
     let result = [...advice];
     
     if (filters) {
-      // Filtre par type
       if (filters.type && filters.type.length > 0) {
         result = result.filter(item => filters.type!.includes(item.type));
       }
       
-      // Filtre par vidéo
       if (filters.hasVideo) {
         result = result.filter(item => item.has_video);
       }
       
-      // Filtre par produits
       if (filters.hasProducts) {
         result = result.filter(item => item.has_products);
       }
       
-      // Filtre par terme de recherche
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
         result = result.filter(item => 
@@ -96,7 +90,6 @@ export const useAdvice = (filters?: AdviceFilters) => {
         );
       }
       
-      // Tri
       if (filters.sortBy) {
         switch (filters.sortBy) {
           case 'date':
@@ -106,7 +99,6 @@ export const useAdvice = (filters?: AdviceFilters) => {
             result.sort((a, b) => (b.comments_count || 0) - (a.comments_count || 0));
             break;
           case 'clicks':
-            // On pourrait implémenter ceci si on avait un compteur de clics
             break;
         }
       }
@@ -123,7 +115,6 @@ export const useAdvice = (filters?: AdviceFilters) => {
   };
 };
 
-// Add the useAdviceArticle hook to fetch a specific article by ID
 export const useAdviceArticle = (id: string) => {
   const { profile } = useAuth();
   
@@ -132,78 +123,111 @@ export const useAdviceArticle = (id: string) => {
     
     let query = supabase
       .from('advice_articles')
-      .select(`
-        *,
-        comments:advice_comments(
-          *,
-          user:profiles(*)
-        ),
-        products:advice_products(*)
-      `)
+      .select(`*`)
       .eq('id', id);
     
-    // If user is not admin or moderator, only show approved articles
-    // or articles authored by the current user
     if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
       query = query.or(`status.eq.approved,author_id.eq.${profile?.id || ''}`);
     }
     
-    const { data, error } = await query.single();
+    const { data: articleData, error: articleError } = await query.single();
     
-    if (error) {
-      console.error('Error fetching advice article:', error);
-      throw error;
+    if (articleError) {
+      console.error('Error fetching advice article:', articleError);
+      throw articleError;
     }
     
-    if (!data) {
+    if (!articleData) {
       throw new Error('Article not found');
     }
     
-    // Fetch author information
     const { data: authorData, error: authorError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', data.author_id)
+      .eq('id', articleData.author_id)
       .single();
       
     if (authorError) {
       console.error('Error fetching author:', authorError);
     }
     
-    // Check if the current user has liked any comments
-    let userLikedComments: Record<string, boolean> = {};
-    
-    if (profile && data.comments && data.comments.length > 0) {
-      const commentIds = data.comments.map((comment: any) => comment.id);
+    const { data: commentsData, error: commentsError } = await supabase
+      .from('advice_comments')
+      .select(`
+        *
+      `)
+      .eq('article_id', id);
       
-      const { data: likesData, error: likesError } = await supabase
-        .from('advice_comment_likes')
-        .select('comment_id')
-        .eq('user_id', profile.id)
-        .in('comment_id', commentIds);
+    if (commentsError) {
+      console.error('Error fetching comments:', commentsError);
+    }
+    
+    let commentsWithUsers = [];
+    if (commentsData && commentsData.length > 0) {
+      const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
+      
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
         
-      if (!likesError && likesData) {
-        userLikedComments = likesData.reduce((acc, like) => {
-          acc[like.comment_id] = true;
-          return acc;
-        }, {} as Record<string, boolean>);
+      if (usersError) {
+        console.error('Error fetching comment users:', usersError);
+      }
+      
+      const usersMap = {};
+      if (usersData) {
+        usersData.forEach(user => {
+          usersMap[user.id] = user;
+        });
+      }
+      
+      commentsWithUsers = commentsData.map(comment => ({
+        ...comment,
+        user: usersMap[comment.user_id] || null,
+        isLiked: false
+      }));
+      
+      if (profile) {
+        const commentIds = commentsData.map(comment => comment.id);
+        
+        const { data: likesData, error: likesError } = await supabase
+          .from('advice_comment_likes')
+          .select('comment_id')
+          .eq('user_id', profile.id)
+          .in('comment_id', commentIds);
+          
+        if (!likesError && likesData) {
+          const likedCommentIds = new Set(likesData.map(like => like.comment_id));
+          
+          commentsWithUsers = commentsWithUsers.map(comment => ({
+            ...comment,
+            isLiked: likedCommentIds.has(comment.id)
+          }));
+        }
       }
     }
     
-    // Add isLiked property to each comment
-    const commentsWithLikes = data.comments ? data.comments.map((comment: any) => ({
-      ...comment,
-      isLiked: userLikedComments[comment.id] || false
-    })) : [];
+    const { data: productsData, error: productsError } = await supabase
+      .from('advice_products')
+      .select('*')
+      .eq('article_id', id);
+      
+    if (productsError) {
+      console.error('Error fetching advice products:', productsError);
+    }
     
-    return {
-      ...data,
-      has_video: Boolean(data.video_url),
-      has_products: data.products && data.products.length > 0,
-      comments: commentsWithLikes,
-      comments_count: commentsWithLikes.length,
-      author: authorData || null
+    const result = {
+      ...articleData,
+      has_video: Boolean(articleData.video_url),
+      has_products: productsData && productsData.length > 0,
+      comments: commentsWithUsers || [],
+      comments_count: commentsWithUsers.length,
+      author: authorData || null,
+      products: productsData || []
     };
+    
+    return result;
   };
   
   return useQuery({

@@ -261,6 +261,7 @@ const AdminConseilEdit = () => {
   }
   
   if (error || !advice) {
+    console.error("Error loading advice:", error);
     return (
       <div className="container py-8">
         <div className="bg-red-50 text-red-800 p-4 rounded-md">
