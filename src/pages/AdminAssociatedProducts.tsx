@@ -79,82 +79,73 @@ const AdminAssociatedProducts = () => {
     }
   }, [user, isAdmin, isModerator, navigate]);
   
+  const [clicks, setClicks] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    const fetchProductsData = async () => {
-      setIsLoading(true);
-      try {
-        const { data: productsData, error: productsError } = await supabase
-          .from('advice_products')
-          .select(`
-            id,
-            name,
-            image_url,
-            external_url,
-            promo_code,
-            click_count,
-            is_sponsored,
-            article_id,
-            created_at,
-            advice_articles (
-              id,
-              title
-            )
-          `);
-          
-        if (productsError) throw productsError;
-        
-        let fromDate: Date | null = null;
-        
-        if (timeRange !== 'all') {
-          fromDate = new Date();
-          
-          if (timeRange === '7d') {
-            fromDate.setDate(fromDate.getDate() - 7);
-          } else if (timeRange === '30d') {
-            fromDate.setDate(fromDate.getDate() - 30);
-          } else if (timeRange === '90d') {
-            fromDate.setDate(fromDate.getDate() - 90);
-          }
-        }
-        
-        const productStats = productsData?.map(product => {
-          return {
-            id: product.id,
-            name: product.name,
-            article_title: product.advice_articles?.title || 'Conseil inconnu',
-            clicks: product.click_count || 0,
-            article_id: product.article_id,
-            product_id: product.id,
-            is_sponsored: product.is_sponsored,
-            image_url: product.image_url,
-            external_url: product.external_url,
-            promo_code: product.promo_code,
-            last_click: null,
-            created_at: product.created_at
-          };
-        }) || [];
-        
-        setProducts(productStats as ProductReportItem[]);
-      } catch (error) {
-        console.error('Erreur lors du chargement des produits:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les données des produits",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProductsData();
+    fetchClicksData();
   }, [timeRange]);
+
+  const fetchClicksData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch products with click data directly from advice_products table
+      const { data: productsData, error } = await supabase
+        .from('advice_products')
+        .select(`
+          id,
+          name,
+          description,
+          external_url,
+          image_url,
+          is_sponsored,
+          click_count,
+          article_id,
+          promo_code,
+          created_at,
+          updated_at,
+          advice_articles:article_id(title, id)
+        `)
+        .order('click_count', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching click data:", error);
+        setError("Failed to fetch product click data");
+        return;
+      }
+
+      const formattedClicks = (productsData || []).map(product => {
+        return {
+          id: product.id,
+          name: product.name, 
+          article: product.advice_articles ? product.advice_articles.title : 'N/A',
+          clicks: product.click_count || 0,
+          article_id: product.article_id || '',
+          product_id: product.id,
+          is_sponsored: product.is_sponsored,
+          image_url: product.image_url,
+          external_url: product.external_url,
+          promo_code: product.promo_code,
+          timestamp: product.created_at,
+          created_at: product.created_at
+        };
+      });
+
+      setClicks(formattedClicks);
+    } catch (error: any) {
+      console.error("Error:", error);
+      setError(error.message || "An unknown error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
-  const filteredProducts = products
+  const filteredProducts = clicks
     .filter(product => {
       const matchesSearch = searchTerm === '' || 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.article_title.toLowerCase().includes(searchTerm.toLowerCase());
+        product.article.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesSponsored = 
         filterSponsored === 'all' || 
@@ -172,14 +163,14 @@ const AdminAssociatedProducts = () => {
           : a.name.localeCompare(b.name);
       } else if (sortBy === 'article') {
         return sortOrder === 'desc' 
-          ? b.article_title.localeCompare(a.article_title) 
-          : a.article_title.localeCompare(b.article_title);
+          ? b.article.localeCompare(a.article) 
+          : a.article.localeCompare(b.article);
       } else if (sortBy === 'last_click') {
-        if (!a.last_click) return sortOrder === 'desc' ? 1 : -1;
-        if (!b.last_click) return sortOrder === 'desc' ? -1 : 1;
+        if (!a.timestamp) return sortOrder === 'desc' ? 1 : -1;
+        if (!b.timestamp) return sortOrder === 'desc' ? -1 : 1;
         return sortOrder === 'desc' 
-          ? new Date(b.last_click).getTime() - new Date(a.last_click).getTime()
-          : new Date(a.last_click).getTime() - new Date(b.last_click).getTime();
+          ? new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          : new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
       }
       return 0;
     });
@@ -188,7 +179,7 @@ const AdminAssociatedProducts = () => {
     const headers = ['Nom', 'Conseil', 'Clics', 'Sponsorisé', 'URL Externe'];
     const rows = filteredProducts.map(product => [
       product.name,
-      product.article_title,
+      product.article,
       product.clicks,
       product.is_sponsored ? 'Oui' : 'Non',
       product.external_url || ''
@@ -236,20 +227,20 @@ const AdminAssociatedProducts = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-blue-50 rounded-md p-4">
                 <h3 className="text-sm text-blue-600 font-medium">Total Produits</h3>
-                <p className="text-2xl font-bold">{products.length}</p>
+                <p className="text-2xl font-bold">{clicks.length}</p>
               </div>
               <div className="bg-green-50 rounded-md p-4">
                 <h3 className="text-sm text-green-600 font-medium">Total Clics</h3>
-                <p className="text-2xl font-bold">{products.reduce((sum, product) => sum + product.clicks, 0)}</p>
+                <p className="text-2xl font-bold">{clicks.reduce((sum, product) => sum + product.clicks, 0)}</p>
               </div>
               <div className="bg-amber-50 rounded-md p-4">
                 <h3 className="text-sm text-amber-600 font-medium">Produits Sponsorisés</h3>
-                <p className="text-2xl font-bold">{products.filter(p => p.is_sponsored).length}</p>
+                <p className="text-2xl font-bold">{clicks.filter(p => p.is_sponsored).length}</p>
               </div>
               <div className="bg-purple-50 rounded-md p-4">
                 <h3 className="text-sm text-purple-600 font-medium">Clics Sponsorisés</h3>
                 <p className="text-2xl font-bold">
-                  {products
+                  {clicks
                     .filter(p => p.is_sponsored)
                     .reduce((sum, product) => sum + product.clicks, 0)}
                 </p>
@@ -372,7 +363,7 @@ const AdminAssociatedProducts = () => {
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline flex items-center"
                         >
-                          <span className="line-clamp-1">{product.article_title}</span>
+                          <span className="line-clamp-1">{product.article}</span>
                           <ExternalLink className="h-3 w-3 ml-1" />
                         </a>
                       </TableCell>
@@ -383,8 +374,8 @@ const AdminAssociatedProducts = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {product.last_click 
-                          ? format(new Date(product.last_click), 'dd/MM/yyyy HH:mm', { locale: fr })
+                        {product.timestamp 
+                          ? format(new Date(product.timestamp), 'dd/MM/yyyy HH:mm', { locale: fr })
                           : '-'
                         }
                       </TableCell>

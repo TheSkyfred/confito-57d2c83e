@@ -1,13 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-// Define InsertRecord type if it's not imported from supabase types
-type InsertRecord<T> = Omit<T, 'id' | 'created_at' | 'updated_at'>;
+import { InsertRecord, TableName, AdsCampaignType, AdsInvoiceType } from '@/types/supabase';
 
 // Helper for direct database operations
 export const supabaseDirect = {
   // Select data from a table
-  select: async <T extends object>(tableName: string, select: string = '*', filters?: Record<string, any>) => {
+  select: async <T extends object>(tableName: TableName, select: string = '*', filters?: Record<string, any>) => {
     let query = supabase.from(tableName).select(select);
     
     // Add filters if provided
@@ -22,7 +20,7 @@ export const supabaseDirect = {
   },
 
   // Select data with a where clause
-  selectWhere: async <T extends object>(tableName: string, column: string, value: any, select: string = '*') => {
+  selectWhere: async <T extends object>(tableName: TableName, column: string, value: any, select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
@@ -31,7 +29,7 @@ export const supabaseDirect = {
   },
 
   // Select data with a where in clause
-  selectWhereIn: async <T extends object>(tableName: string, column: string, values: any[], select: string = '*') => {
+  selectWhereIn: async <T extends object>(tableName: TableName, column: string, values: any[], select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
@@ -40,7 +38,7 @@ export const supabaseDirect = {
   },
 
   // Get a record by ID
-  getById: async <T extends object>(tableName: string, id: string, select: string = '*') => {
+  getById: async <T extends object>(tableName: TableName, id: string, select: string = '*') => {
     const { data, error } = await supabase
       .from(tableName)
       .select(select)
@@ -50,7 +48,7 @@ export const supabaseDirect = {
   },
 
   // Insert data and return the inserted data
-  insertAndReturn: async <T extends object>(tableName: string, data: InsertRecord<T>) => {
+  insertAndReturn: async <T extends object>(tableName: TableName, data: InsertRecord<T>) => {
     const { data: returnedData, error } = await supabase
       .from(tableName)
       .insert(data)
@@ -59,7 +57,7 @@ export const supabaseDirect = {
   },
 
   // Insert data without returning
-  insert: async <T extends object>(tableName: string, data: InsertRecord<T>) => {
+  insert: async <T extends object>(tableName: TableName, data: InsertRecord<T>) => {
     const { error } = await supabase
       .from(tableName)
       .insert(data);
@@ -67,20 +65,20 @@ export const supabaseDirect = {
   },
 
   // Update data
-  update: async <T extends object>(tableName: string, id: string, data: Partial<T>) => {
+  update: async <T extends object>(tableName: TableName, data: Partial<T>, idObj: { id: string }) => {
     const { error } = await supabase
       .from(tableName)
       .update(data)
-      .eq('id', id);
+      .eq('id', idObj.id);
     return { error };
   },
 
   // Delete data
-  delete: async (tableName: string, id: string) => {
+  delete: async (tableName: TableName, idObj: { id: string }) => {
     const { error } = await supabase
       .from(tableName)
       .delete()
-      .eq('id', id);
+      .eq('id', idObj.id);
     return { error };
   }
 };
@@ -102,15 +100,21 @@ export const trackProductClick = async (productId: string, articleId: string) =>
     await supabase
       .from('advice_products')
       .update({ 
-        click_count: supabase.rpc('increment', { row_id: productId, table_name: 'advice_products', column_name: 'click_count' })
+        click_count: supabase.rpc('increment', { 
+          row_id: productId,
+          table_name: 'advice_products',
+          column_name: 'click_count' 
+        })
       })
       .eq('id', productId);
       
     // Log the click in a separate structure if available
     try {
-      await supabase.from('advice_product_clicks').insert(clickData);
+      // We don't use advice_product_clicks since it doesn't exist
+      console.log('Recording product click:', clickData);
+      // Could implement a different tracking mechanism here if needed
     } catch (error) {
-      console.warn('advice_product_clicks table might not exist, but continuing with main tracking logic');
+      console.warn('Error tracking product click details:', error);
     }
       
     return true;

@@ -1,10 +1,19 @@
+
 import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Filter, X } from 'lucide-react';
 import { AdviceType, AdviceFilters } from '@/types/advice';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
 
 interface AdviceFilterCardProps {
   filters: AdviceFilters;

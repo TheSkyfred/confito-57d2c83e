@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAdvice } from '@/hooks/useAdvice';
 import { AdviceType, AdviceFilters } from '@/types/advice';
 import AdviceHeader from '@/components/advice/AdviceHeader';
@@ -9,7 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 const Conseils = () => {
   const [filters, setFilters] = useState<AdviceFilters>({});
-  const { advice, isLoading, error } = useAdvice(filters);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const { advice, isLoading, error } = useAdvice({
+    ...filters,
+    searchTerm
+  });
 
   const handleFilterChange = (newFilters: Partial<AdviceFilters>) => {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
@@ -17,12 +23,25 @@ const Conseils = () => {
 
   return (
     <div className="container py-8">
-      <AdviceHeader />
+      <AdviceHeader user={null} />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="md:col-span-1">
-          <AdviceSearch onSearch={(searchTerm: string) => handleFilterChange({ searchTerm })} />
-          <AdviceFilterCard onFilterChange={handleFilterChange} />
+          <AdviceSearch 
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            filters={filters}
+          />
+          {showFilters && (
+            <AdviceFilterCard 
+              filters={filters}
+              setFilters={setFilters}
+              onFilterChange={handleFilterChange}
+              onClose={() => setShowFilters(false)}
+            />
+          )}
         </div>
 
         <div className="md:col-span-3">

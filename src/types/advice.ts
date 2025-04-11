@@ -49,3 +49,11 @@ export interface AdviceProduct {
   updated_at: string;
   promo_code?: string;
 }
+
+export interface AdviceHeaderProps {
+  user: any;
+}
+
+export interface AdviceCardProps {
+  article: AdviceArticle;
+}

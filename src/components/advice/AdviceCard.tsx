@@ -1,80 +1,78 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, MessageSquare, Video } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { Card, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
 import { AdviceArticle } from '@/types/advice';
+import { Video, MessageSquare, Tag } from 'lucide-react';
+import { formatDistance } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface AdviceCardProps {
-  advice: AdviceArticle;
+  article: AdviceArticle;
 }
 
-const AdviceCard: React.FC<AdviceCardProps> = ({ advice }) => {
-  const typeLabels: Record<string, string> = {
-    'fruits': 'Fruits',
-    'cuisson': 'Cuisson',
-    'recette': 'Recette',
-    'conditionnement': 'Conditionnement',
-    'sterilisation': 'Stérilisation',
-    'materiel': 'Matériel'
-  };
-
-  const formattedDate = format(new Date(advice.published_at), 'dd MMMM yyyy', { locale: fr });
-  const truncatedContent = advice.content && advice.content.length > 120
-    ? `${advice.content.substring(0, 120)}...`
-    : advice.content;
+const AdviceCard: React.FC<AdviceCardProps> = ({ article }) => {
+  // Default image if none provided
+  const coverImage = article.cover_image_url || '/placeholder-advice.jpg';
+  
+  // Format the date
+  const formattedDate = article.published_at 
+    ? formatDistance(new Date(article.published_at), new Date(), { 
+        addSuffix: true,
+        locale: fr 
+      })
+    : '';
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-md transition-shadow">
-      <Link to={`/conseils/${advice.id}`} className="flex-1 flex flex-col">
-        <div className="relative h-48 overflow-hidden">
-          {advice.cover_image_url ? (
-            <img 
-              src={advice.cover_image_url} 
-              alt={advice.title} 
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-muted flex items-center justify-center">
-              Pas d'image
+    <Link to={`/conseil/${article.id}`} className="block h-full">
+      <Card className="h-full overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+        <div className="aspect-video relative w-full overflow-hidden">
+          <img 
+            src={coverImage} 
+            alt={article.title} 
+            className="object-cover w-full h-full"
+          />
+          {article.has_video && (
+            <div className="absolute top-2 right-2 bg-black/70 text-white p-1 rounded-md flex items-center text-xs">
+              <Video className="w-3 h-3 mr-1" />
+              Vidéo
             </div>
           )}
-          {advice.has_video && (
-            <Badge variant="secondary" className="absolute top-2 right-2 flex items-center gap-1">
-              <Video className="h-3 w-3" />
-              Vidéo
-            </Badge>
-          )}
-        </div>
-        
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between mb-2">
-            <Badge>{typeLabels[advice.type] || advice.type}</Badge>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+            <p className="text-xs text-white">
+              {article.type.charAt(0).toUpperCase() + article.type.slice(1)}
+            </p>
           </div>
-          <CardTitle className="line-clamp-2 text-xl">{advice.title}</CardTitle>
-        </CardHeader>
-        
-        <CardContent className="flex-grow">
-          <p className="text-muted-foreground text-sm line-clamp-3">
-            {truncatedContent || "Cliquez pour découvrir ce conseil"}
-          </p>
+        </div>
+        <CardContent className="flex-1 py-4">
+          <CardTitle className="text-lg mb-2 line-clamp-2">{article.title}</CardTitle>
+          {article.content && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {article.content.replace(/<[^>]*>/g, '').substring(0, 120)}...
+            </p>
+          )}
         </CardContent>
-      </Link>
-      
-      <CardFooter className="pt-2 flex justify-between text-xs text-muted-foreground">
-        <div className="flex items-center">
-          <Calendar className="mr-1 h-3 w-3" />
-          <span>{formattedDate}</span>
-        </div>
-        <div className="flex items-center">
-          <MessageSquare className="mr-1 h-3 w-3" />
-          <span>{advice.comments_count || 0} commentaires</span>
-        </div>
-      </CardFooter>
-    </Card>
+        <CardFooter className="pt-0 text-xs text-muted-foreground flex justify-between items-center">
+          <div className="flex items-center">
+            {formattedDate}
+          </div>
+          <div className="flex items-center space-x-3">
+            {article.products && article.products.length > 0 && (
+              <div className="flex items-center">
+                <Tag className="w-3 h-3 mr-1" />
+                {article.products.length}
+              </div>
+            )}
+            {article.comments_count && article.comments_count > 0 && (
+              <div className="flex items-center">
+                <MessageSquare className="w-3 h-3 mr-1" />
+                {article.comments_count}
+              </div>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    </Link>
   );
 };
 
