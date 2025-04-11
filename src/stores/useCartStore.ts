@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { JamType } from '@/types/supabase';
@@ -396,7 +395,7 @@ export const useCartStore = create<CartStore>()(
                 jam_images (id, url, is_primary, jam_id, created_at),
                 profiles!inner (
                   id, username, full_name, avatar_url, bio, address, phone, website,
-                  credits, role, created_at, updated_at
+                  credits, role, created_at, updated_at, is_active
                 )
               )
             `)
@@ -417,7 +416,7 @@ export const useCartStore = create<CartStore>()(
                 status: (item.jams.status || 'pending') as 'pending' | 'approved' | 'rejected'
               },
               quantity: item.quantity
-            }));
+            })) as CartItem[];
             
             set({ items: formattedItems });
           }
