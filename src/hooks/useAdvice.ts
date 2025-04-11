@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -120,4 +121,94 @@ export const useAdvice = (filters?: AdviceFilters) => {
     error,
     refetch
   };
+};
+
+// Add the useAdviceArticle hook to fetch a specific article by ID
+export const useAdviceArticle = (id: string) => {
+  const { profile } = useAuth();
+  
+  const fetchAdviceArticle = async () => {
+    console.log('Fetching single advice article with ID:', id);
+    
+    let query = supabase
+      .from('advice_articles')
+      .select(`
+        *,
+        comments:advice_comments(
+          *,
+          user:profiles(*)
+        ),
+        products:advice_products(*)
+      `)
+      .eq('id', id);
+    
+    // If user is not admin or moderator, only show approved articles
+    // or articles authored by the current user
+    if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+      query = query.or(`status.eq.approved,author_id.eq.${profile?.id || ''}`);
+    }
+    
+    const { data, error } = await query.single();
+    
+    if (error) {
+      console.error('Error fetching advice article:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('Article not found');
+    }
+    
+    // Fetch author information
+    const { data: authorData, error: authorError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.author_id)
+      .single();
+      
+    if (authorError) {
+      console.error('Error fetching author:', authorError);
+    }
+    
+    // Check if the current user has liked any comments
+    let userLikedComments: Record<string, boolean> = {};
+    
+    if (profile && data.comments && data.comments.length > 0) {
+      const commentIds = data.comments.map((comment: any) => comment.id);
+      
+      const { data: likesData, error: likesError } = await supabase
+        .from('advice_comment_likes')
+        .select('comment_id')
+        .eq('user_id', profile.id)
+        .in('comment_id', commentIds);
+        
+      if (!likesError && likesData) {
+        userLikedComments = likesData.reduce((acc, like) => {
+          acc[like.comment_id] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+      }
+    }
+    
+    // Add isLiked property to each comment
+    const commentsWithLikes = data.comments ? data.comments.map((comment: any) => ({
+      ...comment,
+      isLiked: userLikedComments[comment.id] || false
+    })) : [];
+    
+    return {
+      ...data,
+      has_video: Boolean(data.video_url),
+      has_products: data.products && data.products.length > 0,
+      comments: commentsWithLikes,
+      comments_count: commentsWithLikes.length,
+      author: authorData || null
+    };
+  };
+  
+  return useQuery({
+    queryKey: ['advice', id, profile?.id, profile?.role],
+    queryFn: fetchAdviceArticle,
+    enabled: !!id
+  });
 };
