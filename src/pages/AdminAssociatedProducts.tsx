@@ -102,7 +102,7 @@ const AdminAssociatedProducts = () => {
           
         if (productsError) throw productsError;
         
-        const clicksQuery = supabase
+        let clicksQuery = supabase
           .from('advice_product_clicks')
           .select('*')
           .order('clicked_at', { ascending: false });

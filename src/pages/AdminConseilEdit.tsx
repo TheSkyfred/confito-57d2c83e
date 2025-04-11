@@ -3,10 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useAdviceArticle } from '@/hooks/useAdvice';
 import { supabase } from '@/integrations/supabase/client';
-import { AdviceType } from '@/types/advice';
 import { toast } from '@/hooks/use-toast';
+import { AdviceArticle } from '@/types/advice';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,13 +55,13 @@ interface FormData {
   cover_image_url: string;
   video_url: string;
   content: string;
-  type: AdviceType;
+  type: AdviceArticle['type'];
   tags: string;
   visible: boolean;
   status: string;
 }
 
-const AdminConseilEdit = () => {
+const AdminConseilEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -90,7 +90,7 @@ const AdminConseilEdit = () => {
       cover_image_url: '',
       video_url: '',
       content: '',
-      type: 'fruits' as AdviceType,
+      type: 'fruits' as AdviceArticle['type'],
       tags: '',
       visible: true,
       status: 'pending'
@@ -330,6 +330,67 @@ const AdminConseilEdit = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('advice_articles')
+        .update({
+          status: 'approved',
+          visible: true
+        })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Conseil approuvé",
+        description: "Le conseil est maintenant visible"
+      });
+      
+      refetch && refetch();
+    } catch (error) {
+      console.error('Error approving conseil:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de l'approbation du conseil",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!id) return;
+    
+    try {
+      const { error } = await supabase
+        .from('advice_articles')
+        .update({
+          status: 'rejected',
+          visible: false,
+          rejection_reason: reason
+        })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Conseil rejeté",
+        description: "Le conseil a été rejeté"
+      });
+      
+      refetch && refetch();
+    } catch (error) {
+      console.error('Error rejecting conseil:', error);
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du rejet du conseil",
+        variant: "destructive"
+      });
     }
   };
 

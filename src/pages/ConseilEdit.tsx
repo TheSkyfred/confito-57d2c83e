@@ -287,19 +287,24 @@ const ConseilEdit: React.FC = () => {
     }
 
     try {
-      const { data, error } = await supabaseDirect.insertAndReturn<AdviceProduct>('advice_products', {
-        article_id: id,
-        name: productForm.name,
-        description: productForm.description,
-        image_url: productForm.image_url,
-        external_url: productForm.external_url,
-        is_sponsored: productForm.is_sponsored,
-        promo_code: productForm.promo_code
-      });
+      const { data, error } = await supabase
+        .from('advice_products')
+        .insert({
+          article_id: id,
+          name: productForm.name,
+          description: productForm.description,
+          image_url: productForm.image_url,
+          external_url: productForm.external_url,
+          is_sponsored: productForm.is_sponsored,
+          promo_code: productForm.promo_code
+        })
+        .select();
       
       if (error) throw error;
       
-      setProducts(prev => [...prev, ...data]);
+      if (data) {
+        setProducts(prev => [...prev, ...data]);
+      }
       
       setProductForm({
         name: '',

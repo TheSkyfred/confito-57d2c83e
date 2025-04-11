@@ -217,13 +217,13 @@ const ConseilDetail: React.FC = () => {
                 {product.promo_code && (
                   <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200 text-center">
                     <p className="text-sm font-semibold text-blue-700">
-                      Code promo: {product.promo_code || ""}
+                      Code promo: {product.promo_code}
                     </p>
                   </div>
                 )}
                 <Button 
                   variant="secondary" 
-                  onClick={() => handleProductClick(product.id, product.external_url)}
+                  onClick={() => handleProductClick(product.id, product.external_url || '')}
                   disabled={!product.external_url}
                 >
                   Voir le produit
