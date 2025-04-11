@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ProAccessory } from '@/types/supabase';
 import { toast } from '@/components/ui/use-toast';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 // Hook pour gérer les accessoires sponsorisés
 export const useProAccessories = () => {
@@ -28,7 +29,7 @@ export const useProAccessories = () => {
         throw error;
       }
 
-      return data as unknown as ProAccessory[];
+      return data as ProAccessory[];
     }
   });
 
@@ -41,7 +42,7 @@ export const useProAccessories = () => {
       .single();
 
     if (error) throw error;
-    return data as unknown as ProAccessory;
+    return data as ProAccessory;
   };
 
   // Créer un nouvel accessoire
@@ -151,8 +152,12 @@ export const useProAccessories = () => {
   // Incrémenter le compteur de clics
   const incrementClickCount = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc('increment_accessory_click', { accessory_id: id });
-      if (error) throw error;
+      const response = await supabaseDirect.incrementProductClick(id);
+      if (response.error) throw response.error;
+    },
+    onSuccess: () => {
+      // Rafraîchir les données après incrémentation
+      queryClient.invalidateQueries({ queryKey: ['pro-accessories'] });
     }
   });
 

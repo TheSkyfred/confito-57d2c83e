@@ -43,6 +43,11 @@ const AdminProAccessories = () => {
     );
   }
 
+  // Log the data we're working with
+  console.log("Accessories data:", accessories);
+  console.log("Loading state:", isLoading);
+  console.log("Error:", error);
+
   const filteredAccessories = accessories?.filter(accessory => {
     if (activeTab === 'mine' && user?.id) {
       return accessory.created_by === user.id;
@@ -78,6 +83,74 @@ const AdminProAccessories = () => {
       }
     }
   };
+
+  // Function to render content based on loading state and data
+  function renderContent(items?: ProAccessory[]) {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array(6).fill(0).map((_, i) => (
+            <Card key={i} className="p-4">
+              <div className="flex flex-col space-y-3">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <div className="flex justify-between pt-2">
+                  <Skeleton className="h-8 w-20" />
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium text-destructive">Erreur de chargement</h3>
+          <p className="text-muted-foreground">
+            Une erreur s'est produite lors du chargement des accessoires: {error.message}
+          </p>
+        </div>
+      );
+    }
+
+    if (!items || items.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-medium">Aucun accessoire trouvé</h3>
+          <p className="text-muted-foreground mb-6">
+            {filter 
+              ? "Aucun accessoire ne correspond à votre recherche" 
+              : activeTab === 'mine' 
+                ? "Vous n'avez pas encore ajouté d'accessoires" 
+                : "Aucun accessoire n'a encore été ajouté"}
+          </p>
+          <Button onClick={() => handleOpenForm()}>
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter votre premier accessoire
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((accessory) => (
+          <AccessoryCard
+            key={accessory.id}
+            accessory={accessory}
+            onEdit={handleOpenForm}
+            onDelete={handleDelete}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
@@ -166,74 +239,6 @@ const AdminProAccessories = () => {
       </AlertDialog>
     </div>
   );
-
-  // Fonction utilitaire pour afficher le contenu
-  function renderContent(items?: ProAccessory[]) {
-    if (isLoading) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array(6).fill(0).map((_, i) => (
-            <Card key={i} className="p-4">
-              <div className="flex flex-col space-y-3">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-6 w-full" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <div className="flex justify-between pt-2">
-                  <Skeleton className="h-8 w-20" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-destructive">Erreur de chargement</h3>
-          <p className="text-muted-foreground">
-            Une erreur s'est produite lors du chargement des accessoires
-          </p>
-        </div>
-      );
-    }
-
-    if (!items || items.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium">Aucun accessoire trouvé</h3>
-          <p className="text-muted-foreground mb-6">
-            {filter 
-              ? "Aucun accessoire ne correspond à votre recherche" 
-              : activeTab === 'mine' 
-                ? "Vous n'avez pas encore ajouté d'accessoires" 
-                : "Aucun accessoire n'a encore été ajouté"}
-          </p>
-          <Button onClick={() => handleOpenForm()}>
-            <Plus className="h-4 w-4 mr-1" />
-            Ajouter votre premier accessoire
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map((accessory) => (
-          <AccessoryCard
-            key={accessory.id}
-            accessory={accessory}
-            onEdit={handleOpenForm}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
-    );
-  }
 };
 
 export default AdminProAccessories;

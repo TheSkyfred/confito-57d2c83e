@@ -232,11 +232,9 @@ export const supabaseDirect = {
    */
   async incrementProductClick(productId: string) {
     try {
-      // Utiliser une mise à jour directe au lieu de RPC
+      // Appeler directement la fonction RPC increment_accessory_click
       const { data, error } = await supabase
-        .from('advice_products')
-        .update({ click_count: supabase.rpc('increment_accessory_click', { accessory_id: productId }) as any })
-        .eq('id', productId);
+        .rpc('increment_accessory_click', { accessory_id: productId });
       
       if (error) throw error;
       return { data, error: null };

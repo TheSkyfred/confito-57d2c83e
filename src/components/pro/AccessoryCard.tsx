@@ -4,7 +4,7 @@ import { ProAccessory } from '@/types/supabase';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink } from 'lucide-react';
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { useProAccessories } from '@/hooks/useProAccessories';
 import { useAuth } from '@/contexts/AuthContext';
