@@ -63,7 +63,7 @@ const AdminRecipes = () => {
       if (error) throw error;
       return data || [];
     },
-    enabled: session && (isAdmin || isModerator)
+    enabled: Boolean(session && (isAdmin || isModerator))
   });
   
   const handleApprove = async (recipeId: string) => {
@@ -167,7 +167,7 @@ const AdminRecipes = () => {
               <SelectValue placeholder="Tous les statuts" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="">Tous les statuts</SelectItem>
               <SelectItem value="brouillon">Brouillon</SelectItem>
               <SelectItem value="pending">En attente</SelectItem>
               <SelectItem value="approved">Approuvée</SelectItem>
@@ -256,7 +256,7 @@ const AdminRecipes = () => {
                           <CheckIcon className="h-4 w-4" />
                         </Button>
                         
-                        <div className="relative inline-block">
+                        <div className="group relative inline-block">
                           <Button 
                             variant="ghost" 
                             size="sm"
