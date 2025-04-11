@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,7 +22,7 @@ import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJams from './pages/AdminJams';
 import AdminJamEdit from './pages/AdminJamEdit';
-import AdminBattles from './pages/AdminBattles'; // Import the new AdminBattles page
+import AdminBattles from './pages/AdminBattles';
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
 import BattlesList from './pages/BattlesList';
@@ -51,6 +50,7 @@ import Conseils from './pages/Conseils';
 import ConseilDetail from './pages/ConseilDetail'; 
 import ConseilEdit from './pages/ConseilEdit';
 import ConseilCreate from './pages/ConseilCreate';
+import AdminProAccessories from './pages/AdminProAccessories';
 
 const queryClient = new QueryClient();
 
@@ -83,7 +83,7 @@ function App() {
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />
                   <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} />
-                  <Route path="/admin/battles" element={<AdminBattles />} /> {/* New route */}
+                  <Route path="/admin/battles" element={<AdminBattles />} />
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
@@ -108,6 +108,7 @@ function App() {
                   <Route path="/conseils/create" element={<ConseilCreate />} />
                   <Route path="/conseils/edit/:id" element={<ConseilEdit />} />
                   <Route path="/conseils/:id" element={<ConseilDetail />} />
+                  <Route path="/admin/pro-accessories" element={<AdminProAccessories />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

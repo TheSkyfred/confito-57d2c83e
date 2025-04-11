@@ -164,6 +164,52 @@ const JamDetails = () => {
     setReviewToEdit(undefined);
   };
 
+  const checkFavorite = async () => {
+    if (!user?.id || !jam?.id) return false;
+    
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('jam_id', jam.id)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Erreur lors de la vérification des favoris:", error);
+      return false;
+    }
+    
+    return !!data;
+  };
+
+  const removeFavorite = async () => {
+    if (!user?.id || !jam?.id) return;
+    
+    const { error } = await supabase
+      .from('favorites')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('jam_id', jam.id);
+    
+    if (error) {
+      console.error("Erreur lors de la suppression du favori:", error);
+      throw error;
+    }
+  };
+
+  const addFavorite = async () => {
+    if (!user?.id || !jam?.id) return;
+    
+    const { error } = await supabase
+      .from('favorites')
+      .insert({ user_id: user.id, jam_id: jam.id });
+    
+    if (error) {
+      console.error("Erreur lors de l'ajout du favori:", error);
+      throw error;
+    }
+  };
+
   const toggleFavorite = async () => {
     if (!user) {
       toast({
@@ -176,15 +222,9 @@ const JamDetails = () => {
     
     try {
       if (favorited) {
-        await supabase
-          .from('favorites')
-          .delete()
-          .eq('jam_id', id as string)
-          .eq('user_id', user.id);
+        await removeFavorite();
       } else {
-        await supabase
-          .from('favorites')
-          .insert([{ jam_id: id as string, user_id: user.id }]);
+        await addFavorite();
       }
       
       setFavorited(!favorited);
@@ -222,7 +262,7 @@ const JamDetails = () => {
     setQuantity(newQuantity);
   };
 
-  const addToCart = async () => {
+  const handleAddToCart = async () => {
     if (!user) {
       toast({
         title: "Connexion requise",
@@ -518,7 +558,7 @@ const JamDetails = () => {
               <Button 
                 variant="default" 
                 className="bg-jam-raspberry hover:bg-jam-raspberry/90"
-                onClick={addToCart}
+                onClick={() => handleAddToCart()}
                 disabled={jam.status !== 'approved'}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />

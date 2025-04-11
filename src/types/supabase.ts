@@ -1,4 +1,3 @@
-
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -8,12 +7,17 @@ export type ProfileType = {
   avatar_url: string | null;
   bio: string | null;
   address: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
   phone: string | null;
   website: string | null;
   credits: number;
   role: 'user' | 'moderator' | 'admin' | 'pro';
   created_at: string;
   updated_at: string;
+  is_active: boolean;
 };
 
 export type JamImageType = {
@@ -472,4 +476,18 @@ export type ProProfileType = {
   
   // Relations
   profile?: ProfileType;
+};
+
+export type ProAccessory = {
+  id: string;
+  name: string;
+  brand: string;
+  short_description: string;
+  image_url: string | null;
+  external_url: string | null;
+  click_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  creator?: ProfileType;
 };

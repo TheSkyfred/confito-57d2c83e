@@ -232,22 +232,14 @@ export const supabaseDirect = {
    */
   async incrementProductClick(productId: string) {
     try {
-      // Use the update method instead of SQL
-      const { data, error } = await this.select('advice_products', '*', { id: productId });
+      // Utiliser l'update method au lieu de SQL
+      const { data, error } = await supabase
+        .from('advice_products')
+        .update({ click_count: supabase.rpc('increment_click_count', { product_id: productId }) })
+        .eq('id', productId);
       
       if (error) throw error;
-      if (!data || data.length === 0) throw new Error('Product not found');
-      
-      const product = data[0];
-      const newClickCount = (product.click_count || 0) + 1;
-      
-      const updateResult = await this.update('advice_products', 
-        { click_count: newClickCount }, 
-        { id: productId }
-      );
-      
-      if (updateResult.error) throw updateResult.error;
-      return { data: updateResult.data, error: null };
+      return { data, error: null };
     } catch (error: any) {
       console.error(`Erreur lors de l'incrémentation du compteur de clics:`, error);
       return { data: null, error };

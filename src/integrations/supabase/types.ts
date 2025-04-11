@@ -1656,6 +1656,45 @@ export type Database = {
           },
         ]
       }
+      pro_accessories: {
+        Row: {
+          brand: string
+          click_count: number | null
+          created_at: string
+          created_by: string
+          external_url: string | null
+          id: string
+          image_url: string | null
+          name: string
+          short_description: string
+          updated_at: string
+        }
+        Insert: {
+          brand: string
+          click_count?: number | null
+          created_at?: string
+          created_by: string
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          short_description: string
+          updated_at?: string
+        }
+        Update: {
+          brand?: string
+          click_count?: number | null
+          created_at?: string
+          created_by?: string
+          external_url?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          short_description?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pro_profiles: {
         Row: {
           billing_address: string | null
@@ -2215,6 +2254,10 @@ export type Database = {
       calculate_recipe_average_rating: {
         Args: { recipe_uuid: string }
         Returns: number
+      }
+      increment_accessory_click: {
+        Args: { accessory_id: string }
+        Returns: undefined
       }
       insert_jam_image: {
         Args: {
