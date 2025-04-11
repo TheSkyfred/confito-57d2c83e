@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,11 +95,8 @@ export const useJamForm = ({
       
       const recipeString = JSON.stringify(formData.recipe_steps);
       
-      // Determine which price field to use based on is_pro
-      const priceField = formData.is_pro 
-        ? { price_euros: formData.price_euros || formData.price_credits }
-        : { price_credits: formData.price_credits };
-      
+      // Always include both price fields in the data object
+      // but set appropriate values based on is_pro flag
       const jamData = {
         name: formData.name,
         description: formData.description,
@@ -113,10 +109,11 @@ export const useJamForm = ({
         production_date: formData.production_date,
         shelf_life_months: formData.shelf_life_months,
         special_edition: formData.special_edition,
-        ...priceField, // Use the appropriate price field
+        price_credits: formData.is_pro ? null : formData.price_credits,
+        price_euros: formData.is_pro ? formData.price_euros || formData.price_credits : null,
         recipe: recipeString,
         is_active: publish,
-        is_pro: formData.is_pro, // Add the is_pro value when saving
+        is_pro: formData.is_pro,
       };
       
       let jam_id = initialJamId;
