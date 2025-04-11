@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -55,7 +54,6 @@ const ConseilCreate = () => {
   const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   
-  // Rediriger si l'utilisateur n'est pas admin ou modérateur
   React.useEffect(() => {
     if (user && !isAdmin && !isModerator) {
       navigate('/conseils');
@@ -99,7 +97,6 @@ const ConseilCreate = () => {
     try {
       console.log("Uploading to bucket: advice_images, path:", filePath);
       
-      // Upload the image
       const { error: uploadError, data } = await supabase.storage
         .from('advice_images')
         .upload(filePath, file);
@@ -109,14 +106,12 @@ const ConseilCreate = () => {
         throw uploadError;
       }
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('advice_images')
         .getPublicUrl(filePath);
       
       console.log("File uploaded successfully, public URL:", publicUrl);
       
-      // Update the form and preview
       form.setValue('cover_image_url', publicUrl);
       setCoverImagePreview(publicUrl);
       
@@ -142,11 +137,12 @@ const ConseilCreate = () => {
     setIsSubmitting(true);
     
     try {
-      // Traiter les tags
       const tagsArray = data.tags
         .split(',')
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0);
+      
+      const status = user.role === 'user' ? 'pending' : 'approved';
       
       const { data: articleData, error } = await supabaseDirect.insertAndReturn('advice_articles', {
         title: data.title,
@@ -156,14 +152,17 @@ const ConseilCreate = () => {
         content: data.content,
         type: data.type,
         tags: tagsArray,
-        visible: data.visible
+        visible: data.visible,
+        status: status
       });
         
       if (error) throw error;
       
       toast({
         title: "Conseil créé",
-        description: "Votre conseil a été publié avec succès"
+        description: status === 'pending' 
+          ? "Votre conseil est en attente de validation" 
+          : "Votre conseil a été publié avec succès"
       });
       
       navigate(`/conseils/${articleData[0].id}`);

@@ -218,6 +218,7 @@ export type Database = {
           created_at: string | null
           id: string
           published_at: string | null
+          status: string | null
           tags: string[] | null
           title: string
           type: Database["public"]["Enums"]["advice_type"]
@@ -232,6 +233,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           published_at?: string | null
+          status?: string | null
           tags?: string[] | null
           title: string
           type: Database["public"]["Enums"]["advice_type"]
@@ -246,6 +248,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           published_at?: string | null
+          status?: string | null
           tags?: string[] | null
           title?: string
           type?: Database["public"]["Enums"]["advice_type"]
