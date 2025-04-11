@@ -22,10 +22,10 @@ import Credits from './pages/Credits';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJams from './pages/AdminJams';
-import AdminJamEdit from './pages/AdminJamEdit'; // Import the new AdminJamEdit page
+import AdminJamEdit from './pages/AdminJamEdit';
+import AdminBattles from './pages/AdminBattles'; // Import the new AdminBattles page
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
-import BattleAdmin from './pages/BattleAdmin';
 import BattlesList from './pages/BattlesList';
 import Rankings from './pages/Rankings';
 import ProDashboard from './pages/ProDashboard';
@@ -80,10 +80,10 @@ function App() {
                   <Route path="/battles" element={<BattlesList />} />
                   <Route path="/battles/jam" element={<JamBattles />} />
                   <Route path="/battles/:id" element={<BattleDetails />} />
-                  <Route path="/battles/admin" element={<BattleAdmin />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />
-                  <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} /> {/* New route for admin jam editing */}
+                  <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} />
+                  <Route path="/admin/battles" element={<AdminBattles />} /> {/* New route */}
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />

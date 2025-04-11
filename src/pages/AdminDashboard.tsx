@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -61,7 +60,7 @@ const AdminDashboard = () => {
       title: "Combats de confitures",
       icon: <Trophy className="h-5 w-5 mr-2" />,
       description: "Créer et gérer les tournois de confitures",
-      link: "/battles/admin",
+      link: "/admin/battles",
     },
     {
       title: "Recettes",
