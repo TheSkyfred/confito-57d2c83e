@@ -1,239 +1,211 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useUserRole } from '@/hooks/useUserRole';
-import { useToast } from '@/hooks/use-toast';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Activity,
-  BookOpen,
-  CalendarDays,
-  GaugeCircle,
-  Trophy,
-  Users,
-  ShoppingCart,
-  Megaphone,
-  Calendar,
-  Medal,
-  MessageCircle,
+import { 
+  BarChart, 
+  ShoppingBag, 
+  Users, 
+  BookOpen, 
+  Award, 
+  Gift,
+  Calendar, 
+  Apple,
+  Package,
   FileText,
-  Leaf
+  BadgeDollarSign,
 } from 'lucide-react';
 
+interface DashboardStat {
+  title: string;
+  value: string | number;
+  change?: string;
+  icon: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+}
+
 const AdminDashboard = () => {
-  const { isAdmin, isModerator, isLoading, role } = useUserRole();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { isAdmin, isModerator } = useUserRole();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Record<string, DashboardStat>>({});
   
-  React.useEffect(() => {
-    if (!isLoading && !isAdmin && !isModerator) {
-      navigate('/');
-      toast({
-        title: "Accès refusé",
-        description: "Vous n'avez pas les droits nécessaires pour accéder à cette page.",
-        variant: "destructive",
-      });
+  useEffect(() => {
+    if (user && !isAdmin && !isModerator) {
+      navigate('/dashboard');
+      return;
     }
-  }, [isAdmin, isModerator, navigate, isLoading, toast]);
-  
-  if (isLoading || (!isAdmin && !isModerator)) {
-    return null;
-  }
+    
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch counts from various tables
+        const [
+          { count: userCount },
+          { count: jamCount },
+          { count: salesCount },
+          { count: ordersCount }
+        ] = await Promise.all([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('jams').select('*', { count: 'exact', head: true }),
+          supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'delivered'),
+          supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+        ]);
+        
+        setStats({
+          users: {
+            title: 'Utilisateurs',
+            value: userCount || 0,
+            icon: <Users className="h-4 w-4" />,
+          },
+          jams: {
+            title: 'Confitures',
+            value: jamCount || 0,
+            icon: <Gift className="h-4 w-4" />,
+          },
+          sales: {
+            title: 'Ventes Livrées',
+            value: salesCount || 0,
+            icon: <ShoppingBag className="h-4 w-4" />,
+          },
+          orders: {
+            title: 'Commandes En Attente',
+            value: ordersCount || 0,
+            icon: <Package className="h-4 w-4" />,
+          },
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [user, isAdmin, isModerator, navigate]);
   
   const adminModules = [
     {
-      title: "Confitures",
-      icon: <GaugeCircle className="h-5 w-5 mr-2" />,
-      description: "Gérer les confitures et modérer le contenu utilisateur",
-      link: "/admin/jams",
+      title: 'Confitures',
+      description: 'Gérer les confitures, validations et rejets',
+      icon: <ShoppingBag className="h-10 w-10 text-primary" />,
+      href: '/admin/jams',
+      primary: true
     },
     {
-      title: "Combats de confitures",
-      icon: <Trophy className="h-5 w-5 mr-2" />,
-      description: "Créer et gérer les tournois de confitures",
-      link: "/admin/battles",
+      title: 'Conseils & Articles',
+      description: 'Gérer les conseils, articles et produits associés',
+      icon: <FileText className="h-10 w-10 text-primary" />,
+      href: '/admin/conseils',
+      primary: true
     },
     {
-      title: "Recettes",
-      icon: <BookOpen className="h-5 w-5 mr-2" />,
-      description: "Gérer les recettes de confitures",
-      link: "/admin/recipes",
+      title: 'Battles',
+      description: 'Gérer les battles, participations et votes',
+      icon: <Award className="h-10 w-10 text-primary" />,
+      href: '/admin/battles'
     },
     {
-      title: "Fruits saisonniers",
-      icon: <Leaf className="h-5 w-5 mr-2" />,
-      description: "Gérer le calendrier des fruits de saison",
-      link: "/admin/fruits",
-      new: true,
+      title: 'Recettes',
+      description: 'Gérer les recettes, validations et rejets',
+      icon: <BookOpen className="h-10 w-10 text-primary" />,
+      href: '/admin/recipes'
     },
     {
-      title: "Conseils",
-      icon: <MessageCircle className="h-5 w-5 mr-2" />,
-      description: "Gérer les articles de conseils",
-      link: "/admin/conseils",
+      title: 'Fruits de saison',
+      description: 'Gérer le calendrier des fruits de saison',
+      icon: <Apple className="h-10 w-10 text-primary" />,
+      href: '/admin/seasonal-fruits'
     },
     {
-      title: "Publicités",
-      icon: <Megaphone className="h-5 w-5 mr-2" />,
-      description: "Gérer les campagnes publicitaires",
-      link: "/admin/ads",
+      title: 'Publicités',
+      description: 'Gérer les campagnes publicitaires',
+      icon: <BadgeDollarSign className="h-10 w-10 text-primary" />,
+      href: '/admin/ads'
     },
     {
-      title: "Utilisateurs",
-      icon: <Users className="h-5 w-5 mr-2" />,
-      description: "Gérer les comptes utilisateurs",
-      link: "/admin/users",
+      title: 'Utilisateurs',
+      description: 'Gérer les utilisateurs et leurs rôles',
+      icon: <Users className="h-10 w-10 text-primary" />,
+      href: '/admin/users'
     },
     {
-      title: "Commandes",
-      icon: <ShoppingCart className="h-5 w-5 mr-2" />,
-      description: "Voir et gérer les commandes",
-      link: "/admin/orders",
-    },
+      title: 'Produits Associés',
+      description: 'Rapport des produits associés et des clics',
+      icon: <Package className="h-10 w-10 text-primary" />,
+      href: '/admin/associatedproducts'
+    }
   ];
   
-  const statCards = [
-    {
-      title: "Utilisateurs actifs",
-      value: "234",
-      change: "+12%",
-      positive: true,
-      icon: <Users className="h-4 w-4" />,
-    },
-    {
-      title: "Confitures publiées",
-      value: "187",
-      change: "+24%",
-      positive: true,
-      icon: <Activity className="h-4 w-4" />,
-    },
-    {
-      title: "Commandes du mois",
-      value: "28",
-      change: "-4%",
-      positive: false,
-      icon: <ShoppingCart className="h-4 w-4" />,
-    },
-    {
-      title: "Recettes ajoutées",
-      value: "45",
-      change: "+8%",
-      positive: true,
-      icon: <FileText className="h-4 w-4" />,
-    },
-  ];
+  if (loading) {
+    return (
+      <div className="container py-8">
+        <h1 className="text-2xl font-bold mb-6">Administration</h1>
+        <div className="h-64 flex items-center justify-center">
+          <p>Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="container py-8">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-serif font-bold mb-2">Tableau de bord</h1>
-          <p className="text-muted-foreground">
-            Bienvenue dans l'interface d'administration.
-          </p>
-        </div>
-        <div className="flex items-center">
-          <Badge className="bg-jam-raspberry text-white mr-2">
-            {role === 'admin' ? 'Administrateur' : 'Modérateur'}
-          </Badge>
-        </div>
+      <h1 className="text-2xl font-bold mb-6">Administration</h1>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {Object.entries(stats).map(([key, stat]) => (
+          <Card key={key}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                {stat.title}
+              </CardTitle>
+              <div className="rounded-full bg-muted p-1">
+                {stat.icon}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              {stat.change && (
+                <p className={`text-xs ${stat.trend === 'up' ? 'text-green-600' : stat.trend === 'down' ? 'text-red-600' : 'text-gray-500'}`}>
+                  {stat.change}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                <span className="bg-primary/10 text-primary p-1 rounded-full">
-                  {stat.icon}
-                </span>
-              </div>
-              <div className="flex items-end mt-2">
-                <h3 className="text-3xl font-bold">{stat.value}</h3>
-                <span className={`text-xs ml-2 mb-1 ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        {adminModules.map((module, i) => (
+          <Link to={module.href} key={i} className="block">
+            <Card className={`h-full hover:shadow-md transition-shadow ${module.primary ? 'border-primary/20' : ''}`}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  {module.icon}
+                  {module.primary && (
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                      Principal
+                    </span>
+                  )}
+                </div>
+                <CardTitle className="text-xl mt-2">{module.title}</CardTitle>
+                <CardDescription>{module.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="outline" className="w-full">Accéder</Button>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
-      </div>
-
-      <h2 className="text-xl font-medium mb-4">Modules d'administration</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {adminModules.map((module, index) => (
-          <Card key={index} className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center">
-                {module.icon}
-                {module.title}
-                {module.new && (
-                  <span className="ml-2 bg-jam-raspberry text-white text-xs px-2 py-0.5 rounded-full">
-                    Nouveau
-                  </span>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {module.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-2">
-              <Link to={module.link}>
-                <Button variant="ghost" className="w-full justify-start">
-                  Accéder
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
-      <div className="mt-12">
-        <h2 className="text-xl font-medium mb-4">Calendrier des événements</h2>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Événements à venir
-            </CardTitle>
-            <CardDescription>
-              Prochains événements et échéances
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="bg-primary/10 p-2 rounded-md mr-3">
-                  <CalendarDays className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Lancement du nouveau concours</p>
-                  <p className="text-sm text-muted-foreground">15 juin 2023</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="bg-primary/10 p-2 rounded-md mr-3">
-                  <Medal className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Annonce des résultats du concours été</p>
-                  <p className="text-sm text-muted-foreground">30 juin 2023</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

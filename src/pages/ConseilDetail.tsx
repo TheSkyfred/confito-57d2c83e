@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAdviceArticle } from '@/hooks/useAdvice';
@@ -15,6 +14,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import AdviceAdminActions from '@/components/advice/AdviceAdminActions';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
+import { trackProductClick } from '@/utils/supabaseAdapter';
 
 dayjs.locale('fr');
 
@@ -110,12 +110,7 @@ const ConseilDetail: React.FC = () => {
   
   const handleProductClick = async (productId: string, externalUrl: string) => {
     try {
-      // Correct way to update the click_count
-      await supabase
-        .from('advice_products')
-        .update({ click_count: (await supabase.from('advice_products').select('click_count').eq('id', productId).single()).data.click_count + 1 })
-        .eq('id', productId);
-      
+      await trackProductClick(productId, id as string);
       window.open(externalUrl, '_blank');
     } catch (error) {
       console.error("Error tracking product click:", error);
@@ -148,7 +143,6 @@ const ConseilDetail: React.FC = () => {
           });
       }
 
-      // Update likes count
       const { count } = await supabase
         .from('advice_comment_likes')
         .select('*', { count: 'exact' })
@@ -195,13 +189,41 @@ const ConseilDetail: React.FC = () => {
       
       {article.products && article.products.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold mb-2">Produits associés</h2>
+          <h2 className="text-2xl font-semibold mb-2">Matériel recommandé</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {article.products.map(product => (
-              <div key={product.id} className="border rounded-md p-4">
-                <h3 className="font-semibold">{product.name}</h3>
-                <p className="text-gray-600">{product.description}</p>
-                <Button variant="secondary" onClick={() => handleProductClick(product.id, product.external_url)}>
+              <div 
+                key={product.id} 
+                className={`border rounded-md p-4 ${product.is_sponsored ? 'bg-amber-50 border-amber-200' : ''}`}
+              >
+                {product.image_url && (
+                  <div className="aspect-video w-full mb-3 rounded overflow-hidden">
+                    <img 
+                      src={product.image_url} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold">{product.name}</h3>
+                  {product.is_sponsored && (
+                    <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                      Sponsorisé
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-600 text-sm mb-3">{product.description}</p>
+                {product.promo_code && (
+                  <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                    <span className="text-sm font-semibold text-blue-700">Code promo: {product.promo_code}</span>
+                  </div>
+                )}
+                <Button 
+                  variant="secondary" 
+                  onClick={() => handleProductClick(product.id, product.external_url)}
+                  disabled={!product.external_url}
+                >
                   Voir le produit
                 </Button>
               </div>

@@ -16,6 +16,7 @@ export interface AdviceArticle {
   published_at: string;
   created_at: string;
   updated_at: string;
+  status?: 'pending' | 'approved' | 'rejected';
   
   // Relations
   author?: ProfileType;
@@ -45,6 +46,7 @@ export interface AdviceProduct {
   image_url: string | null;
   external_url: string | null;
   is_sponsored: boolean;
+  promo_code?: string | null;
   click_count: number;
   conversion_count: number;
   created_at: string;
@@ -67,7 +69,8 @@ export interface AdviceComment {
   
   // UI state
   is_replying?: boolean;
-  is_liked_by_user?: boolean;
+  is_liked?: boolean;
+  isLiked?: boolean;
 }
 
 export interface AdviceCommentLike {
@@ -83,4 +86,13 @@ export interface AdviceFilters {
   hasProducts?: boolean;
   searchTerm?: string;
   sortBy?: 'date' | 'popularity' | 'clicks';
+}
+
+export interface ProductFormData {
+  name: string;
+  description: string;
+  image_url: string;
+  external_url: string;
+  promo_code?: string;
+  is_sponsored: boolean;
 }
