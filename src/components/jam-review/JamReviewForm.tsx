@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -93,7 +94,7 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
 
     if (isSubmitting) return;
     
-    setSubmitting(true);
+    setIsSubmitting(true);
 
     try {
       // Check if user already reviewed this jam
@@ -155,7 +156,7 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
         variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
   
@@ -181,20 +182,27 @@ const JamReviewForm: React.FC<JamReviewFormProps> = ({
                 <p className="text-sm text-muted-foreground">{criteria.description}</p>
               </div>
               <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={`p-1`}
-                    onClick={() => handleRatingChange(criteria.id, value)}
-                  >
-                    <Star
-                      className="h-5 w-5 transition-colors"
-                      fill={value <= { tasteRating, textureRating, originalityRating, balanceRating }[criteria.id as keyof typeof { tasteRating, textureRating, originalityRating, balanceRating }] ? "#FFA000" : "transparent"}
-                      stroke={value <= { tasteRating, textureRating, originalityRating, balanceRating }[criteria.id as keyof typeof { tasteRating, textureRating, originalityRating, balanceRating }] ? "#FFA000" : "currentColor"}
-                    />
-                  </button>
-                ))}
+                {[1, 2, 3, 4, 5].map((value) => {
+                  const currentRating = criteria.id === 'taste' ? tasteRating :
+                                        criteria.id === 'texture' ? textureRating :
+                                        criteria.id === 'originality' ? originalityRating :
+                                        balanceRating;
+                  
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      className="p-1"
+                      onClick={() => handleRatingChange(criteria.id, value)}
+                    >
+                      <Star
+                        className="h-5 w-5 transition-colors"
+                        fill={value <= currentRating ? "#FFA000" : "transparent"}
+                        stroke={value <= currentRating ? "#FFA000" : "currentColor"}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <Separator />
