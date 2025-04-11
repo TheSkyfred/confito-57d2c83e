@@ -17,8 +17,8 @@ export const supabaseDirect = {
     }
     
     const { data, error } = await query;
-    // Use type assertion to handle the conversion explicitly
-    return { data: data as unknown as T[], error };
+    // Use explicit casting to handle the conversion safely
+    return { data: data as T[], error };
   },
 
   // Select data with a where clause
@@ -27,8 +27,9 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .eq(column, value);
-    // Use type assertion to handle the conversion explicitly
-    return { data: data as unknown as T[], error };
+    
+    // Use explicit casting to handle the conversion safely
+    return { data: data as T[], error };
   },
 
   // Select data with a where in clause
@@ -37,8 +38,9 @@ export const supabaseDirect = {
       .from(tableName)
       .select(select)
       .in(column, values);
-    // Use type assertion to handle the conversion explicitly
-    return { data: data as unknown as T[], error };
+    
+    // Use explicit casting to handle the conversion safely
+    return { data: data as T[], error };
   },
 
   // Get a record by ID
@@ -48,8 +50,9 @@ export const supabaseDirect = {
       .select(select)
       .eq('id', id)
       .single();
-    // Use type assertion to handle the conversion explicitly
-    return { data: data as unknown as T, error };
+    
+    // Use explicit casting to handle the conversion safely
+    return { data: data as T, error };
   },
 
   // Insert data and return the inserted data
@@ -58,8 +61,9 @@ export const supabaseDirect = {
       .from(tableName)
       .insert(data)
       .select();
-    // Use type assertion to handle the conversion explicitly
-    return { data: returnedData as unknown as T[], error };
+    
+    // Use explicit casting to handle the conversion safely
+    return { data: returnedData as T[], error };
   },
 
   // Insert data without returning
@@ -102,13 +106,11 @@ export const trackProductClick = async (productId: string, articleId: string) =>
       user_agent: navigator.userAgent,
     };
     
-    // Record the click directly in advice_products
+    // Record the click directly in advice_products using update
     await supabase
       .from('advice_products')
       .update({ 
-        click_count: supabase.rpc('increment_clicks', { 
-          row_id: productId
-        }) as any
+        click_count: supabase.rpc('increment') as any
       })
       .eq('id', productId);
       

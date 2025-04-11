@@ -1,3 +1,4 @@
+
 import React, {
   useState,
   useEffect,
@@ -16,74 +17,73 @@ interface AuthContextProps {
   user: User | null;
   profile: ProfileType | null;
   loading: boolean;
+  session: Session | null; // Add missing session property
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string) => Promise<void>;
   signOut: () => Promise<void>;
   update: (data: Partial<ProfileType>) => Promise<void>;
   error: string | null;
+  isAdmin?: boolean; // Add isAdmin property for AdminRecipes
 }
 
 const AuthContext = createContext<AuthContextProps>({
   user: null,
   profile: null,
   loading: true,
+  session: null, // Initialize session as null
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
   update: async () => {},
   error: null,
+  isAdmin: false,
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
+  const [session, setSession] = useState<Session | null>(null); // Add session state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false); // Add isAdmin state
 
   useEffect(() => {
     const getInitialSession = async () => {
       setLoading(true);
       const {
-        data: { session },
+        data: { session: currentSession },
       } = await supabase.auth.getSession();
+      
+      setSession(currentSession);
+      setUser(currentSession?.user || null);
 
-      setUser(session?.user || null);
-
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user.id);
       }
       setLoading(false);
     };
 
-    supabase.auth.onAuthStateChange(async (event, session: Session | null) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-    });
-
     const fetchProfile = async (userId: string) => {
       try {
-        const { data: profile } = await supabase
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .single();
         
-        if (profile) {
+        if (profileData) {
           // Conversion explicite du profil pour s'assurer qu'il correspond au type ProfileType
           const typedProfile: ProfileType = {
-            ...profile,
-            // Ajout des propriétés qui peuvent être absentes dans les profils existants
-            address_line1: profile.address_line1 || '',
-            address_line2: profile.address_line2 || null,
-            postal_code: profile.postal_code || '',
-            city: profile.city || '',
-          } as ProfileType;
+            ...profileData,
+            // Ensure all required properties exist, even if they don't in the database yet
+            address_line1: profileData.address_line1 || profileData.address || '',
+            address_line2: profileData.address_line2 || null,
+            postal_code: profileData.postal_code || '',
+            city: profileData.city || '',
+          };
           
           setProfile(typedProfile);
+          setIsAdmin(typedProfile.role === 'admin');
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -92,17 +92,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getInitialSession();
 
-    supabase.auth.onAuthStateChange(async (event, session: Session | null) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
       }
-    });
+    );
 
     return () => {
-      supabase.auth.signOut();
+      subscription?.unsubscribe();
     };
   }, []);
 
@@ -211,12 +216,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         user,
         profile,
+        session,
         loading,
         signIn,
         signUp,
         signOut,
         update,
-        error
+        error,
+        isAdmin
       }}
     >
       {children}

@@ -25,11 +25,11 @@ export const useUsers = (searchTerm: string = '') => {
       // Get the last login info for each user from auth.users
       // Note: This will only work with service_role key, not with anon key
       // For demo purposes, we'll set a random date for last login
-      const usersWithLastLogin = profiles.map((profile) => {
+      const usersWithLastLogin = profiles.map((profile: any) => {
         // Ensure the profile conforms to the ProfileType with the new fields
         const completeProfile: Partial<ProfileType> = {
           ...profile,
-          address_line1: profile.address_line1 || (profile.address || ''),
+          address_line1: profile.address_line1 || profile.address || '',
           address_line2: profile.address_line2 || null,
           postal_code: profile.postal_code || '',
           city: profile.city || '',

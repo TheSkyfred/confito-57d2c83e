@@ -12,12 +12,14 @@ import { useAuth } from '@/contexts/AuthContext';
 const Cart = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, removeItem, updateQuantity, clearCart, getTotalCredits } = useCartStore();
+  const cartStore = useCartStore();
+  const { removeItem, updateQuantity, clearCart, getTotalCredits } = cartStore;
+  const items = cartStore.items;
   const [isProcessing, setIsProcessing] = useState(false);
   
   useEffect(() => {
     const syncCart = async () => {
-      await useCartStore.getState().syncWithDatabase();
+      await cartStore.syncWithDatabase();
     };
     
     syncCart();

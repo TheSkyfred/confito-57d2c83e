@@ -28,7 +28,8 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
   const avatarUrl = getProfileAvatarUrl(profile);
   const displayName = getProfileFullName(profile);
   const initial = getProfileInitials(username);
-  const totalItems = useCartStore(state => state.getTotalItems());
+  const cartStore = useCartStore();
+  const totalItems = cartStore.getTotalItems();
   
   const sizeClasses = {
     sm: 'h-6 w-6',

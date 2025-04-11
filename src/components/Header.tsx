@@ -48,7 +48,8 @@ const Header = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const totalCartItems = useCartStore((state) => state.getTotalItems());
+  const cartStore = useCartStore();
+  const totalCartItems = cartStore.getTotalItems();
   
   const isPro = profile?.role === 'pro';
 
@@ -66,7 +67,7 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    useCartStore.getState().syncWithDatabase();
+    cartStore.syncWithDatabase();
   }, [location.pathname]);
 
   const toggleMenu = () => {

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowRight, Calendar, Fruit } from 'lucide-react';
+import { ArrowRight, Calendar, Apple } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -123,7 +123,7 @@ const SeasonalSection = () => {
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full bg-muted">
-                          <Fruit className="h-12 w-12 text-muted-foreground" />
+                          <Apple className="h-12 w-12 text-muted-foreground" />
                         </div>
                       )}
                     </div>

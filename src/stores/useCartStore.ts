@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { JamType } from '@/types/supabase';
@@ -21,85 +22,10 @@ interface CartState {
   syncWithDatabase: () => Promise<void>;
 }
 
-const loadCartFromSupabase = async (userId: string): Promise<CartItem[]> => {
-  try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-
-    if (user) {
-      const { data: cartData, error: cartError } = await supabase
-        .from('carts')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (cartError) {
-        console.error("Erreur lors de la récupération du panier:", cartError.message);
-        return [];
-      }
-
-      if (!cartData) {
-        return [];
-      }
-
-      const { data: cartItemsData, error: itemsError } = await supabase
-        .from('cart_items')
-        .select(`
-          quantity,
-          jams!inner (
-            id, name, description, price_credits, available_quantity, creator_id,
-            weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
-            status, rejection_reason,
-            created_at, updated_at,
-            jam_images (id, url, is_primary, jam_id, created_at),
-            profiles!inner (
-              id, username, full_name, avatar_url, bio, address, phone, website,
-              credits, role, created_at, updated_at
-            )
-          )
-        `)
-        .eq('cart_id', cartData.id);
-
-      if (itemsError) {
-        console.error("Erreur lors de la récupération des articles du panier:", itemsError.message);
-        return [];
-      }
-
-      const completeItems = items.map(item => {
-        if (item.jam && item.jam.profiles) {
-          const completeProfiles = {
-            ...item.jam.profiles,
-            address_line1: item.jam.profiles.address_line1 || (item.jam.profiles.address || ''),
-            address_line2: item.jam.profiles.address_line2 || null,
-            postal_code: item.jam.profiles.postal_code || '',
-            city: item.jam.profiles.city || ''
-          };
-
-          return {
-            ...item,
-            jam: {
-              ...item.jam,
-              profiles: completeProfiles
-            }
-          };
-        }
-        return item;
-      });
-
-      return completeItems as CartItem[];
-    } else {
-      return [];
-    }
-  } catch (error) {
-    console.error('Error loading cart from Supabase:', error);
-    return [];
-  }
-};
-
-export const useCartStore = create(
+export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
-      items: [],
+      items: [] as CartItem[],
       
       addItem: async (jam, quantity = 1) => {
         try {
@@ -459,28 +385,36 @@ export const useCartStore = create(
             return;
           }
           
-          const completeItems = items.map(item => {
-            if (item.jam && item.jam.profiles) {
+          // Convert to properly typed cart items
+          const cartItems = cartItemsData?.map(item => {
+            const jamData = item.jams;
+            
+            if (jamData && jamData.profiles) {
+              // Add required address fields to profile
               const completeProfiles = {
-                ...item.jam.profiles,
-                address_line1: item.jam.profiles.address_line1 || (item.jam.profiles.address || ''),
-                address_line2: item.jam.profiles.address_line2 || null,
-                postal_code: item.jam.profiles.postal_code || '',
-                city: item.jam.profiles.city || ''
+                ...jamData.profiles,
+                address_line1: jamData.profiles.address_line1 || (jamData.profiles.address || ''),
+                address_line2: jamData.profiles.address_line2 || null,
+                postal_code: jamData.profiles.postal_code || '',
+                city: jamData.profiles.city || ''
               };
               
               return {
-                ...item,
                 jam: {
-                  ...item.jam,
+                  ...jamData,
                   profiles: completeProfiles
-                }
+                } as JamType,
+                quantity: item.quantity
               };
             }
-            return item;
-          });
+            
+            return {
+              jam: jamData as JamType,
+              quantity: item.quantity
+            };
+          }) || [];
           
-          set({ items: completeItems });
+          set({ items: cartItems });
         } catch (error: any) {
           console.error("Erreur lors de la synchronisation avec la base de données:", error.message);
         }
