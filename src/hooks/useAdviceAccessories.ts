@@ -26,7 +26,7 @@ export const useAdviceAccessories = (adviceId?: string) => {
         .from('advice_accessory_links')
         .select(`
           *,
-          accessory:pro_accessories(*)
+          accessory:accessory_id(*)
         `)
         .eq('advice_id', adviceId);
       

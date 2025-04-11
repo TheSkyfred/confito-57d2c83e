@@ -17,7 +17,7 @@ export const useProAccessories = () => {
     queryFn: async () => {
       let query = supabase
         .from('pro_accessories')
-        .select('*, profiles(id, username, full_name, avatar_url)');
+        .select('*');
 
       if (filter) {
         query = query.ilike('name', `%${filter}%`);
@@ -30,13 +30,7 @@ export const useProAccessories = () => {
         throw error;
       }
 
-      // Transform the data to match the ProAccessory type
-      return data.map(item => {
-        return {
-          ...item,
-          creator: item.profiles || null
-        } as unknown as ProAccessory;
-      });
+      return data as ProAccessory[];
     }
   });
 
@@ -44,17 +38,13 @@ export const useProAccessories = () => {
   const getAccessoryById = async (id: string) => {
     const { data, error } = await supabase
       .from('pro_accessories')
-      .select('*, profiles(id, username, full_name, avatar_url)')
+      .select('*')
       .eq('id', id)
       .single();
 
     if (error) throw error;
     
-    // Transform to match the ProAccessory type
-    return {
-      ...data,
-      creator: data.profiles || null
-    } as unknown as ProAccessory;
+    return data as ProAccessory;
   };
 
   // Créer un nouvel accessoire

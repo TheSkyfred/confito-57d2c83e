@@ -28,6 +28,11 @@ const AccessoriesSelector: React.FC<AccessoriesSelectorProps> = ({ adviceId }) =
   const { accessories, setFilter, isLoading: loadingAccessories } = useProAccessories();
   const { linkedAccessories, linkAccessory, unlinkAccessory, isLoading: loadingLinked } = useAdviceAccessories(adviceId);
 
+  // Afficher les données pour le débogage
+  console.log("Accessories data:", accessories);
+  console.log("Loading state:", loadingAccessories);
+  console.log("Error:", error);
+
   // Filtrer les accessoires qui ne sont pas déjà liés au conseil
   const filteredAccessories = accessories?.filter(accessory => {
     const isAlreadyLinked = linkedAccessories?.some(
