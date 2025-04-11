@@ -28,7 +28,7 @@ export const useProAccessories = () => {
         throw error;
       }
 
-      return data as ProAccessory[];
+      return data as unknown as ProAccessory[];
     }
   });
 
@@ -41,7 +41,7 @@ export const useProAccessories = () => {
       .single();
 
     if (error) throw error;
-    return data as ProAccessory;
+    return data as unknown as ProAccessory;
   };
 
   // Créer un nouvel accessoire
