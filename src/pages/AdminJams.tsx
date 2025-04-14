@@ -103,7 +103,9 @@ const AdminJams = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as JamWithProfile[];
+      
+      // Explicitly cast the data to JamWithProfile[] to ensure type safety
+      return data as unknown as JamWithProfile[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
@@ -234,7 +236,7 @@ const AdminJams = () => {
                     {getStatusBadge(jam.status as string)}
                   </TableCell>
                   <TableCell>
-                    {jam.jam_stocks && jam.jam_stocks[0] ? (
+                    {jam.jam_stocks && Array.isArray(jam.jam_stocks) && jam.jam_stocks.length > 0 ? (
                       <span className={jam.jam_stocks[0].is_available ? 'text-green-600' : 'text-red-600'}>
                         {jam.jam_stocks[0].quantity}
                       </span>
