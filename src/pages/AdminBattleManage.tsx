@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,7 +114,7 @@ const AdminBattleManage = () => {
         .eq('battle_id', id);
       
       if (votesError) throw votesError;
-      setVoteDetails(votes as BattleVoteDetailedType[]);
+      setVoteDetails(votes as unknown as BattleVoteDetailedType[]);
       
       // Charger les commentaires - specify the exact column for the join using profiles(username).profiles
       const { data: comments, error: commentsError } = await supabase
@@ -125,7 +126,7 @@ const AdminBattleManage = () => {
         .eq('battle_id', id);
       
       if (commentsError) throw commentsError;
-      setVoteComments(comments as BattleVoteCommentType[]);
+      setVoteComments(comments as unknown as BattleVoteCommentType[]);
       
     } catch (error) {
       console.error('Erreur lors du chargement des votes:', error);
@@ -384,7 +385,6 @@ const AdminBattleManage = () => {
           <TabsTrigger value="judges">Juges</TabsTrigger>
           <TabsTrigger value="results">Résultats</TabsTrigger>
         </TabsList>
-        
         
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -892,3 +892,36 @@ const AdminBattleManage = () => {
                               const file = e.target.files ? e.target.files[0] : null;
                               setNewsArticle({
                                 ...newsArticle,
+                                image: file
+                              });
+                            }}
+                          />
+                        </div>
+                        
+                        <Button 
+                          className="w-full" 
+                          onClick={handleCreateNewsArticle}
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          Publier l'actualité
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-muted-foreground">
+                      Vous pourrez publier une actualité une fois que le battle sera terminé.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default AdminBattleManage;
