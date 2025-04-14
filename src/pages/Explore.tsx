@@ -6,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamType } from '@/types/supabase';
 import {
   Star,
@@ -40,7 +39,6 @@ const Explore = () => {
   const { data: jams, isLoading } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      // Use the supabase client directly, since getTypedSupabaseQuery doesn't return the expected type
       const { data, error } = await supabase
         .from('jams')
         .select(`

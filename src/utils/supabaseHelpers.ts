@@ -79,12 +79,10 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
 };
 
 /**
- * Get a typed Supabase query
- * This is a utility function to help with TypeScript type inference
+ * Get a typed Supabase client for a specific table
  */
-export const getTypedSupabaseQuery = (table: string) => {
-  // Return a query for the specified table
-  return supabase.from(table);
+export const getTypedSupabaseQuery = (tableName: string) => {
+  return supabase.from(tableName);
 };
 
 /**

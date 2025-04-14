@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -111,8 +112,8 @@ const JamDetails = () => {
 
   const isFavorite = user && jam && userFavorites?.includes(jam.id);
 
-  const toggleFavoriteMutation = useMutation(
-    async () => {
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async () => {
       if (!user || !jam) return;
 
       if (isFavorite) {
@@ -133,25 +134,23 @@ const JamDetails = () => {
         if (error) throw error;
       }
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(['userFavorites', user?.id]);
-        toast({
-          title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
-          description: isFavorite
-            ? "Cette confiture a été retirée de vos favoris."
-            : "Cette confiture a été ajoutée à vos favoris.",
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de l'ajout/suppression des favoris.",
-          variant: "destructive",
-        });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ['userFavorites', user?.id]});
+      toast({
+        title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+        description: isFavorite
+          ? "Cette confiture a été retirée de vos favoris."
+          : "Cette confiture a été ajoutée à vos favoris.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'ajout/suppression des favoris.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleToggleFavorite = () => {
     toggleFavoriteMutation.mutate();
@@ -192,7 +191,12 @@ const JamDetails = () => {
           </Link>
         </Button>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={handleToggleFavorite} disabled={toggleFavoriteMutation.isLoading}>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleToggleFavorite} 
+            disabled={toggleFavoriteMutation.isPending}
+          >
             {isFavorite ? <Heart className="h-5 w-5 fill-red-500 text-red-500" /> : <Heart className="h-5 w-5" />}
           </Button>
           <Button variant="default">

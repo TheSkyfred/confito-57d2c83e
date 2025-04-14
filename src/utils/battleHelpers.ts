@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { NewBattleType, BattleCandidateType, BattleJudgeType, BattleParticipantType, ProfileType, BattleStarsType } from '@/types/supabase';
+import { NewBattleType, BattleCandidateType, BattleJudgeType, BattleParticipantType, ProfileType, BattleStarsType, BattleStatus } from '@/types/supabase';
 import { format, parseISO, isPast } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useState, useEffect } from 'react';
@@ -38,9 +38,9 @@ export const fetchBattleById = async (id: string): Promise<NewBattleType | null>
       .from('jam_battles_new')
       .select(`
         *,
-        battle_participants (*, profile:user_id (*, *)),
-        battle_judges (*, profile:user_id (*, *)),
-        battle_candidates (*, profile:user_id (*, *)),
+        battle_participants (*, profile:user_id (*)),
+        battle_judges (*, profile:user_id (*)),
+        battle_candidates (*, profile:user_id (*)),
         battle_results (*)
       `)
       .eq('id', id)
@@ -84,10 +84,10 @@ export const fetchFeaturedBattles = async (): Promise<NewBattleType[]> => {
 
 /**
  * Fetches battles by status from the database.
- * @param {string} status The status of the battles to fetch.
+ * @param {BattleStatus} status The status of the battles to fetch.
  * @returns {Promise<NewBattleType[]>} A promise that resolves to an array of battle objects with the specified status.
  */
-export const fetchBattlesByStatus = async (status: string): Promise<NewBattleType[]> => {
+export const fetchBattlesByStatus = async (status: BattleStatus): Promise<NewBattleType[]> => {
   try {
     const { data, error } = await supabase
       .from('jam_battles_new')
@@ -248,10 +248,21 @@ export const createNewBattle = async (battleData: Partial<NewBattleType>): Promi
       ? battleData.constraints 
       : JSON.stringify(battleData.constraints || {});
 
-    // Prepare battle data with proper typing for constraints
+    // Prepare battle data for insert
     const formattedBattleData = {
-      ...battleData,
-      constraints: constraints,
+      theme: battleData.theme,
+      constraints,
+      max_price_credits: battleData.max_price_credits,
+      min_jams_required: battleData.min_jams_required,
+      max_judges: battleData.max_judges,
+      judge_discount_percent: battleData.judge_discount_percent,
+      reward_credits: battleData.reward_credits,
+      reward_description: battleData.reward_description,
+      registration_start_date: battleData.registration_start_date,
+      registration_end_date: battleData.registration_end_date,
+      production_end_date: battleData.production_end_date,
+      voting_end_date: battleData.voting_end_date,
+      is_featured: battleData.is_featured || false,
       status: battleData.status || 'inscription'
     };
 
@@ -440,9 +451,18 @@ export const updateBattle = async (
   updates: Partial<NewBattleType>
 ): Promise<NewBattleType | null> => {
   try {
+    // Convert constraints to a string if it's not already
+    const updatedData: any = { ...updates };
+    
+    if (updates.constraints) {
+      updatedData.constraints = typeof updates.constraints === 'string' 
+        ? updates.constraints 
+        : JSON.stringify(updates.constraints || {});
+    }
+    
     const { data, error } = await supabase
       .from('jam_battles_new')
-      .update(updates)
+      .update(updatedData)
       .eq('id', battleId)
       .select()
       .single();
@@ -452,7 +472,7 @@ export const updateBattle = async (
       throw error;
     }
 
-    return data || null;
+    return data as unknown as NewBattleType;
   } catch (error) {
     console.error('Error in updateBattle:', error);
     return null;
@@ -546,7 +566,7 @@ export const publishBattle = async (battleId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('jam_battles_new')
-      .update({ is_active: true })
+      .update({ is_featured: true })
       .eq('id', battleId);
 
     if (error) {
@@ -570,7 +590,7 @@ export const unpublishBattle = async (battleId: string): Promise<boolean> => {
   try {
     const { error } = await supabase
       .from('jam_battles_new')
-      .update({ is_active: false })
+      .update({ is_featured: false })
       .eq('id', battleId);
 
     if (error) {
@@ -813,13 +833,13 @@ export const isAfterVotingPeriod = (votingEndDate: string): boolean => {
 export const distributeBattleRewards = async (battleId: string, winnerId: string) => {
   try {
     // Get battle details
-    const { data: battle } = await supabase
+    const { data: battle, error: battleError } = await supabase
       .from('jam_battles_new')
       .select('*')
       .eq('id', battleId)
       .single();
     
-    if (!battle) throw new Error('Battle not found');
+    if (battleError || !battle) throw new Error('Battle not found');
     
     // Update battle results to mark reward as distributed
     const { error: updateError } = await supabase
@@ -830,23 +850,27 @@ export const distributeBattleRewards = async (battleId: string, winnerId: string
     if (updateError) throw updateError;
     
     // Get current user credits
-    const { data: winnerData } = await supabase
+    const { data: winnerData, error: winnerError } = await supabase
       .from('profiles')
       .select('credits')
       .eq('id', winnerId)
       .single();
       
+    if (winnerError) throw winnerError;
+    
     if (winnerData) {
       const newCredits = winnerData.credits + battle.reward_credits;
       
       // Update user's credits
-      await supabase
+      const { error: updateCreditsError } = await supabase
         .from('profiles')
         .update({ credits: newCredits })
         .eq('id', winnerId);
         
+      if (updateCreditsError) throw updateCreditsError;
+        
       // Record the transaction
-      await supabase
+      const { error: transactionError } = await supabase
         .from('credit_transactions')
         .insert({
           user_id: winnerId,
@@ -854,6 +878,8 @@ export const distributeBattleRewards = async (battleId: string, winnerId: string
           description: `Récompense pour la victoire au battle "${battle.theme}"`,
           related_order_id: null
         });
+        
+      if (transactionError) throw transactionError;
     }
     
     return { success: true };

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { cn } from "@/lib/utils";
 
 const BattleDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,9 +54,9 @@ const BattleDetails = () => {
         .from('jam_battles_new')
         .select(`
           *,
-          battle_participants (*, profile:user_id (*, *)),
-          battle_judges (*, profile:user_id (*, *)),
-          battle_candidates (*, profile:user_id (*, *)),
+          battle_participants (*, profile:user_id (*)),
+          battle_judges (*, profile:user_id (*)),
+          battle_candidates (*, profile:user_id (*)),
           battle_results (*)
         `)
         .eq('id', id)
@@ -63,7 +65,7 @@ const BattleDetails = () => {
       if (error) throw error;
       if (!data) throw new Error('No battle found');
       
-      return data as NewBattleType;
+      return data as unknown as NewBattleType;
     }
   });
   
@@ -88,7 +90,7 @@ const BattleDetails = () => {
         description: "Votre candidature a été soumise avec succès."
       });
       
-      queryClient.invalidateQueries(['battle', id]);
+      queryClient.invalidateQueries({queryKey: ['battle', id]});
       
     } catch (err) {
       console.error("Error registering as candidate:", err);
@@ -121,7 +123,7 @@ const BattleDetails = () => {
         description: "Votre inscription en tant que juge a été soumise avec succès."
       });
       
-      queryClient.invalidateQueries(['battle', id]);
+      queryClient.invalidateQueries({queryKey: ['battle', id]});
       
     } catch (err) {
       console.error("Error registering as judge:", err);
@@ -254,14 +256,13 @@ const BattleDetails = () => {
                   <Badge variant="outline">Déjà inscrit</Badge>
                 ) : (
                   <div className="space-y-2">
-                    <Form>
-                      <form onSubmit={(e) => {
+                    <form onSubmit={(e) => {
                           e.preventDefault();
                           handleRegisterAsCandidate();
                         }} className="space-y-4">
                         <div className="grid gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="motivation">Motivation</Label>
+                            <label htmlFor="motivation" className="text-sm font-medium leading-none">Motivation</label>
                             <Textarea
                               id="motivation"
                               placeholder="Expliquez pourquoi vous souhaitez participer à ce battle"
@@ -271,7 +272,7 @@ const BattleDetails = () => {
                           </div>
                           
                           <div className="space-y-2">
-                            <Label htmlFor="referenceJamId">Confiture de référence (optionnel)</Label>
+                            <label htmlFor="referenceJamId" className="text-sm font-medium leading-none">Confiture de référence (optionnel)</label>
                             <Input
                               id="referenceJamId"
                               placeholder="ID de votre confiture la plus réussie"
@@ -290,7 +291,6 @@ const BattleDetails = () => {
                           ) : "S'inscrire"}
                         </Button>
                       </form>
-                    </Form>
                   </div>
                 )
               ) : (
@@ -342,18 +342,3 @@ const BattleDetails = () => {
 };
 
 export default BattleDetails;
-
-function Label({ ...props }: React.HTMLAttributes<HTMLLabelElement>) {
-  return (
-    <FormLabel
-      className={cn(
-        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-        props.className
-      )}
-      {...props}
-    />
-  )
-}
-
-import { cn } from "@/lib/utils"
-import { FormLabel } from "@/components/ui/form"
