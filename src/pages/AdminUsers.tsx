@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUsers, UserWithProfileType } from '@/hooks/useUsers';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +29,8 @@ import {
   Shield, 
   User as UserIcon, 
   UserCog,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -137,6 +137,18 @@ const AdminUsers: React.FC = () => {
   
   return (
     <div className="container py-8">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="mb-4"
+        asChild
+      >
+        <Link to="/admin">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour à l'administration
+        </Link>
+      </Button>
+
       <h1 className="text-3xl font-serif font-bold mb-2">Gestion des utilisateurs</h1>
       <p className="text-muted-foreground mb-6">
         Administration des comptes utilisateurs de la plateforme

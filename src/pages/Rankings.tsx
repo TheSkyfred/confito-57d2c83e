@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import {
   Trophy,
   Award,
@@ -78,70 +78,71 @@ const Rankings = () => {
   const { data: topRegularJams, isLoading: isLoadingRegularJams } = useQuery({
     queryKey: ['topRegularJams'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jams')
-        .select(`
-          id,
-          name,
-          creator_id,
-          is_pro,
-          price_credits,
-          jam_images (url),
-          profiles:creator_id (username, avatar_url),
-          jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
-        `)
-        .eq('is_active', true)
-        .eq('is_pro', false)
-        .limit(50);
+      try {
+        // Use supabaseDirect to avoid relationship errors
+        const { data: jamsData, error: jamsError } = await supabaseDirect.select(
+          'jams',
+          `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary), 
+           jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)`,
+          `is_active=eq.true&is_pro=eq.false`
+        );
 
-      if (error) {
-        console.error("Error fetching regular jams:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les confitures régulières",
-          variant: "destructive",
+        if (jamsError) {
+          console.error("Error fetching regular jams:", jamsError);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les confitures régulières",
+            variant: "destructive",
+          });
+          throw jamsError;
+        }
+        
+        if (!jamsData || !Array.isArray(jamsData)) {
+          throw new Error("No jam data returned");
+        }
+      
+        // Process and calculate metrics
+        const processedJams = jamsData.map((jam: any) => {
+          const ratings = jam.jam_reviews || [];
+          const avgRatingSum = ratings.reduce((sum: number, review: any) => {
+            const reviewRatings = [
+              review.taste_rating || 0,
+              review.texture_rating || 0, 
+              review.originality_rating || 0,
+              review.balance_rating || 0
+            ].filter(r => r > 0);
+            
+            const reviewAvg = reviewRatings.length > 0 ? 
+              reviewRatings.reduce((s, r) => s + r, 0) / reviewRatings.length : 0;
+              
+            return sum + reviewAvg;
+          }, 0);
+          
+          const avgRating = ratings.length > 0 ? avgRatingSum / ratings.length : 0;
+            
+          return {
+            ...jam,
+            profile: jam.profiles,
+            review_count: ratings.length,
+            avg_rating: avgRating,
+            // In a real app, you'd have a proper orders count
+            sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
+          };
         });
+
+        // Sort by average rating and review count (weighted formula)
+        return processedJams
+          .sort((a: Jam, b: Jam) => {
+            // Weighted score: 70% average rating + 30% review count normalization
+            const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
+            const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
+            return scoreB - scoreA;
+          })
+          .slice(0, 10);
+      } catch (error) {
+        console.error("Error processing regular jams:", error);
         throw error;
       }
-      
-      // Process and calculate metrics
-      const processedJams = data.map((jam: any) => {
-        const ratings = jam.jam_reviews || [];
-        const avgRatingSum = ratings.reduce((sum: number, review: any) => {
-          const reviewRatings = [
-            review.taste_rating || 0,
-            review.texture_rating || 0, 
-            review.originality_rating || 0,
-            review.balance_rating || 0
-          ].filter(r => r > 0);
-          
-          const reviewAvg = reviewRatings.length > 0 ? 
-            reviewRatings.reduce((s, r) => s + r, 0) / reviewRatings.length : 0;
-            
-          return sum + reviewAvg;
-        }, 0);
-        
-        const avgRating = ratings.length > 0 ? avgRatingSum / ratings.length : 0;
-          
-        return {
-          ...jam,
-          profile: jam.profiles,
-          review_count: ratings.length,
-          avg_rating: avgRating,
-          // In a real app, you'd have a proper orders count
-          sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
-        };
-      });
-
-      // Sort by average rating and review count (weighted formula)
-      return processedJams
-        .sort((a: Jam, b: Jam) => {
-          // Weighted score: 70% average rating + 30% review count normalization
-          const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
-          const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
-          return scoreB - scoreA;
-        })
-        .slice(0, 10);
     },
   });
 
@@ -150,57 +151,59 @@ const Rankings = () => {
     queryKey: ['topUsers'],
     queryFn: async () => {
       try {
-        // Get non-pro users with their jams count
-        const { data: usersWithJams, error: usersError } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            username,
-            avatar_url,
-            full_name,
-            role,
-            jams:jams(id, is_pro),
-            jam_reviews:jam_reviews(id)
-          `)
-          .neq('role', 'pro')
-          .order('created_at', { ascending: false });
+        // Get non-pro users with their jams count using supabaseDirect
+        const { data: usersData, error: usersError } = await supabaseDirect.select(
+          'profiles',
+          `id, username, avatar_url, full_name, role`,
+          `role=neq.pro`
+        );
 
         if (usersError) throw usersError;
+        
+        if (!usersData || !Array.isArray(usersData)) {
+          throw new Error("No user data returned");
+        }
 
-        // Get sales data
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('seller_id, quantity')
-          .eq('status', 'delivered');
+        // Get user jams (only non-pro jams)
+        const userJamCounts = await Promise.all(
+          usersData.map(async (user) => {
+            const { count: jamCount, error: jamError } = await supabase
+              .from('jams')
+              .select('id', { count: 'exact', head: true })
+              .eq('creator_id', user.id)
+              .eq('is_pro', false);
+              
+            const { count: reviewCount, error: reviewError } = await supabase
+              .from('jam_reviews')
+              .select('id', { count: 'exact', head: true })
+              .eq('reviewer_id', user.id);
+              
+            // Get sales data
+            const { data: orders, error: ordersError } = await supabase
+              .from('orders')
+              .select('quantity')
+              .eq('seller_id', user.id)
+              .eq('status', 'delivered');
+              
+            const saleCount = orders ? orders.reduce((sum, order) => sum + (order.quantity || 0), 0) : 0;
+            
+            // Random average rating between 4.0 and 5.0 for demo
+            const avgRating = 4.0 + (Math.random() * 1.0);
+            
+            return {
+              ...user,
+              jam_count: jamCount || 0,
+              review_count: reviewCount || 0,
+              sale_count: saleCount,
+              avg_rating: avgRating
+            };
+          })
+        );
 
-        if (ordersError) throw ordersError;
-
-        // Process user data
-        const processedUsers = usersWithJams.map((user: any) => {
-          // Filter only non-pro jams
-          const regularJams = user.jams?.filter((jam: any) => !jam.is_pro) || [];
-          const reviewCount = user.jam_reviews?.length || 0;
-          
-          // Calculate sales
-          const userSales = orders?.filter((order: any) => order.seller_id === user.id) || [];
-          const saleCount = userSales.reduce((sum: number, order: any) => sum + (order.quantity || 0), 0);
-          
-          // Calculate average rating (simplified for demo)
-          const avgRating = Math.min(4.5 + (Math.random() * 0.5), 5); // Random for demo, between 4.5-5
-          
-          return {
-            ...user,
-            jam_count: regularJams.length,
-            review_count: reviewCount,
-            sale_count: saleCount,
-            avg_rating: avgRating
-          };
-        });
-
-        // Sort by a weighted metric of jam count and sales
-        return processedUsers
+        // Sort by weighted score
+        return userJamCounts
           .sort((a: User, b: User) => {
-            // Create a weighted score: 40% jam count, 40% sales, 20% reviews
+            // 40% jam count, 40% sales, 20% reviews
             const scoreA = (a.jam_count * 0.4) + (a.sale_count * 0.4) + (a.review_count * 0.2);
             const scoreB = (b.jam_count * 0.4) + (b.sale_count * 0.4) + (b.review_count * 0.2);
             return scoreB - scoreA;
@@ -222,69 +225,70 @@ const Rankings = () => {
   const { data: topProJams, isLoading: isLoadingProJams } = useQuery({
     queryKey: ['topProJams'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('jams')
-        .select(`
-          id,
-          name,
-          creator_id,
-          is_pro,
-          price_euros,
-          jam_images (url),
-          profiles:creator_id (username, avatar_url),
-          jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
-        `)
-        .eq('is_active', true)
-        .eq('is_pro', true)
-        .limit(50);
+      try {
+        // Use supabaseDirect to avoid relationship errors
+        const { data: jamsData, error: jamsError } = await supabaseDirect.select(
+          'jams',
+          `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary),
+           jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)`,
+          `is_active=eq.true&is_pro=eq.true`
+        );
 
-      if (error) {
-        console.error("Error fetching pro jams:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les confitures professionnelles",
-          variant: "destructive",
+        if (jamsError) {
+          console.error("Error fetching pro jams:", jamsError);
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger les confitures professionnelles",
+            variant: "destructive",
+          });
+          throw jamsError;
+        }
+
+        if (!jamsData || !Array.isArray(jamsData)) {
+          throw new Error("No pro jam data returned");
+        }
+        
+        // Process and calculate metrics (same logic as regular jams)
+        const processedJams = jamsData.map((jam: any) => {
+          const ratings = jam.jam_reviews || [];
+          const avgRatingSum = ratings.reduce((sum: number, review: any) => {
+            const reviewRatings = [
+              review.taste_rating || 0,
+              review.texture_rating || 0, 
+              review.originality_rating || 0,
+              review.balance_rating || 0
+            ].filter(r => r > 0);
+            
+            const reviewAvg = reviewRatings.length > 0 ? 
+              reviewRatings.reduce((s, r) => s + r, 0) / reviewRatings.length : 0;
+              
+            return sum + reviewAvg;
+          }, 0);
+          
+          const avgRating = ratings.length > 0 ? avgRatingSum / ratings.length : 0;
+            
+          return {
+            ...jam,
+            profile: jam.profiles,
+            review_count: ratings.length,
+            avg_rating: avgRating,
+            sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
+          };
         });
+
+        // Sort by average rating and review count (weighted formula)
+        return processedJams
+          .sort((a: Jam, b: Jam) => {
+            // Weighted score: 70% average rating + 30% review count normalization
+            const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
+            const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
+            return scoreB - scoreA;
+          })
+          .slice(0, 10);
+      } catch (error) {
+        console.error("Error processing pro jams:", error);
         throw error;
       }
-      
-      // Process and calculate metrics (same logic as regular jams)
-      const processedJams = data.map((jam: any) => {
-        const ratings = jam.jam_reviews || [];
-        const avgRatingSum = ratings.reduce((sum: number, review: any) => {
-          const reviewRatings = [
-            review.taste_rating || 0,
-            review.texture_rating || 0, 
-            review.originality_rating || 0,
-            review.balance_rating || 0
-          ].filter(r => r > 0);
-          
-          const reviewAvg = reviewRatings.length > 0 ? 
-            reviewRatings.reduce((s, r) => s + r, 0) / reviewRatings.length : 0;
-            
-          return sum + reviewAvg;
-        }, 0);
-        
-        const avgRating = ratings.length > 0 ? avgRatingSum / ratings.length : 0;
-          
-        return {
-          ...jam,
-          profile: jam.profiles,
-          review_count: ratings.length,
-          avg_rating: avgRating,
-          sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
-        };
-      });
-
-      // Sort by average rating and review count (weighted formula)
-      return processedJams
-        .sort((a: Jam, b: Jam) => {
-          // Weighted score: 70% average rating + 30% review count normalization
-          const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
-          const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
-          return scoreB - scoreA;
-        })
-        .slice(0, 10);
     },
   });
 

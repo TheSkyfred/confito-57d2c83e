@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 
 import {
   Table,
@@ -33,7 +33,8 @@ import {
   FilterIcon,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from 'lucide-react';
 
 const AdminRecipes = () => {
@@ -158,6 +159,18 @@ const AdminRecipes = () => {
   
   return (
     <div className="container mx-auto py-8">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="mb-4"
+        asChild
+      >
+        <Link to="/admin">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour à l'administration
+        </Link>
+      </Button>
+    
       <h1 className="text-3xl font-serif font-bold mb-4">Administration des recettes</h1>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
