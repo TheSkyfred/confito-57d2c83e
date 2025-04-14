@@ -7,7 +7,7 @@ import { ArrowLeft, Check, X, Award, FileText } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { BattleStatus } from '@/components/battle/BattleStatus';
+import BattleStatus from '@/components/battle/BattleStatus';
 import { fetchBattleById } from '@/utils/battleHelpers';
 import { validateBattleJudge, validateBattleCandidate } from '@/utils/battleAdminHelpers';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -106,7 +106,7 @@ const AdminBattleManage = () => {
             <h1 className="text-3xl font-serif font-bold tracking-tight">
               {battle.theme}
             </h1>
-            <BattleStatus status={battle.status} />
+            <BattleStatus battle={battle} />
           </div>
           <p className="text-muted-foreground">
             Gestion et suivi du battle
@@ -219,7 +219,7 @@ const AdminBattleManage = () => {
                         <TableCell>{candidate.reference_jam?.name || 'Aucune'}</TableCell>
                         <TableCell>
                           {candidate.is_selected ? 
-                            <Badge variant="success">Sélectionné</Badge> : 
+                            <Badge variant="secondary">Sélectionné</Badge> : 
                             <Badge variant="outline">En attente</Badge>
                           }
                         </TableCell>
@@ -272,7 +272,7 @@ const AdminBattleManage = () => {
                         <TableCell>{judge.profile?.username}</TableCell>
                         <TableCell>
                           {judge.is_validated ? 
-                            <Badge variant="success">Validé</Badge> : 
+                            <Badge variant="secondary">Validé</Badge> : 
                             <Badge variant="outline">En attente</Badge>
                           }
                         </TableCell>

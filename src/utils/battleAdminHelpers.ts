@@ -133,7 +133,8 @@ export const distributeBattleRewards = async (battleId: string) => {
       .select(`
         winner_id,
         battle_id,
-        jam_battles_new (reward_credits)
+        reward_distributed,
+        jam_battles_new:battle_id (reward_credits)
       `)
       .eq('battle_id', battleId)
       .single();
@@ -152,13 +153,24 @@ export const distributeBattleRewards = async (battleId: string) => {
       return { success: false, message: 'No reward to distribute' };
     }
     
-    // 4. Add credits to winner
-    const { error: creditError } = await supabase.rpc('add_credits_to_user', {
-      user_id: battleResult.winner_id,
-      amount: rewardCredits
-    });
+    // 4. Add credits to winner - using a manual update since rpc function isn't available
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', battleResult.winner_id)
+      .single();
+      
+    if (profileError) throw profileError;
     
-    if (creditError) throw creditError;
+    // Update the user credits
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ 
+        credits: (userProfile.credits || 0) + rewardCredits 
+      })
+      .eq('id', battleResult.winner_id);
+      
+    if (updateError) throw updateError;
     
     // 5. Create credit transaction
     const { error: transactionError } = await supabase
@@ -172,12 +184,12 @@ export const distributeBattleRewards = async (battleId: string) => {
     if (transactionError) throw transactionError;
     
     // 6. Mark reward as distributed
-    const { error: updateError } = await supabase
+    const { error: updateResultError } = await supabase
       .from('battle_results')
       .update({ reward_distributed: true })
       .eq('battle_id', battleId);
       
-    if (updateError) throw updateError;
+    if (updateResultError) throw updateResultError;
     
     return { success: true, message: 'Reward distributed successfully' };
   } catch (error: any) {
@@ -186,6 +198,10 @@ export const distributeBattleRewards = async (battleId: string) => {
   }
 };
 
+// The battle_rewards table doesn't exist yet, so I'll comment out these functions
+// and we'll need to create SQL migrations for them later
+
+/* 
 // Add a battle reward
 export const addBattleReward = async (battleId: string, rewardData: any) => {
   try {
@@ -224,3 +240,4 @@ export const getBattleRewards = async (battleId: string) => {
     return [];
   }
 };
+*/
