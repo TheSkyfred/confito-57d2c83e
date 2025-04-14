@@ -23,7 +23,7 @@ const AdminSeasonalFruitEdit = () => {
   const { toast } = useToast();
   const { isAdmin, isModerator, isLoading: roleLoading } = useUserRole();
   
-  // Fetch fruit data
+  // Updated: Fetch fruit data from the fruits table instead of seasonal_fruits
   const { 
     data: fruit, 
     isLoading, 
@@ -33,7 +33,7 @@ const AdminSeasonalFruitEdit = () => {
     queryKey: ['seasonalFruitEdit', id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('seasonal_fruits')
+        .from('fruits')
         .select('*')
         .eq('id', id)
         .single();

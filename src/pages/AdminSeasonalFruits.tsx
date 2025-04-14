@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,19 +23,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Edit, Trash, Eye } from "lucide-react";
+import { Loader2, Plus, Edit, Trash, Eye, ArrowLeft } from "lucide-react";
 
 const AdminSeasonalFruits = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, isModerator, isLoading: roleLoading } = useUserRole();
 
-  // Fetch fruits
+  // Updated: Fetch fruits from the fruits table instead of seasonal_fruits
   const { data: fruits, isLoading, refetch } = useQuery({
     queryKey: ['adminSeasonalFruits'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('seasonal_fruits')
+        .from('fruits')
         .select('*')
         .order('name', { ascending: true });
 
@@ -70,8 +70,9 @@ const AdminSeasonalFruits = () => {
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ?`)) {
       try {
+        // Updated: Delete from the fruits table instead of seasonal_fruits
         const { error } = await supabase
-          .from('seasonal_fruits')
+          .from('fruits')
           .delete()
           .eq('id', id);
 
@@ -100,6 +101,7 @@ const AdminSeasonalFruits = () => {
     }
   };
 
+  // Modified: Determine which months are in season based on all boolean fields for months
   const countSeasonMonths = (fruit: any) => {
     const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
     return months.filter(month => fruit[month]).length;
@@ -121,6 +123,18 @@ const AdminSeasonalFruits = () => {
 
   return (
     <div className="container py-8">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="mb-4"
+        asChild
+      >
+        <Link to="/admin">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour à l'administration
+        </Link>
+      </Button>
+
       <CardHeader className="px-0">
         <CardTitle className="text-3xl font-serif">Gestion des fruits saisonniers</CardTitle>
         <CardDescription>
@@ -149,7 +163,7 @@ const AdminSeasonalFruits = () => {
                 <TableRow>
                   <TableHead>Nom</TableHead>
                   <TableHead>Famille</TableHead>
-                  <TableHead>Mois de saison</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -158,7 +172,13 @@ const AdminSeasonalFruits = () => {
                   <TableRow key={fruit.id}>
                     <TableCell className="font-medium">{fruit.name}</TableCell>
                     <TableCell>{fruit.family || "-"}</TableCell>
-                    <TableCell>{countSeasonMonths(fruit)} mois</TableCell>
+                    <TableCell>
+                      {fruit.is_published ? (
+                        <span className="text-green-600 font-medium">Publié</span>
+                      ) : (
+                        <span className="text-amber-600 font-medium">Brouillon</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleView(fruit)}>
                         <Eye className="h-4 w-4" />

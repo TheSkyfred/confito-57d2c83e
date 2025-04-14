@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -199,10 +198,10 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
       console.log("Data to be saved:", fruitData);
 
       if (fruit?.id) {
-        // Fixed: Update the correct table - seasonal_fruits instead of fruits
+        // Updated: Save to the fruits table instead of seasonal_fruits
         console.log("Updating existing fruit with ID:", fruit.id);
         const { error } = await supabase
-          .from('seasonal_fruits')
+          .from('fruits')
           .update(fruitData)
           .eq('id', fruit.id);
 
@@ -216,10 +215,10 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           description: `Les informations de ${values.name} ont été mises à jour avec succès.`,
         });
       } else {
-        // Création d'un nouveau fruit
+        // Updated: Create a new fruit in the fruits table
         console.log("Creating new fruit");
         const { error } = await supabase
-          .from('seasonal_fruits')
+          .from('fruits')
           .insert(fruitData);
 
         if (error) {
