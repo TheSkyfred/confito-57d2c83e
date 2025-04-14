@@ -36,7 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BattleStatus } from '@/components/battle/BattleStatus';
+import BattleStatus from '@/components/battle/BattleStatus';
 
 const AdminBattles = () => {
   const navigate = useNavigate();
@@ -66,7 +66,15 @@ const AdminBattles = () => {
         
       if (error) throw error;
       
-      setBattles(data || []);
+      // Parse JSON constraints to object for each battle
+      const parsedBattles = data?.map(battle => ({
+        ...battle,
+        constraints: typeof battle.constraints === 'string' 
+          ? JSON.parse(battle.constraints) 
+          : battle.constraints
+      })) as NewBattleType[];
+      
+      setBattles(parsedBattles || []);
     } catch (error) {
       console.error('Error fetching battles:', error);
       toast({

@@ -11,19 +11,22 @@ import {
   Truck, 
   Vote 
 } from 'lucide-react';
-import { NewBattleType } from '@/types/supabase';
+import { NewBattleType, BattleStatus as BattleStatusType } from '@/types/supabase';
 
 interface BattleStatusProps {
-  battle: NewBattleType;
+  status: BattleStatusType;
+  battle?: NewBattleType;
 }
 
-const BattleStatus: React.FC<BattleStatusProps> = ({ battle }) => {
+const BattleStatus: React.FC<BattleStatusProps> = ({ status, battle }) => {
   const getStatusInfo = () => {
-    switch (battle.status) {
+    switch (status) {
       case 'inscription':
         return {
           label: 'Inscriptions en cours',
-          description: `Les inscriptions sont ouvertes jusqu'au ${format(new Date(battle.registration_end_date), 'd MMMM yyyy', { locale: fr })}`,
+          description: battle?.registration_end_date ? 
+            `Les inscriptions sont ouvertes jusqu'au ${format(new Date(battle.registration_end_date), 'd MMMM yyyy', { locale: fr })}` :
+            'Les inscriptions sont ouvertes',
           color: 'bg-blue-500',
           icon: <CalendarRange className="h-5 w-5" />
         };
@@ -37,7 +40,9 @@ const BattleStatus: React.FC<BattleStatusProps> = ({ battle }) => {
       case 'production':
         return {
           label: 'Production en cours',
-          description: `Les participants produisent leur confiture jusqu'au ${format(new Date(battle.production_end_date), 'd MMMM yyyy', { locale: fr })}`,
+          description: battle?.production_end_date ?
+            `Les participants produisent leur confiture jusqu'au ${format(new Date(battle.production_end_date), 'd MMMM yyyy', { locale: fr })}` :
+            'Les participants produisent leur confiture',
           color: 'bg-orange-500',
           icon: <PackageOpen className="h-5 w-5" />
         };
@@ -51,14 +56,18 @@ const BattleStatus: React.FC<BattleStatusProps> = ({ battle }) => {
       case 'vote':
         return {
           label: 'Vote en cours',
-          description: `Les juges votent jusqu'au ${format(new Date(battle.voting_end_date), 'd MMMM yyyy', { locale: fr })}`,
+          description: battle?.voting_end_date ?
+            `Les juges votent jusqu'au ${format(new Date(battle.voting_end_date), 'd MMMM yyyy', { locale: fr })}` :
+            'Les juges votent pour les confitures',
           color: 'bg-green-500',
           icon: <Vote className="h-5 w-5" />
         };
       case 'termine':
         return {
           label: 'Battle terminé',
-          description: `Battle terminé le ${format(new Date(battle.voting_end_date), 'd MMMM yyyy', { locale: fr })}`,
+          description: battle?.voting_end_date ?
+            `Battle terminé le ${format(new Date(battle.voting_end_date), 'd MMMM yyyy', { locale: fr })}` :
+            'Battle terminé',
           color: 'bg-gray-500',
           icon: <Clock className="h-5 w-5" />
         };
@@ -75,24 +84,9 @@ const BattleStatus: React.FC<BattleStatusProps> = ({ battle }) => {
   const { label, description, color, icon } = getStatusInfo();
   
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4">
-      <div className="flex items-center gap-3">
-        <div className={`rounded-full ${color} p-2 text-white`}>
-          {icon}
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold">{label}</h3>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      
-      <div className="flex items-center">
-        {battle.status !== 'termine' && (
-          <div className="text-sm text-muted-foreground">
-            {battle.battle_judges?.length || 0} juges
-          </div>
-        )}
-      </div>
+    <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: color.replace('bg-', 'var(--') + ')', color: 'white' }}>
+      {icon}
+      <span>{label}</span>
     </div>
   );
 };

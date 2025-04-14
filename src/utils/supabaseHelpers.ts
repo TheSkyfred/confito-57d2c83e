@@ -79,11 +79,10 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
 
 /**
  * Get a typed Supabase client for a specific table
- * Uses type assertion to overcome TypeScript limitations with dynamic table names
  */
 export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
-  // Cast the return value to any to bypass TypeScript's strict checking
-  return supabase.from(tableName as any) as any;
+  // Use type assertion but in a safer way
+  return supabase.from(tableName) as unknown as ReturnType<typeof supabase.from<T>>;
 };
 
 /**
@@ -114,6 +113,24 @@ export const adaptDbRecipeToRecipeType = (recipe: any): any => {
     ...recipe,
     instructions: parseRecipeInstructions(recipe.instructions)
   };
+};
+
+/**
+ * Helper function to ensure constraints are in Record<string, any> format
+ */
+export const parseConstraints = (constraints: any): Record<string, any> => {
+  if (!constraints) return {};
+  
+  if (typeof constraints === 'string') {
+    try {
+      return JSON.parse(constraints);
+    } catch (e) {
+      console.error('Failed to parse constraints:', e);
+      return {};
+    }
+  }
+  
+  return constraints as Record<string, any>;
 };
 
 /**
