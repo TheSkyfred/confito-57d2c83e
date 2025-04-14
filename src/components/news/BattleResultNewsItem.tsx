@@ -1,133 +1,91 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ChevronRight, Trophy, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, CalendarDays, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { BattleResultType, NewBattleType, ProfileType } from '@/types/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { BattleResultType, NewBattleType } from '@/types/supabase';
 import { getProfileInitials } from '@/utils/supabaseHelpers';
 
-interface BattleResultNewsItemProps {
-  result: BattleResultType & {
+type BattleResultNewsItemProps = {
+  result: BattleResultType & { 
     battle?: NewBattleType;
-    winner?: {
-      username: string;
-      avatar_url: string | null;
-    };
-    participant_a?: {
-      username: string;
-      avatar_url: string | null;
-    };
-    participant_b?: {
-      username: string;
-      avatar_url: string | null;
-    };
-  };
-}
-
-const BattleResultNewsItem: React.FC<BattleResultNewsItemProps> = ({ result }) => {
-  if (!result.battle) {
-    return null;
+    winner?: ProfileType;
+    participant_a?: ProfileType;
+    participant_b?: ProfileType;
   }
+};
+
+const BattleResultNewsItem = ({ result }: BattleResultNewsItemProps) => {
+  const battleUrl = `/battles/${result.battle_id}`;
+  const winnerName = result.winner?.username || "Participant";
+  const theme = result.battle?.theme || "Confiture Battle";
   
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'd MMMM yyyy', { locale: fr });
-    } catch (e) {
-      return dateString;
-    }
-  };
-
-  const getScoreDisplay = () => {
-    const scoreA = result.participant_a_score || 0;
-    const scoreB = result.participant_b_score || 0;
-    
-    return (
-      <div className="flex items-center gap-2 font-mono">
-        <span className={`font-bold ${scoreA > scoreB ? 'text-green-600' : ''}`}>{scoreA}</span>
-        <span>-</span>
-        <span className={`font-bold ${scoreB > scoreA ? 'text-green-600' : ''}`}>{scoreB}</span>
-      </div>
-    );
-  };
-
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0">
-        <div className="md:col-span-3">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardDescription className="flex items-center gap-1">
-                <Trophy className="h-4 w-4 text-amber-500" />
-                <span>Résultat de battle</span>
-              </CardDescription>
-              <CardDescription className="flex items-center gap-1">
-                <CalendarDays className="h-4 w-4" />
-                <span>{formatDate(result.created_at)}</span>
-              </CardDescription>
-            </div>
-            <CardTitle className="flex items-center gap-2">
-              <span>Battle: {result.battle.theme}</span>
-              {result.battle.is_featured && (
-                <Badge variant="secondary" className="ml-2">Événement spécial</Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-              {/* Participant A */}
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-16 w-16 mb-2">
-                  <AvatarImage 
-                    src={result.participant_a?.avatar_url || undefined} 
-                    alt={result.participant_a?.username || 'Participant A'} 
-                  />
-                  <AvatarFallback>{getProfileInitials(result.participant_a?.username)}</AvatarFallback>
-                </Avatar>
-                <div className="font-medium">{result.participant_a?.username || 'Participant A'}</div>
-              </div>
-              
-              {/* Score */}
-              <div className="flex flex-col items-center justify-center">
-                {getScoreDisplay()}
-                <div className="mt-2 text-center">
-                  <div className="font-bold text-sm">Vainqueur</div>
-                  <div className="flex items-center justify-center gap-2 mt-1">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                    <span className="font-medium">{result.winner?.username || 'Inconnu'}</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Participant B */}
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-16 w-16 mb-2">
-                  <AvatarImage 
-                    src={result.participant_b?.avatar_url || undefined} 
-                    alt={result.participant_b?.username || 'Participant B'} 
-                  />
-                  <AvatarFallback>{getProfileInitials(result.participant_b?.username)}</AvatarFallback>
-                </Avatar>
-                <div className="font-medium">{result.participant_b?.username || 'Participant B'}</div>
-              </div>
-            </div>
-          </CardContent>
-          
-          <CardFooter className="pt-0">
-            <Button variant="ghost" size="sm" className="ml-auto" asChild>
-              <Link to={`/battles/${result.battle_id}`}>
-                Voir les détails
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Link>
-            </Button>
-          </CardFooter>
+    <Card className="overflow-hidden">
+      <CardHeader>
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-1">
+          <Calendar className="h-4 w-4" />
+          <span>{format(new Date(result.created_at), 'PPP', { locale: fr })}</span>
         </div>
-      </div>
+        <h3 className="text-xl font-semibold">
+          Résultats du battle: {theme}
+        </h3>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row items-center gap-6 py-2">
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={result.winner?.avatar_url || undefined} alt={winnerName} />
+                <AvatarFallback>{getProfileInitials(winnerName)}</AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-1 -right-1 bg-yellow-500 rounded-full p-1">
+                <Trophy className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            <p className="font-medium mt-1">{winnerName}</p>
+            <p className="text-sm text-muted-foreground">Gagnant</p>
+          </div>
+          
+          <div className="flex-grow">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 border rounded-lg flex flex-col items-center">
+                <Avatar className="h-10 w-10 mb-1">
+                  <AvatarImage src={result.participant_a?.avatar_url || undefined} alt={result.participant_a?.username || "Participant A"} />
+                  <AvatarFallback>
+                    {getProfileInitials(result.participant_a?.username || "PA")}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-sm font-medium">{result.participant_a?.username || "Participant A"}</p>
+                <p className="text-lg font-bold">{result.participant_a_score} pts</p>
+              </div>
+              
+              <div className="p-3 border rounded-lg flex flex-col items-center">
+                <Avatar className="h-10 w-10 mb-1">
+                  <AvatarImage src={result.participant_b?.avatar_url || undefined} alt={result.participant_b?.username || "Participant B"} />
+                  <AvatarFallback>
+                    {getProfileInitials(result.participant_b?.username || "PB")}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-sm font-medium">{result.participant_b?.username || "Participant B"}</p>
+                <p className="text-lg font-bold">{result.participant_b_score} pts</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button variant="outline" size="sm" asChild>
+          <Link to={battleUrl}>
+            Voir le détail du battle
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 };
