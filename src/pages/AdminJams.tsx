@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -65,10 +66,8 @@ interface JamWithProfile {
     id: string;
     username: string;
   } | null;
-  jam_stocks?: {
-    quantity: number;
-    is_available: boolean;
-  }[] | null;
+  // Make jam_stocks optional since we're not using the relationship directly
+  jam_stocks?: any;
   jam_images?: {
     url: string;
     is_primary: boolean;
@@ -86,26 +85,38 @@ const AdminJams = () => {
   const { data: jams, isLoading, error, refetch } = useQuery({
     queryKey: ['adminJams', statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from('jams')
-        .select(`
-          *,
-          profiles:creator_id(id, username),
-          jam_stocks(quantity, is_available),
-          jam_images(url, is_primary)
-        `);
-      
-      if (statusFilter !== 'all') {
-        query = query.eq('is_active', statusFilter === 'active');
+      try {
+        // Using supabaseDirect utility to fetch jams without relying on Supabase relationships
+        let queryFilter = '';
+        if (statusFilter !== 'all') {
+          queryFilter = `is_active=eq.${statusFilter === 'active' ? 'true' : 'false'}`;
+        }
+        
+        // Get all jams with their creators' profiles
+        const { data: jamsData, error: jamsError } = await supabaseDirect.select(
+          'jams', 
+          `*, profiles:creator_id(id, username), jam_images(url, is_primary)`,
+          queryFilter
+        );
+        
+        if (jamsError) throw jamsError;
+        
+        // Get jam images separately
+        if (!jamsData || !Array.isArray(jamsData)) {
+          throw new Error("No jam data returned");
+        }
+        
+        // Transform the data to match our expected format
+        const jamWithProfiles: JamWithProfile[] = jamsData.map(jam => ({
+          ...jam,
+          jam_stocks: { quantity: jam.available_quantity, is_available: jam.is_active }
+        }));
+        
+        return jamWithProfiles;
+      } catch (error) {
+        console.error("Error fetching jams:", error);
+        throw error;
       }
-      
-      const { data, error } = await query
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Explicitly cast the data to JamWithProfile[] to ensure type safety
-      return data as unknown as JamWithProfile[];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
@@ -226,7 +237,7 @@ const AdminJams = () => {
                   <TableCell className="font-medium">{jam.name}</TableCell>
                   <TableCell>{jam.profiles?.username || "Utilisateur supprimé"}</TableCell>
                   <TableCell>
-                    {jam.is_pro ? (
+                    {jam.is_pro && jam.price_euros ? (
                       <span>{jam.price_euros} €</span>
                     ) : (
                       <span>{jam.price_credits} crédits</span>
@@ -236,13 +247,9 @@ const AdminJams = () => {
                     {getStatusBadge(jam.status as string)}
                   </TableCell>
                   <TableCell>
-                    {jam.jam_stocks && Array.isArray(jam.jam_stocks) && jam.jam_stocks.length > 0 ? (
-                      <span className={jam.jam_stocks[0].is_available ? 'text-green-600' : 'text-red-600'}>
-                        {jam.jam_stocks[0].quantity}
-                      </span>
-                    ) : (
-                      <span className="text-amber-600">Non défini</span>
-                    )}
+                    <span className={jam.is_active ? 'text-green-600' : 'text-red-600'}>
+                      {jam.available_quantity}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {jam.is_pro ? (
