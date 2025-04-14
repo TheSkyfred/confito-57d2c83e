@@ -1,49 +1,177 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { format, parseISO, isBefore, isAfter } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useEligibilityCheck } from '@/utils/battleHelpers';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Clock, Users, Calendar, CheckCircle, XCircle } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { fetchBattleById } from '@/utils/battleHelpers';
+import { Clock, Users, Calendar, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { NewBattleType } from '@/types/supabase';
-import { useEligibilityCheck } from '@/utils/battleHelpers';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useToast } from '@/hooks/use-toast';
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 const BattleDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const [battle, setBattle] = useState<NewBattleType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [isJudgeRegistering, setIsJudgeRegistering] = useState(false);
+  const [formData, setFormData] = useState({
+    motivation: "",
+    referenceJamId: ""
+  });
+  
+  // Check user eligibility
+  const { isEligible, loading: eligibilityLoading, error: eligibilityError } = useEligibilityCheck(user?.id, id);
 
-  useEffect(() => {
-    const loadBattle = async () => {
-      setLoading(true);
-      if (id) {
-        const battleData = await fetchBattleById(id);
-        setBattle(battleData);
-      }
-      setLoading(false);
-    };
+  const { data: battle, isLoading, error } = useQuery({
+    queryKey: ['battle', id],
+    queryFn: async () => {
+      if (!id) throw new Error('No ID provided');
+      
+      const { data, error } = await supabase
+        .from('jam_battles_new')
+        .select(`
+          *,
+          battle_participants (*, profile:user_id (*, *)),
+          battle_judges (*, profile:user_id (*, *)),
+          battle_candidates (*, profile:user_id (*, *)),
+          battle_results (*)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      if (!data) throw new Error('No battle found');
+      
+      return data as NewBattleType;
+    }
+  });
+  
+  const handleRegisterAsCandidate = async () => {
+    setIsRegistering(true);
+    try {
+      if (!user || !id) throw new Error("Missing user or battle ID");
+      
+      const { error } = await supabase
+        .from('battle_candidates')
+        .insert([{
+          battle_id: id,
+          user_id: user.id,
+          motivation: formData.motivation,
+          reference_jam_id: formData.referenceJamId || null
+        }]);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Inscription réussie",
+        description: "Votre candidature a été soumise avec succès."
+      });
+      
+      queryClient.invalidateQueries(['battle', id]);
+      
+    } catch (err) {
+      console.error("Error registering as candidate:", err);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de votre inscription.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+  
+  const handleRegisterAsJudge = async () => {
+    setIsJudgeRegistering(true);
+    try {
+      if (!user || !id) throw new Error("Missing user or battle ID");
+      
+      const { error } = await supabase
+        .from('battle_judges')
+        .insert([{
+          battle_id: id,
+          user_id: user.id
+        }]);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Inscription réussie",
+        description: "Votre inscription en tant que juge a été soumise avec succès."
+      });
+      
+      queryClient.invalidateQueries(['battle', id]);
+      
+    } catch (err) {
+      console.error("Error registering as judge:", err);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de votre inscription en tant que juge.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsJudgeRegistering(false);
+    }
+  };
+  
+  const isRegistrationOpen = () => {
+    if (!battle) return false;
+    const now = new Date();
+    const registrationEndDate = parseISO(battle.registration_end_date);
+    return isBefore(now, registrationEndDate);
+  };
+  
+  const isVotingOpen = () => {
+    if (!battle) return false;
+    const now = new Date();
+    const votingEndDate = parseISO(battle.voting_end_date);
+    return isBefore(now, votingEndDate) && isAfter(now, parseISO(battle.production_end_date));
+  };
+  
+  const hasUserRegisteredAsCandidate = () => {
+    if (!battle || !user) return false;
+    return battle.battle_candidates?.some(candidate => candidate.user_id === user.id) || false;
+  };
+  
+  const hasUserRegisteredAsJudge = () => {
+    if (!battle || !user) return false;
+    return battle.battle_judges?.some(judge => judge.user_id === user.id) || false;
+  };
 
-    loadBattle();
-  }, [id]);
-
-  if (loading) {
-    return <div className="container py-8">Chargement...</div>;
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-jam-raspberry" />
+        </div>
+      </div>
+    );
   }
 
-  if (!battle) {
+  if (error || !battle) {
     return <div className="container py-8">Battle non trouvé</div>;
   }
-
-  // Fix the usage of the hook
-  const eligibility = useEligibilityCheck();
-  const isEligible = eligibility.isEligible;
-
-  const checkUserEligibility = async () => {
-    return await eligibility.checkEligibility();
-  };
 
   return (
     <div className="container py-8 max-w-3xl">
@@ -112,10 +240,62 @@ const BattleDetails = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isEligible ? (
+          {eligibilityLoading ? (
+            <div className="flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : eligibilityError ? (
+            <div className="text-red-500">Erreur lors de la vérification de l'éligibilité.</div>
+          ) : isEligible ? (
             <div className="space-y-2">
               <p>Vous êtes éligible pour participer à ce battle !</p>
-              <Button>Participer maintenant</Button>
+              {isRegistrationOpen() ? (
+                hasUserRegisteredAsCandidate() ? (
+                  <Badge variant="outline">Déjà inscrit</Badge>
+                ) : (
+                  <div className="space-y-2">
+                    <Form>
+                      <form onSubmit={(e) => {
+                          e.preventDefault();
+                          handleRegisterAsCandidate();
+                        }} className="space-y-4">
+                        <div className="grid gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="motivation">Motivation</Label>
+                            <Textarea
+                              id="motivation"
+                              placeholder="Expliquez pourquoi vous souhaitez participer à ce battle"
+                              value={formData.motivation}
+                              onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="referenceJamId">Confiture de référence (optionnel)</Label>
+                            <Input
+                              id="referenceJamId"
+                              placeholder="ID de votre confiture la plus réussie"
+                              value={formData.referenceJamId}
+                              onChange={(e) => setFormData({ ...formData, referenceJamId: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        
+                        <Button type="submit" disabled={isRegistering}>
+                          {isRegistering ? (
+                            <>
+                              Inscription en cours...
+                              <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                            </>
+                          ) : "S'inscrire"}
+                        </Button>
+                      </form>
+                    </Form>
+                  </div>
+                )
+              ) : (
+                <Badge variant="outline">Inscriptions fermées</Badge>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -130,8 +310,50 @@ const BattleDetails = () => {
           )}
         </CardContent>
       </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Devenir Juge</CardTitle>
+          <CardDescription>
+            Participez à l'évaluation des confitures
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isRegistrationOpen() ? (
+            hasUserRegisteredAsJudge() ? (
+              <Badge variant="outline">Déjà inscrit comme juge</Badge>
+            ) : (
+              <Button onClick={handleRegisterAsJudge} disabled={isJudgeRegistering}>
+                {isJudgeRegistering ? (
+                  <>
+                    Inscription en cours...
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                  </>
+                ) : "S'inscrire comme juge"}
+              </Button>
+            )
+          ) : (
+            <Badge variant="outline">Inscriptions fermées</Badge>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default BattleDetails;
+
+function Label({ ...props }: React.HTMLAttributes<HTMLLabelElement>) {
+  return (
+    <FormLabel
+      className={cn(
+        "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        props.className
+      )}
+      {...props}
+    />
+  )
+}
+
+import { cn } from "@/lib/utils"
+import { FormLabel } from "@/components/ui/form"

@@ -1,7 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
-import { NewBattleType, BattleCandidateType, BattleJudgeType, BattleParticipantType, ProfileType } from '@/types/supabase';
+import { NewBattleType, BattleCandidateType, BattleJudgeType, BattleParticipantType, ProfileType, BattleStarsType } from '@/types/supabase';
 import { format, parseISO, isPast } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
 
 /**
  * Fetches all battles from the database.
@@ -19,7 +20,7 @@ export const fetchAllBattles = async (): Promise<NewBattleType[]> => {
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
     console.error('Error in fetchAllBattles:', error);
     return [];
@@ -50,7 +51,7 @@ export const fetchBattleById = async (id: string): Promise<NewBattleType | null>
       throw error;
     }
 
-    return data || null;
+    return data as unknown as NewBattleType;
   } catch (error) {
     console.error('Error in fetchBattleById:', error);
     return null;
@@ -74,7 +75,7 @@ export const fetchFeaturedBattles = async (): Promise<NewBattleType[]> => {
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
     console.error('Error in fetchFeaturedBattles:', error);
     return [];
@@ -99,7 +100,7 @@ export const fetchBattlesByStatus = async (status: string): Promise<NewBattleTyp
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
     console.error('Error in fetchBattlesByStatus:', error);
     return [];
@@ -107,25 +108,49 @@ export const fetchBattlesByStatus = async (status: string): Promise<NewBattleTyp
 };
 
 /**
- * Fetches battles that are currently open for registration.
- * @returns {Promise<NewBattleType[]>} A promise that resolves to an array of battle objects open for registration.
+ * Fetches upcoming battles (those in registration phase)
+ * @returns {Promise<NewBattleType[]>} A promise that resolves to an array of upcoming battles.
  */
-export const fetchRegistrationBattles = async (): Promise<NewBattleType[]> => {
+export const fetchUpcomingBattles = async (): Promise<NewBattleType[]> => {
   try {
     const { data, error } = await supabase
       .from('jam_battles_new')
       .select('*')
       .eq('status', 'inscription')
-      .order('created_at', { ascending: false });
+      .order('registration_end_date', { ascending: true });
 
     if (error) {
-      console.error('Error fetching registration battles:', error);
+      console.error('Error fetching upcoming battles:', error);
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
-    console.error('Error in fetchRegistrationBattles:', error);
+    console.error('Error in fetchUpcomingBattles:', error);
+    return [];
+  }
+};
+
+/**
+ * Fetches active battles (production, sending, and voting phases)
+ * @returns {Promise<NewBattleType[]>} A promise that resolves to an array of active battles.
+ */
+export const fetchActiveBattles = async (): Promise<NewBattleType[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('jam_battles_new')
+      .select('*')
+      .in('status', ['selection', 'production', 'envoi', 'vote'])
+      .order('voting_end_date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching active battles:', error);
+      throw error;
+    }
+
+    return data as unknown as NewBattleType[];
+  } catch (error) {
+    console.error('Error in fetchActiveBattles:', error);
     return [];
   }
 };
@@ -140,14 +165,14 @@ export const fetchVotingBattles = async (): Promise<NewBattleType[]> => {
       .from('jam_battles_new')
       .select('*')
       .eq('status', 'vote')
-      .order('created_at', { ascending: false });
+      .order('voting_end_date', { ascending: false });
 
     if (error) {
       console.error('Error fetching voting battles:', error);
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
     console.error('Error in fetchVotingBattles:', error);
     return [];
@@ -171,10 +196,80 @@ export const fetchCompletedBattles = async (): Promise<NewBattleType[]> => {
       throw error;
     }
 
-    return data || [];
+    return data as unknown as NewBattleType[];
   } catch (error) {
     console.error('Error in fetchCompletedBattles:', error);
     return [];
+  }
+};
+
+/**
+ * Fetches the Battle Stars ranking from the database.
+ * @param {number} limit Maximum number of records to fetch
+ * @returns {Promise<BattleStarsType[]>} A promise that resolves to an array of battle stars rankings.
+ */
+export const fetchBattleStars = async (limit: number = 10): Promise<BattleStarsType[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('battle_stars')
+      .select(`
+        *,
+        profile:user_id (id, username, full_name, avatar_url, role)
+      `)
+      .order('total_score', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching battle stars:', error);
+      throw error;
+    }
+
+    return data as unknown as BattleStarsType[];
+  } catch (error) {
+    console.error('Error in fetchBattleStars:', error);
+    return [];
+  }
+};
+
+/**
+ * Creates a new battle in the database.
+ * @param {Partial<NewBattleType>} battleData An object containing the battle data.
+ * @returns {Promise<NewBattleType | null>} A promise that resolves to the new battle object or null if there was an error.
+ */
+export const createNewBattle = async (battleData: Partial<NewBattleType>): Promise<NewBattleType | null> => {
+  try {
+    // Make sure required fields are present
+    if (!battleData.theme || !battleData.registration_end_date || !battleData.production_end_date || !battleData.voting_end_date) {
+      throw new Error('Missing required battle data');
+    }
+
+    // Convert constraints to a string if it's not already
+    const constraints = typeof battleData.constraints === 'string' 
+      ? battleData.constraints 
+      : JSON.stringify(battleData.constraints || {});
+
+    // Prepare battle data with proper typing for constraints
+    const formattedBattleData = {
+      ...battleData,
+      constraints: constraints,
+      status: battleData.status || 'inscription'
+    };
+
+    const { data, error } = await supabase
+      .from('jam_battles_new')
+      .insert([formattedBattleData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating new battle:', error);
+      throw error;
+    }
+
+    return data as unknown as NewBattleType;
+  } catch (error) {
+    console.error('Error in createNewBattle:', error);
+    return null;
   }
 };
 
@@ -734,12 +829,7 @@ export const distributeBattleRewards = async (battleId: string, winnerId: string
     
     if (updateError) throw updateError;
     
-    // Add credits to winner's profile
-    const { error: creditsError } = await supabase.rpc('calculate_recipe_average_rating', {
-      recipe_uuid: winnerId
-    });
-    
-    // Use a different approach to add credits since rpc has limited functions
+    // Get current user credits
     const { data: winnerData } = await supabase
       .from('profiles')
       .select('credits')
@@ -749,6 +839,7 @@ export const distributeBattleRewards = async (battleId: string, winnerId: string
     if (winnerData) {
       const newCredits = winnerData.credits + battle.reward_credits;
       
+      // Update user's credits
       await supabase
         .from('profiles')
         .update({ credits: newCredits })
@@ -760,31 +851,76 @@ export const distributeBattleRewards = async (battleId: string, winnerId: string
         .insert({
           user_id: winnerId,
           amount: battle.reward_credits,
-          description: `Reward for winning battle: ${battle.theme}`
+          description: `Récompense pour la victoire au battle "${battle.theme}"`,
+          related_order_id: null
         });
     }
     
     return { success: true };
   } catch (error) {
-    console.error('Error distributing rewards:', error);
+    console.error('Error distributing battle rewards:', error);
     return { success: false, error };
   }
 };
 
 /**
- * A hook that checks if the user is eligible to participate in battles.
- * @returns {{ isEligible: boolean; checkEligibility: () => Promise<boolean> }} An object containing the eligibility status and a function to check eligibility.
+ * Creates a React hook to check if a user is eligible to participate in a battle.
  */
-export const useEligibilityCheck = () => {
-  const [isEligible, setIsEligible] = React.useState(false);
+export const useEligibilityCheck = (userId: string | undefined, battleId: string | undefined) => {
+  const [isEligible, setIsEligible] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<any>(null);
 
-  const checkEligibility = async (): Promise<boolean> => {
-    // Replace 'YOUR_USER_ID' with the actual user ID or fetch it from your authentication context
-    const userId = 'YOUR_USER_ID'; // Example: useAuth().user?.id;
-    const eligibility = await checkBattleEligibility(userId);
-    setIsEligible(eligibility);
-    return eligibility;
-  };
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (!userId || !battleId) {
+        setLoading(false);
+        return;
+      }
 
-  return { isEligible, checkEligibility };
+      try {
+        setLoading(true);
+
+        // Get battle details
+        const { data: battle } = await supabase
+          .from('jam_battles_new')
+          .select('*')
+          .eq('id', battleId)
+          .single();
+
+        if (!battle) {
+          setIsEligible(false);
+          setLoading(false);
+          return;
+        }
+
+        // Check if user meets minimum jam requirement
+        const { data: userJams, error: jamsError } = await supabase
+          .from('jams')
+          .select('id')
+          .eq('creator_id', userId)
+          .eq('is_active', true)
+          .eq('status', 'approved');
+
+        if (jamsError) {
+          throw jamsError;
+        }
+
+        const jamsCount = userJams?.length || 0;
+        const isEligible = jamsCount >= battle.min_jams_required;
+
+        setIsEligible(isEligible);
+      } catch (err) {
+        console.error('Error checking eligibility:', err);
+        setError(err);
+        setIsEligible(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkEligibility();
+  }, [userId, battleId]);
+
+  return { isEligible, loading, error };
 };

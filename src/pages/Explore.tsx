@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -36,12 +37,12 @@ const Explore = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState('');
   
-  // Fix the getTypedSupabaseQuery usage
   const { data: jams, isLoading } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      // Use the fixed function that accepts a table name
-      const { data, error } = await getTypedSupabaseQuery('jams')
+      // Use the supabase client directly, since getTypedSupabaseQuery doesn't return the expected type
+      const { data, error } = await supabase
+        .from('jams')
         .select(`
           *,
           jam_images (*),

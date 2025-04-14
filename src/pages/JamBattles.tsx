@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,7 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, isBefore } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
 import { JamBattleType, BattleVoteType } from '@/types/supabase';
 import {
   Swords,
@@ -83,7 +83,8 @@ const JamBattles = () => {
       const isActive = activeTab === 'active';
       
       // We need to properly specify the jams columns in the join to avoid ambiguity
-      const { data, error } = await getTypedSupabaseQuery('jam_battles')
+      const { data, error } = await supabase
+        .from('jam_battles')
         .select(`
           *,
           jam_a:jams!jam_battles_jam_a_id_fkey (
@@ -110,7 +111,8 @@ const JamBattles = () => {
       const typedData = data as unknown as Battle[];
       
       if (user) {
-        const { data: votes } = await getTypedSupabaseQuery('battle_votes')
+        const { data: votes } = await supabase
+          .from('battle_votes')
           .select('battle_id, voted_for_jam_id')
           .eq('user_id', user.id);
           
@@ -144,7 +146,8 @@ const JamBattles = () => {
     }
     
     try {
-      const { data: existingVote } = await getTypedSupabaseQuery('battle_votes')
+      const { data: existingVote } = await supabase
+        .from('battle_votes')
         .select('id')
         .eq('battle_id', battleId)
         .eq('user_id', user.id)
@@ -160,7 +163,8 @@ const JamBattles = () => {
       }
       
       // Insert the vote
-      await getTypedSupabaseQuery('battle_votes')
+      await supabase
+        .from('battle_votes')
         .insert([{ 
           battle_id: battleId, 
           user_id: user.id,
@@ -175,13 +179,14 @@ const JamBattles = () => {
       const isVoteForA = jamId === battleToUpdate.jam_a_id;
 
       // Then perform the update with the appropriate field incremented
-      // This is the fixed section to resolve the type errors:
       if (isVoteForA) {
-        await getTypedSupabaseQuery('jam_battles')
+        await supabase
+          .from('jam_battles')
           .update({ votes_for_a: battleToUpdate.votes_for_a + 1 })
           .eq('id', battleId);
       } else {
-        await getTypedSupabaseQuery('jam_battles')
+        await supabase
+          .from('jam_battles')
           .update({ votes_for_b: battleToUpdate.votes_for_b + 1 })
           .eq('id', battleId);
       }
