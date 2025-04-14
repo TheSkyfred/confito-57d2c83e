@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Edit, Trash, Eye } from "lucide-react";
+import { Loader2, Plus, Edit, Trash, Eye, ArrowLeft } from "lucide-react";
 import FruitForm from '@/components/fruit/FruitForm';
 
 const AdminFruits = () => {
@@ -140,6 +140,18 @@ const AdminFruits = () => {
 
   return (
     <div className="container py-8">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="mb-4"
+        asChild
+      >
+        <Link to="/admin">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour à l'administration
+        </Link>
+      </Button>
+    
       <CardHeader className="px-0">
         <CardTitle className="text-3xl font-serif">Gestion des fruits saisonniers</CardTitle>
         <CardDescription>

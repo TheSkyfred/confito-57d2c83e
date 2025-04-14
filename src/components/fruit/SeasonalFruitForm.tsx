@@ -124,21 +124,21 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
   const uploadImage = async (file: File): Promise<string> => {
     setUploading(true);
     try {
-      // Créer un nom de fichier unique
+      // Create a unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      const filePath = `fruits/${fileName}`;
+      const filePath = `${fileName}`;
 
-      // Uploader vers Supabase Storage
+      // Upload to the "fruit_images" Supabase Storage bucket
       const { data, error } = await supabase.storage
-        .from('images')
+        .from('fruit_images')
         .upload(filePath, file);
 
       if (error) throw error;
 
-      // Obtenir l'URL publique
+      // Get public URL
       const { data: urlData } = supabase.storage
-        .from('images')
+        .from('fruit_images')
         .getPublicUrl(filePath);
 
       console.log("Image uploaded successfully, URL:", urlData.publicUrl);
