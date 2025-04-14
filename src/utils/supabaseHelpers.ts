@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -81,9 +82,9 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Get a typed Supabase client for a specific table
  */
 export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
-  // Use a more direct type assertion to bypass TypeScript's strict checking
-  // This allows us to use dynamic table names while maintaining type information
-  return supabase.from(tableName) as any;
+  // More explicit type assertion to fix the TypeScript error.
+  // We need to cast to unknown first, and then to the desired type.
+  return supabase.from(tableName as never) as unknown as ReturnType<typeof supabase.from<T>>;
 };
 
 /**
