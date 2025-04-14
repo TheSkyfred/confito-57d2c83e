@@ -82,8 +82,8 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Uses type assertion to overcome TypeScript limitations with dynamic table names
  */
 export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
-  // Using type assertion to bypass TypeScript's strict checking
-  return supabase.from(tableName) as any;
+  // Cast the return value to any to bypass TypeScript's strict checking
+  return supabase.from(tableName as any) as any;
 };
 
 /**

@@ -133,8 +133,6 @@ export type OrderType = {
   jam?: JamType;
 };
 
-// Nouveaux types pour le système de Battle
-
 export type BattleStatus = 'inscription' | 'selection' | 'production' | 'envoi' | 'vote' | 'termine';
 
 export type NewBattleType = {
@@ -261,7 +259,6 @@ export type BattleStarsType = {
   profile?: ProfileType;
 };
 
-// Add these missing types that were causing the errors
 export type AllergenType = {
   id: string;
   name: string;
@@ -286,5 +283,4 @@ export type ProAccessory = {
   creator?: ProfileType;
 };
 
-// Add missing type for the Json type from Supabase
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];

@@ -52,14 +52,23 @@ const JamBattles = () => {
       const { data: battlesData, error } = await supabase
         .from('jam_battles')
         .select(`
-          *,
-          jam_a:jam_a_id(id, name, description, price_credits, available_quantity, creator_id, 
-            jam_images(*), 
-            profiles:creator_id(username, avatar_url)
+          id,
+          jam_a_id,
+          jam_b_id,
+          votes_for_a,
+          votes_for_b,
+          start_date,
+          end_date,
+          is_active,
+          jam_a:jam_a_id(
+            id, name, description, price_credits, available_quantity, creator_id,
+            jam_images(id, url, is_primary),
+            profiles:creator_id(id, username, avatar_url)
           ),
-          jam_b:jam_b_id(id, name, description, price_credits, available_quantity, creator_id, 
-            jam_images(*), 
-            profiles:creator_id(username, avatar_url)
+          jam_b:jam_b_id(
+            id, name, description, price_credits, available_quantity, creator_id,
+            jam_images(id, url, is_primary),
+            profiles:creator_id(id, username, avatar_url)
           )
         `)
         .eq('is_active', true)
@@ -71,7 +80,7 @@ const JamBattles = () => {
       if (user) {
         const battles = [...battlesData];
         
-        for (const battle of battles) {
+        for (const battle of battles as any[]) {
           // Check if user has voted for this battle
           const { data: voteData } = await supabase
             .from('battle_votes')
@@ -89,18 +98,18 @@ const JamBattles = () => {
           }
         }
         
-        // Explicitly cast the data to JamBattleType[] since we've properly structured it
+        // Explicitly cast the data to JamBattleType[]
         return battles as unknown as JamBattleType[];
       }
       
       // For non-logged in users, mark all as not voted
-      const battles = battlesData.map(battle => ({
+      const battles = battlesData.map((battle: any) => ({
         ...battle,
         already_voted: false,
         voted_for: null
       }));
       
-      // Explicitly cast the data to JamBattleType[] since we've properly structured it
+      // Explicitly cast the data to JamBattleType[]
       return battles as unknown as JamBattleType[];
     },
     enabled: activeTab === 'current'
@@ -113,14 +122,23 @@ const JamBattles = () => {
       const { data: battlesData, error } = await supabase
         .from('jam_battles')
         .select(`
-          *,
-          jam_a:jam_a_id(id, name, description, price_credits, available_quantity, creator_id, 
-            jam_images(*), 
-            profiles:creator_id(username, avatar_url)
+          id,
+          jam_a_id,
+          jam_b_id,
+          votes_for_a,
+          votes_for_b,
+          start_date,
+          end_date,
+          is_active,
+          jam_a:jam_a_id(
+            id, name, description, price_credits, available_quantity, creator_id,
+            jam_images(id, url, is_primary),
+            profiles:creator_id(id, username, avatar_url)
           ),
-          jam_b:jam_b_id(id, name, description, price_credits, available_quantity, creator_id, 
-            jam_images(*), 
-            profiles:creator_id(username, avatar_url)
+          jam_b:jam_b_id(
+            id, name, description, price_credits, available_quantity, creator_id,
+            jam_images(id, url, is_primary),
+            profiles:creator_id(id, username, avatar_url)
           )
         `)
         .eq('is_active', false)
@@ -129,7 +147,7 @@ const JamBattles = () => {
       if (error) throw error;
       
       // All are already voted since these are past battles
-      const battles = battlesData.map(battle => ({
+      const battles = battlesData.map((battle: any) => ({
         ...battle,
         already_voted: true,
         voted_for: null
