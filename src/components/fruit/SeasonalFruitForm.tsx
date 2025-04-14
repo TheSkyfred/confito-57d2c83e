@@ -199,7 +199,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
       console.log("Data to be saved:", fruitData);
 
       if (fruit?.id) {
-        // Mise à jour d'un fruit existant
+        // Fixed: Update the correct table - seasonal_fruits instead of fruits
         console.log("Updating existing fruit with ID:", fruit.id);
         const { error } = await supabase
           .from('seasonal_fruits')
