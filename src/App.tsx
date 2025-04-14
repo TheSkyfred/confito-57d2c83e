@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,6 +24,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminJams from './pages/AdminJams';
 import AdminJamEdit from './pages/AdminJamEdit';
 import AdminBattles from './pages/AdminBattles';
+import AdminBattleCreate from './pages/AdminBattleCreate';
+import AdminBattleEdit from './pages/AdminBattleEdit';
+import AdminBattleManage from './pages/AdminBattleManage';
 import JamBattles from './pages/JamBattles';
 import BattleDetails from './pages/BattleDetails';
 import BattlesList from './pages/BattlesList';
@@ -80,17 +84,21 @@ function App() {
                   <Route path="/battles" element={<BattlesList />} />
                   <Route path="/battles/jam" element={<JamBattles />} />
                   <Route path="/battles/:id" element={<BattleDetails />} />
+                  <Route path="/rankings" element={<Rankings />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />
                   <Route path="/admin/jams/edit/:id" element={<AdminJamEdit />} />
                   <Route path="/admin/battles" element={<AdminBattles />} />
+                  <Route path="/admin/battles/create" element={<AdminBattleCreate />} />
+                  <Route path="/admin/battles/edit/:id" element={<AdminBattleEdit />} />
+                  <Route path="/admin/battles/manage/:id" element={<AdminBattleManage />} />
                   <Route path="/admin/recipes" element={<AdminRecipes />} />
                   <Route path="/admin/ads" element={<AdminAds />} />
                   <Route path="/admin/ads/new" element={<AdminAds action="new" />} />
                   <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" />} />
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
-                  <Route path="/admin/fruits" element={<AdminSeasonalFruits />} />
+                  <Route path="/admin/fruits" element={<AdminFruits />} />
                   <Route path="/admin/seasonal-fruits" element={<AdminSeasonalFruits />} />
                   <Route path="/admin/seasonal-fruits/edit/:id" element={<AdminSeasonalFruitEdit />} />
                   <Route path="/admin/seasonal-fruits/create" element={<AdminSeasonalFruitEdit />} />

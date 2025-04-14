@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from "lucide-react";
 
@@ -15,6 +15,9 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { createNewBattle } from '@/utils/battleHelpers';
+import { Checkbox } from '@/components/ui/checkbox';
+import { NewBattleType } from '@/types/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const battleFormSchema = z.object({
   theme: z.string().min(5, "Le thème doit contenir au moins 5 caractères."),
@@ -35,14 +38,37 @@ type BattleFormValues = z.infer<typeof battleFormSchema>;
 
 interface BattleFormProps {
   onSuccess?: (battleId: string) => void;
+  battleToEdit?: NewBattleType;
 }
 
-const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
+const BattleForm: React.FC<BattleFormProps> = ({ onSuccess, battleToEdit }) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const form = useForm<BattleFormValues>({
-    resolver: zodResolver(battleFormSchema),
-    defaultValues: {
+  const getDefaultValues = (): BattleFormValues => {
+    if (battleToEdit) {
+      // Parse constraints object to string
+      const constraintsStr = Object.entries(battleToEdit.constraints || {})
+        .map(([key, value]) => `${key}:${value}`)
+        .join(', ');
+      
+      return {
+        theme: battleToEdit.theme,
+        constraints: constraintsStr,
+        max_price_credits: battleToEdit.max_price_credits,
+        min_jams_required: battleToEdit.min_jams_required,
+        max_judges: battleToEdit.max_judges,
+        judge_discount_percent: battleToEdit.judge_discount_percent,
+        reward_credits: battleToEdit.reward_credits,
+        reward_description: battleToEdit.reward_description || '',
+        registration_end_date: parseISO(battleToEdit.registration_end_date),
+        production_end_date: parseISO(battleToEdit.production_end_date),
+        voting_end_date: parseISO(battleToEdit.voting_end_date),
+        is_featured: battleToEdit.is_featured,
+      };
+    }
+    
+    return {
       theme: '',
       constraints: '',
       max_price_credits: 10,
@@ -55,10 +81,23 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
       production_end_date: addDays(new Date(), 30),
       voting_end_date: addDays(new Date(), 45),
       is_featured: false,
-    },
+    };
+  };
+  
+  const form = useForm<BattleFormValues>({
+    resolver: zodResolver(battleFormSchema),
+    defaultValues: getDefaultValues(),
   });
   
+  useEffect(() => {
+    if (battleToEdit) {
+      // Reset form with battleToEdit values
+      form.reset(getDefaultValues());
+    }
+  }, [battleToEdit]);
+  
   const onSubmit = async (data: BattleFormValues) => {
+    setIsSubmitting(true);
     try {
       // Formater les contraintes en objet JSON
       const constraintsObj = {};
@@ -78,39 +117,61 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
         judge_discount_percent: data.judge_discount_percent,
         reward_credits: data.reward_credits,
         reward_description: data.reward_description,
-        registration_start_date: new Date().toISOString(), // Conversion en chaîne ISO
-        registration_end_date: data.registration_end_date.toISOString(), // Conversion en chaîne ISO
-        production_end_date: data.production_end_date.toISOString(), // Conversion en chaîne ISO
-        voting_end_date: data.voting_end_date.toISOString(), // Conversion en chaîne ISO
+        registration_start_date: new Date().toISOString(),
+        registration_end_date: data.registration_end_date.toISOString(),
+        production_end_date: data.production_end_date.toISOString(),
+        voting_end_date: data.voting_end_date.toISOString(),
         is_featured: data.is_featured,
-        status: 'inscription' as const
+        status: battleToEdit ? undefined : 'inscription' as const
       };
       
-      const newBattle = await createNewBattle(battleData);
+      let result;
       
-      if (newBattle) {
+      if (battleToEdit) {
+        // Update existing battle
+        const { data: updatedBattle, error } = await supabase
+          .from('jam_battles_new')
+          .update(battleData)
+          .eq('id', battleToEdit.id)
+          .select()
+          .single();
+          
+        if (error) throw error;
+        result = updatedBattle;
+      } else {
+        // Create new battle
+        result = await createNewBattle(battleData);
+      }
+      
+      if (result) {
         toast({
-          title: "Succès!",
-          description: "Le battle a été créé avec succès.",
+          title: battleToEdit ? "Battle mis à jour" : "Battle créé",
+          description: battleToEdit 
+            ? "Le battle a été mis à jour avec succès." 
+            : "Le battle a été créé avec succès.",
         });
         
         if (onSuccess) {
-          onSuccess(newBattle.id);
+          onSuccess(result.id);
         }
       } else {
         toast({
           title: "Erreur",
-          description: "Une erreur est survenue lors de la création du battle.",
+          description: battleToEdit 
+            ? "Une erreur est survenue lors de la mise à jour du battle." 
+            : "Une erreur est survenue lors de la création du battle.",
           variant: "destructive"
         });
       }
     } catch (error) {
-      console.error("Erreur lors de la création du battle:", error);
+      console.error("Erreur:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la création du battle.",
+        description: "Une erreur est survenue lors du traitement de votre demande.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -309,7 +370,7 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
                       mode="single"
                       selected={field.value}
                       onSelect={field.onChange}
-                      disabled={(date) => date < new Date()}
+                      disabled={(date) => date < new Date() && !battleToEdit}
                       initialFocus
                     />
                   </PopoverContent>
@@ -347,7 +408,7 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
                       selected={field.value}
                       onSelect={field.onChange}
                       disabled={(date) => 
-                        date < new Date() || 
+                        (!battleToEdit && date < new Date()) || 
                         (form.getValues("registration_end_date") && date <= form.getValues("registration_end_date"))
                       }
                       initialFocus
@@ -387,7 +448,7 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
                       selected={field.value}
                       onSelect={field.onChange}
                       disabled={(date) => 
-                        date < new Date() || 
+                        (!battleToEdit && date < new Date()) || 
                         (form.getValues("production_end_date") && date <= form.getValues("production_end_date"))
                       }
                       initialFocus
@@ -406,11 +467,9 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
           render={({ field }) => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={field.value}
-                  onChange={field.onChange}
-                  className="h-4 w-4 mt-1"
+                  onCheckedChange={field.onChange}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
@@ -423,7 +482,9 @@ const BattleForm: React.FC<BattleFormProps> = ({ onSuccess }) => {
           )}
         />
         
-        <Button type="submit" className="w-full">Créer le Battle</Button>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? "En cours..." : (battleToEdit ? "Mettre à jour" : "Créer le Battle")}
+        </Button>
       </form>
     </Form>
   );

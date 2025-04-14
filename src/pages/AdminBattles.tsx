@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import BattleForm from '@/components/battle/BattleForm';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 
 const AdminBattles = () => {
   const navigate = useNavigate();
@@ -59,11 +59,19 @@ const AdminBattles = () => {
         
         <TabsContent value="manage" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Gérer les Battles existants</CardTitle>
-              <CardDescription>
-                Cette fonctionnalité sera disponible prochainement.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gérer les Battles existants</CardTitle>
+                <CardDescription>
+                  Consultez et gérez les battles en cours et passés.
+                </CardDescription>
+              </div>
+              <Button asChild>
+                <Link to="/admin/battles/create">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Créer un battle
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="p-8 text-center text-muted-foreground">
