@@ -59,15 +59,15 @@ const News = () => {
 
         if (resultsError) throw resultsError;
         
-        // Properly cast the result to match our expected type
-        const typedResults = (resultsData || []) as (BattleResultType & { 
+        // Convert the response to our expected type using type assertion
+        const typedResults = resultsData as unknown as (BattleResultType & { 
           battle?: NewBattleType;
           winner?: ProfileType;
           participant_a?: ProfileType;
           participant_b?: ProfileType;
         })[];
         
-        setBattleResults(typedResults);
+        setBattleResults(typedResults || []);
 
         // Here you would fetch other types of news as well
         // For example, advice articles, new features, etc.
