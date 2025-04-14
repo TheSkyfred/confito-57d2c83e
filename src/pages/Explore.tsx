@@ -1,554 +1,156 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronDown, Sliders, SlidersHorizontal } from 'lucide-react';
-import { JamType } from '@/types/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { getTypedSupabaseQuery } from '@/utils/supabaseHelpers';
-
-import JamCard from '@/components/JamCard';
-import AdBanner from '@/components/AdBanner';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import { JamType } from '@/types/supabase';
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Star,
+  Heart,
+  ShoppingCart,
+  AlertTriangle,
+  Info,
+  PlusCircle
+} from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-
-// Types
-type FilterState = {
-  searchTerm: string;
-  sortBy: string;
-  filters: {
-    fruit?: string[];
-    allergens?: string[];
-    maxSugar?: number;
-    minRating?: number;
-    maxPrice?: number;
-    proOnly?: boolean;
-  }
-};
-
-// Filtres statiques (en production, viendrait de la base de données)
-const fruitOptions = ["Fraise", "Framboise", "Abricot", "Pêche", "Pomme", "Poire", "Rhubarbe", "Myrtille", "Cassis", "Cerise"];
-const allergenOptions = ["Fruits à coque", "Sulfites", "Lait", "Œuf", "Soja", "Gluten"];
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 
 const Explore = () => {
-  const [filters, setFilters] = useState<FilterState>({
-    searchTerm: '',
-    sortBy: 'recent',
-    filters: {
-      fruit: [],
-      allergens: [],
-      maxSugar: 100,
-      minRating: 0,
-      maxPrice: 50,
-      proOnly: false
-    }
-  });
+  const { user } = useAuth();
+  const [filters, setFilters] = useState('');
   
-  // Charge les confitures
-  const { data: jams, isLoading, error } = useQuery({
+  // Fix the getTypedSupabaseQuery usage
+  const { data: jams, isLoading } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      let query = getTypedSupabaseQuery('jams')
+      // Use the fixed function that accepts a table name
+      const { data, error } = await getTypedSupabaseQuery('jams')
         .select(`
           *,
           jam_images (*),
-          profiles:creator_id (username, avatar_url),
-          reviews (rating)
+          reviews (*, reviewer:reviewer_id(username, avatar_url)),
+          profiles:creator_id (id, username, full_name, avatar_url, role)
         `)
+        .eq('status', 'approved')
         .eq('is_active', true);
-      
-      // Appliquer les filtres
-      if (filters.searchTerm) {
-        query = query.ilike('name', `%${filters.searchTerm}%`);
-      }
-      
-      // Filtrer par fruit si sélectionné
-      if (filters.filters.fruit && filters.filters.fruit.length > 0) {
-        query = query.contains('ingredients', filters.filters.fruit);
-      }
-      
-      // Filtrer par allergènes (exclure ceux qui contiennent les allergènes sélectionnés)
-      if (filters.filters.allergens && filters.filters.allergens.length > 0) {
-        query = query.not('allergens', 'cs', `{${filters.filters.allergens.join(',')}}`);
-      }
-      
-      // Filtre par prix max
-      if (filters.filters.maxPrice) {
-        query = query.lte('price_credits', filters.filters.maxPrice);
-      }
-      
-      // Filtrer par "pro only" si l'option est sélectionnée
-      if (filters.filters.proOnly) {
-        query = query.eq('is_pro', true);
-      }
-      
-      // Appliquer le tri
-      switch (filters.sortBy) {
-        case 'price_asc':
-          query = query.order('price_credits', { ascending: true });
-          break;
-        case 'price_desc':
-          query = query.order('price_credits', { ascending: false });
-          break;
-        case 'popular':
-          // En production, utiliserait une métrique de popularité
-          query = query.order('available_quantity', { ascending: false });
-          break;
-        case 'recent':
-        default:
-          query = query.order('created_at', { ascending: false });
-      }
-      
-      const { data, error } = await query;
-      
+
       if (error) throw error;
-      
-      // Calculer les notes moyennes et filtrer par note minimale
-      return data.map((jam: any) => {
-        const ratings = jam.reviews?.map((review: any) => review.rating) || [];
-        const avgRating = ratings.length > 0 
-          ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
-          : 0;
-          
-        return {
-          ...jam,
-          avgRating
-        } as JamType;
-      }).filter((jam: JamType) => (jam.avgRating || 0) >= (filters.filters.minRating || 0));
-    },
-  });
-
-  // Fonction pour mélanger les résultats
-  const getShuffledResults = () => {
-    if (!jams || jams.length === 0) return [];
-    
-    // Créer un tableau d'éléments mélangés
-    let shuffledItems: Array<{ type: 'jam' | 'ad', item: JamType | number }> = [];
-    
-    // D'abord, ajouter toutes les confitures
-    jams.forEach((jam: JamType) => {
-      shuffledItems.push({ type: 'jam', item: jam });
-    });
-    
-    // Déterminer combien de publicités à insérer (environ 1 toutes les 6 confitures)
-    const adCount = Math.ceil(jams.length / 6);
-    
-    // Ajouter les emplacements de publicité
-    for (let i = 0; i < adCount; i++) {
-      shuffledItems.push({ type: 'ad', item: i });
+      return data as JamType[];
     }
-    
-    // Mélanger le tableau
-    shuffledItems = shuffledItems.sort(() => Math.random() - 0.5);
-    
-    return shuffledItems;
-  };
-
-  const updateSearchTerm = (term: string) => {
-    setFilters(prev => ({ ...prev, searchTerm: term }));
-  };
-  
-  const updateSortBy = (value: string) => {
-    setFilters(prev => ({ ...prev, sortBy: value }));
-  };
-  
-  const toggleFruitFilter = (fruit: string) => {
-    setFilters(prev => {
-      const currentFruits = prev.filters.fruit || [];
-      const newFruits = currentFruits.includes(fruit)
-        ? currentFruits.filter(f => f !== fruit)
-        : [...currentFruits, fruit];
-        
-      return {
-        ...prev,
-        filters: {
-          ...prev.filters,
-          fruit: newFruits
-        }
-      };
-    });
-  };
-  
-  const toggleAllergenFilter = (allergen: string) => {
-    setFilters(prev => {
-      const currentAllergens = prev.filters.allergens || [];
-      const newAllergens = currentAllergens.includes(allergen)
-        ? currentAllergens.filter(a => a !== allergen)
-        : [...currentAllergens, allergen];
-        
-      return {
-        ...prev,
-        filters: {
-          ...prev.filters,
-          allergens: newAllergens
-        }
-      };
-    });
-  };
-  
-  const updateMaxSugar = (value: number[]) => {
-    setFilters(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        maxSugar: value[0]
-      }
-    }));
-  };
-  
-  const updateMinRating = (value: number[]) => {
-    setFilters(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        minRating: value[0]
-      }
-    }));
-  };
-  
-  const updateMaxPrice = (value: number[]) => {
-    setFilters(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        maxPrice: value[0]
-      }
-    }));
-  };
-  
-  const toggleProOnlyFilter = () => {
-    setFilters(prev => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        proOnly: !prev.filters.proOnly
-      }
-    }));
-  };
-  
-  const resetFilters = () => {
-    setFilters({
-      searchTerm: '',
-      sortBy: 'recent',
-      filters: {
-        fruit: [],
-        allergens: [],
-        maxSugar: 100,
-        minRating: 0,
-        maxPrice: 50,
-        proOnly: false
-      }
-    });
-  };
-  
-  const activeFilterCount = 
-    (filters.filters.fruit?.length || 0) +
-    (filters.filters.allergens?.length || 0) +
-    (filters.filters.maxSugar !== 100 ? 1 : 0) +
-    (filters.filters.minRating !== 0 ? 1 : 0) +
-    (filters.filters.maxPrice !== 50 ? 1 : 0) +
-    (filters.filters.proOnly ? 1 : 0);
-
-  // Obtenir les résultats mélangés
-  const shuffledResults = getShuffledResults();
+  });
 
   return (
     <div className="container py-8">
-      <div className="flex flex-col mb-8">
-        <h1 className="font-serif text-3xl font-bold mb-2">
-          Découvrir les confitures
-        </h1>
-        <p className="text-muted-foreground">
-          Explorez notre collection de confitures artisanales et trouvez votre prochain coup de cœur
-        </p>
+      <div className="flex flex-col md:flex-row items-center justify-between mb-8">
+        <div className="mb-4 md:mb-0">
+          <h1 className="font-serif text-3xl font-bold">
+            Explorez les confitures
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Découvrez de nouvelles saveurs et soutenez les créateurs de confitures !
+          </p>
+        </div>
+        <Input 
+          type="search" 
+          placeholder="Rechercher une confiture..." 
+          className="max-w-md"
+          value={filters}
+          onChange={(e) => setFilters(e.target.value)}
+        />
       </div>
 
-      {/* Barre de recherche et filtres */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        <div className="relative flex-grow">
-          <Input
-            placeholder="Rechercher une confiture..."
-            value={filters.searchTerm}
-            onChange={(e) => updateSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          <Select value={filters.sortBy} onValueChange={updateSortBy}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trier par" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Plus récentes</SelectItem>
-              <SelectItem value="popular">Plus populaires</SelectItem>
-              <SelectItem value="price_asc">Prix croissant</SelectItem>
-              <SelectItem value="price_desc">Prix décroissant</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="relative">
-                <SlidersHorizontal className="h-4 w-4" />
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-jam-raspberry text-white text-xs flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[300px] sm:w-[400px] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Filtres</SheetTitle>
-                <SheetDescription>
-                  Affinez votre recherche avec nos filtres
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="py-4">
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="fruit">
-                    <AccordionTrigger>Fruits</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="grid grid-cols-2 gap-2">
-                        {fruitOptions.map(fruit => (
-                          <div key={fruit} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`fruit-${fruit}`} 
-                              checked={filters.filters.fruit?.includes(fruit)}
-                              onCheckedChange={() => toggleFruitFilter(fruit)}
-                            />
-                            <label htmlFor={`fruit-${fruit}`} className="text-sm cursor-pointer">
-                              {fruit}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="allergens">
-                    <AccordionTrigger>Allergènes (exclure)</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="grid grid-cols-2 gap-2">
-                        {allergenOptions.map(allergen => (
-                          <div key={allergen} className="flex items-center space-x-2">
-                            <Checkbox 
-                              id={`allergen-${allergen}`} 
-                              checked={filters.filters.allergens?.includes(allergen)}
-                              onCheckedChange={() => toggleAllergenFilter(allergen)}
-                            />
-                            <label htmlFor={`allergen-${allergen}`} className="text-sm cursor-pointer">
-                              {allergen}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="sugar">
-                    <AccordionTrigger>Teneur en sucre max</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="px-1">
-                        <Slider
-                          defaultValue={[100]}
-                          max={100}
-                          step={5}
-                          value={[filters.filters.maxSugar || 100]}
-                          onValueChange={updateMaxSugar}
-                        />
-                        <div className="flex justify-between mt-2">
-                          <span className="text-sm">{filters.filters.maxSugar}% max</span>
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="rating">
-                    <AccordionTrigger>Note minimale</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="px-1">
-                        <Slider
-                          defaultValue={[0]}
-                          max={5}
-                          step={0.5}
-                          value={[filters.filters.minRating || 0]}
-                          onValueChange={updateMinRating}
-                        />
-                        <div className="flex justify-between mt-2">
-                          <span className="text-sm">Min: {filters.filters.minRating} étoiles</span>
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="price">
-                    <AccordionTrigger>Prix maximum</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="px-1">
-                        <Slider
-                          defaultValue={[50]}
-                          max={50}
-                          step={1}
-                          value={[filters.filters.maxPrice || 50]}
-                          onValueChange={updateMaxPrice}
-                        />
-                        <div className="flex justify-between mt-2">
-                          <span className="text-sm">Max: {filters.filters.maxPrice} crédits</span>
-                        </div>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  <AccordionItem value="protype">
-                    <AccordionTrigger>Confitures professionnelles</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="px-1">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="pro-only" 
-                            checked={filters.filters.proOnly}
-                            onCheckedChange={toggleProOnlyFilter}
-                          />
-                          <label htmlFor="pro-only" className="text-sm cursor-pointer">
-                            Afficher uniquement les confitures pro
-                          </label>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Les confitures professionnelles sont vendues en euros et en crédits
-                        </p>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-              </div>
-
-              <SheetFooter>
-                <SheetClose asChild>
-                  <Button variant="secondary" onClick={resetFilters}>Réinitialiser les filtres</Button>
-                </SheetClose>
-                <SheetClose asChild>
-                  <Button className="bg-jam-raspberry hover:bg-jam-raspberry/90">
-                    Appliquer les filtres
-                  </Button>
-                </SheetClose>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </div>
-
-      {/* Filtres actifs */}
-      {activeFilterCount > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {filters.filters.fruit?.map(fruit => (
-            <Badge key={fruit} variant="secondary" className="flex items-center gap-1">
-              {fruit}
-              <button onClick={() => toggleFruitFilter(fruit)} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          ))}
-          
-          {filters.filters.allergens?.map(allergen => (
-            <Badge key={allergen} variant="outline" className="flex items-center gap-1">
-              Sans {allergen}
-              <button onClick={() => toggleAllergenFilter(allergen)} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          ))}
-          
-          {filters.filters.maxSugar !== 100 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Max {filters.filters.maxSugar}% sucre
-              <button onClick={() => updateMaxSugar([100])} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          )}
-          
-          {filters.filters.minRating !== 0 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Min {filters.filters.minRating} étoiles
-              <button onClick={() => updateMinRating([0])} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          )}
-          
-          {filters.filters.maxPrice !== 50 && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Max {filters.filters.maxPrice} crédits
-              <button onClick={() => updateMaxPrice([50])} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          )}
-          
-          {filters.filters.proOnly && (
-            <Badge variant="secondary" className="flex items-center gap-1">
-              Confitures pro uniquement
-              <button onClick={toggleProOnlyFilter} className="ml-1 hover:text-muted-foreground">×</button>
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Résultats */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex flex-col space-y-3">
-              <Skeleton className="h-[200px] w-full rounded-md" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <CardTitle><Skeleton className="h-5 w-3/4" /></CardTitle>
+                <CardDescription><Skeleton className="h-4 w-1/2" /></CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-4 w-full mt-2" />
+                <Skeleton className="h-4 w-full mt-1" />
+              </CardContent>
+            </Card>
           ))}
-        </div>
-      ) : error ? (
-        <div className="text-center py-10">
-          <p className="text-destructive">Une erreur est survenue lors du chargement des confitures.</p>
-          <Button onClick={() => window.location.reload()} variant="outline" className="mt-4">
-            Réessayer
-          </Button>
         </div>
       ) : jams && jams.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {shuffledResults.map((item, index) => (
-            item.type === 'jam' ? (
-              <Link to={`/jam/${(item.item as JamType).id}`} key={`jam-${(item.item as JamType).id}`}>
-                <JamCard jam={item.item as JamType} />
-              </Link>
-            ) : (
-              <AdBanner key={`ad-${index}`} cardIndex={item.item as number} />
-            )
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {jams.map((jam) => (
+            <Card key={jam.id}>
+              <CardHeader>
+                <CardTitle>{jam.name}</CardTitle>
+                <CardDescription>
+                  {jam.description.substring(0, 50)}...
+                </CardDescription>
+              </CardHeader>
+              <img
+                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                alt={jam.name}
+                className="w-full h-48 object-cover rounded-md"
+              />
+              <CardContent>
+                <div className="flex items-center space-x-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span>{jam.avgRating?.toFixed(1) || 'Pas d\'avis'}</span>
+                </div>
+                <div className="flex items-center mt-2">
+                  <Avatar className="h-6 w-6 mr-2">
+                    <AvatarImage src={jam.profiles?.avatar_url || undefined} />
+                    <AvatarFallback>{jam.profiles?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-muted-foreground">
+                    Par {jam.profiles?.username}
+                  </span>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between items-center">
+                <div>
+                  <span className="text-2xl font-bold">{jam.price_credits}</span>
+                  <span className="ml-1 text-muted-foreground">crédits</span>
+                </div>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="icon">
+                    <Heart className="h-5 w-5" />
+                  </Button>
+                  <Button asChild>
+                    <Link to={`/jam/${jam.id}`}>
+                      Voir plus
+                    </Link>
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       ) : (
         <div className="text-center py-10">
-          <p className="text-muted-foreground">Aucune confiture ne correspond à vos critères.</p>
-          <Button onClick={resetFilters} variant="outline" className="mt-4">
-            Réinitialiser les filtres
+          <Info className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h2 className="mt-4 text-xl font-semibold">Aucune confiture trouvée</h2>
+          <p className="mt-2 text-muted-foreground">
+            Essayez de modifier vos critères de recherche.
+          </p>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Proposer une confiture
           </Button>
         </div>
       )}

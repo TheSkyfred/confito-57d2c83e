@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -82,8 +81,12 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Get a typed Supabase query
  * This is a utility function to help with TypeScript type inference
  */
-export const getTypedSupabaseQuery = <T>() => {
-  return supabase;
+export const getTypedSupabaseQuery = <T>(table?: string) => {
+  // Return the supabase client directly if no table is specified
+  if (!table) return supabase;
+  
+  // Otherwise return a query for the specified table
+  return supabase.from(table);
 };
 
 /**

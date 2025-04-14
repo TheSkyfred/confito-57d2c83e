@@ -1,4 +1,3 @@
-
 // This file contains TypeScript types for the Supabase database
 
 export type ProfileType = {
@@ -284,6 +283,7 @@ export type ProAccessory = {
   created_at: string;
   updated_at: string;
   created_by: string;
+  creator?: ProfileType;
 };
 
 // Add missing type for the Json type from Supabase
