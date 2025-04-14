@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -49,20 +48,34 @@ const AdminRecipes = () => {
   const { data: recipes, isLoading, error, refetch } = useQuery({
     queryKey: ['adminRecipes', statusFilter],
     queryFn: async () => {
-      // Utiliser supabaseDirect pour éviter les erreurs de type avec les relations
-      let filter: Record<string, any> = {};
+      let query = supabase.from('recipes');
+      
+      // Apply status filter if not 'all'
       if (statusFilter && statusFilter !== 'all') {
-        filter = { status: statusFilter };
+        query = query.eq('status', statusFilter);
       }
       
-      const { data, error } = await supabaseDirect.select(
-        'recipes',
-        `*, author:profiles!recipes_author_id_fkey (username, avatar_url)`,
-        filter
-      );
+      // Get recipes
+      const { data: recipesData, error: recipesError } = await query.select();
       
-      if (error) throw error;
-      return data || [];
+      if (recipesError) throw recipesError;
+      
+      // Fetch authors separately for each recipe
+      const enhancedRecipes = await Promise.all((recipesData || []).map(async (recipe) => {
+        if (!recipe.author_id) {
+          return { ...recipe, author: null };
+        }
+        
+        const { data: authorData } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', recipe.author_id)
+          .single();
+        
+        return { ...recipe, author: authorData || null };
+      }));
+      
+      return enhancedRecipes || [];
     },
     enabled: Boolean(session && (isAdmin || isModerator))
   });
