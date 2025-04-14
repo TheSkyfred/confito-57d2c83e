@@ -35,8 +35,32 @@ import {
   PackageOpen
 } from 'lucide-react';
 
-// Updated interface to correctly handle the profiles and jam_stocks properties
-interface JamWithProfile extends Omit<JamType, 'profiles'> {
+// Define a more specific interface for the data structure returned by Supabase
+interface JamWithProfile {
+  id: string;
+  name: string;
+  creator_id: string;
+  description: string;
+  ingredients: string[];
+  allergens: string[] | null;
+  weight_grams: number;
+  sugar_content: number | null;
+  price_credits: number;
+  price_euros?: number | null;
+  available_quantity: number;
+  recipe: string | null;
+  recipe_steps?: any[];
+  type?: string;
+  badges?: string[];
+  production_date?: string;
+  shelf_life_months?: number;
+  special_edition?: boolean;
+  is_active: boolean;
+  is_pro?: boolean;
+  status: string;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
   profiles?: {
     id: string;
     username: string;
@@ -45,7 +69,10 @@ interface JamWithProfile extends Omit<JamType, 'profiles'> {
     quantity: number;
     is_available: boolean;
   }[] | null;
-  jam_images?: any[]; // Add this to match the JamType requirement
+  jam_images?: {
+    url: string;
+    is_primary: boolean;
+  }[] | null;
 }
 
 const AdminJams = () => {
