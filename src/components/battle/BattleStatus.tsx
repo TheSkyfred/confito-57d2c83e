@@ -14,13 +14,16 @@ import {
 import { NewBattleType, BattleStatus as BattleStatusType } from '@/types/supabase';
 
 interface BattleStatusProps {
-  status: BattleStatusType;
+  status?: BattleStatusType;
   battle?: NewBattleType;
 }
 
 const BattleStatus: React.FC<BattleStatusProps> = ({ status, battle }) => {
+  // If status is not provided directly but battle is provided, use battle.status
+  const actualStatus = status || (battle ? battle.status : 'inscription');
+  
   const getStatusInfo = () => {
-    switch (status) {
+    switch (actualStatus) {
       case 'inscription':
         return {
           label: 'Inscriptions en cours',

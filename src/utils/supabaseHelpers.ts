@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -81,8 +82,8 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Get a typed Supabase client for a specific table
  */
 export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
-  // Use type assertion but in a safer way
-  return supabase.from(tableName) as unknown as ReturnType<typeof supabase.from<T>>;
+  // Use type assertion to avoid TypeScript errors
+  return supabase.from(tableName) as any;
 };
 
 /**
