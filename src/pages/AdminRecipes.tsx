@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,19 +47,16 @@ const AdminRecipes = () => {
   const { data: recipes, isLoading, error, refetch } = useQuery({
     queryKey: ['adminRecipes', statusFilter],
     queryFn: async () => {
-      let query = supabase.from('recipes');
+      let query = supabase.from('recipes') as any;
       
-      // Apply status filter if not 'all'
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
       
-      // Get recipes
       const { data: recipesData, error: recipesError } = await query.select();
       
       if (recipesError) throw recipesError;
       
-      // Fetch authors separately for each recipe
       const enhancedRecipes = await Promise.all((recipesData || []).map(async (recipe) => {
         if (!recipe.author_id) {
           return { ...recipe, author: null };
