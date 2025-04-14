@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -42,9 +41,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 type ReviewWithReviewer = ReviewType & {
   reviewer: ProfileType;
@@ -135,7 +134,7 @@ const JamDetails = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['userFavorites', user?.id]});
+      queryClient.invalidateQueries({ queryKey: ['userFavorites', user?.id] });
       toast({
         title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
         description: isFavorite

@@ -104,7 +104,7 @@ export type JamBattleType = {
   jam_a: JamType;
   jam_b: JamType;
   already_voted?: boolean;
-  voted_for?: string;
+  voted_for?: string | null;
 };
 
 export type CreditTransactionType = {

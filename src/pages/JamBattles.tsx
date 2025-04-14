@@ -28,7 +28,7 @@ import {
   CheckCircle,
   XCircle,
   ArrowRight,
-  Fire,
+  Flame,
   ThumbsUp,
   AlertCircle,
   Loader2
@@ -62,7 +62,8 @@ const JamBattles = () => {
       
       // Add a field indicating if the user has already voted
       if (user) {
-        for (const battle of data) {
+        const battles = [...data];
+        for (const battle of battles) {
           const { data: voteData } = await supabase
             .from('battle_votes')
             .select('voted_for_jam_id')
@@ -73,11 +74,20 @@ const JamBattles = () => {
           if (voteData) {
             battle.already_voted = true;
             battle.voted_for = voteData.voted_for_jam_id;
+          } else {
+            battle.already_voted = false;
+            battle.voted_for = null;
           }
         }
+        
+        return battles as JamBattleType[];
       }
       
-      return data;
+      return data.map(battle => ({
+        ...battle,
+        already_voted: false,
+        voted_for: null
+      })) as JamBattleType[];
     },
     enabled: activeTab === 'current'
   });
@@ -97,7 +107,13 @@ const JamBattles = () => {
         .order('end_date', { ascending: false });
         
       if (error) throw error;
-      return data;
+      
+      // Convert to JamBattleType with optional properties
+      return data.map(battle => ({
+        ...battle,
+        already_voted: false,
+        voted_for: null
+      })) as JamBattleType[];
     },
     enabled: activeTab === 'past'
   });
@@ -134,11 +150,19 @@ const JamBattles = () => {
       const fieldToUpdate = jamId === activeBattles?.find(b => b.id === battleId)?.jam_a_id 
         ? 'votes_for_a' 
         : 'votes_for_b';
+      
+      // Find the battle to get current vote count  
+      const battle = activeBattles?.find(b => b.id === battleId);
+      if (!battle) throw new Error("Battle not found");
+      
+      const updatedVotes = fieldToUpdate === 'votes_for_a' 
+        ? battle.votes_for_a + 1 
+        : battle.votes_for_b + 1;
         
       const { error: updateError } = await supabase
         .from('jam_battles')
         .update({ 
-          [fieldToUpdate]: activeBattles?.find(b => b.id === battleId)?.[fieldToUpdate] + 1 
+          [fieldToUpdate]: updatedVotes 
         })
         .eq('id', battleId);
         
@@ -155,7 +179,7 @@ const JamBattles = () => {
       if (endBattleError) throw endBattleError;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['battles', 'active']});
+      queryClient.invalidateQueries({ queryKey: ['battles', 'active'] });
       toast({
         title: "Vote enregistré",
         description: "Votre vote a été pris en compte. Merci de votre participation !",
@@ -399,7 +423,7 @@ const JamBattles = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mx-auto">
             <TabsTrigger value="current">
-              <Fire className="mr-2 h-4 w-4" />
+              <Flame className="mr-2 h-4 w-4" />
               Battles en cours
             </TabsTrigger>
             <TabsTrigger value="past">
