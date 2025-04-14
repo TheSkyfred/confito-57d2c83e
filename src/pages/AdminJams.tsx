@@ -35,7 +35,7 @@ import {
   PackageOpen
 } from 'lucide-react';
 
-// Updated interface to correctly handle the profiles property
+// Updated interface to correctly handle the profiles and jam_stocks properties
 interface JamWithProfile extends Omit<JamType, 'profiles'> {
   profiles?: {
     id: string;
@@ -44,7 +44,8 @@ interface JamWithProfile extends Omit<JamType, 'profiles'> {
   jam_stocks?: {
     quantity: number;
     is_available: boolean;
-  } | null;
+  }[] | null;
+  jam_images?: any[]; // Add this to match the JamType requirement
 }
 
 const AdminJams = () => {
@@ -63,7 +64,8 @@ const AdminJams = () => {
         .select(`
           *,
           profiles:creator_id(id, username),
-          jam_stocks(quantity, is_available)
+          jam_stocks(quantity, is_available),
+          jam_images(url, is_primary)
         `);
       
       if (statusFilter !== 'all') {
@@ -205,7 +207,7 @@ const AdminJams = () => {
                     {getStatusBadge(jam.status as string)}
                   </TableCell>
                   <TableCell>
-                    {jam.jam_stocks && jam.jam_stocks.length > 0 ? (
+                    {jam.jam_stocks && jam.jam_stocks[0] ? (
                       <span className={jam.jam_stocks[0].is_available ? 'text-green-600' : 'text-red-600'}>
                         {jam.jam_stocks[0].quantity}
                       </span>
