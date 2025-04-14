@@ -34,7 +34,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { JamBattleType } from "@/types/supabase";
+import { JamBattleType, JamType } from "@/types/supabase";
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,12 +48,19 @@ const JamBattles = () => {
   const { data: activeBattles, isLoading: isLoadingActive } = useQuery({
     queryKey: ['battles', 'active'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First we need to properly query the battles with their related jams
+      const { data: battlesData, error } = await supabase
         .from('jam_battles')
         .select(`
           *,
-          jam_a:jam_a_id(*),
-          jam_b:jam_b_id(*)
+          jam_a:jam_a_id(id, name, description, price_credits, available_quantity, creator_id, 
+            jam_images(*), 
+            profiles:creator_id(username, avatar_url)
+          ),
+          jam_b:jam_b_id(id, name, description, price_credits, available_quantity, creator_id, 
+            jam_images(*), 
+            profiles:creator_id(username, avatar_url)
+          )
         `)
         .eq('is_active', true)
         .order('end_date', { ascending: false });
@@ -62,8 +69,10 @@ const JamBattles = () => {
       
       // Add a field indicating if the user has already voted
       if (user) {
-        const battles = [...data];
+        const battles = [...battlesData];
+        
         for (const battle of battles) {
+          // Check if user has voted for this battle
           const { data: voteData } = await supabase
             .from('battle_votes')
             .select('voted_for_jam_id')
@@ -80,14 +89,19 @@ const JamBattles = () => {
           }
         }
         
-        return battles as JamBattleType[];
+        // Explicitly cast the data to JamBattleType[] since we've properly structured it
+        return battles as unknown as JamBattleType[];
       }
       
-      return data.map(battle => ({
+      // For non-logged in users, mark all as not voted
+      const battles = battlesData.map(battle => ({
         ...battle,
         already_voted: false,
         voted_for: null
-      })) as JamBattleType[];
+      }));
+      
+      // Explicitly cast the data to JamBattleType[] since we've properly structured it
+      return battles as unknown as JamBattleType[];
     },
     enabled: activeTab === 'current'
   });
@@ -96,24 +110,33 @@ const JamBattles = () => {
   const { data: pastBattles, isLoading: isLoadingPast } = useQuery({
     queryKey: ['battles', 'past'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: battlesData, error } = await supabase
         .from('jam_battles')
         .select(`
           *,
-          jam_a:jam_a_id(*),
-          jam_b:jam_b_id(*)
+          jam_a:jam_a_id(id, name, description, price_credits, available_quantity, creator_id, 
+            jam_images(*), 
+            profiles:creator_id(username, avatar_url)
+          ),
+          jam_b:jam_b_id(id, name, description, price_credits, available_quantity, creator_id, 
+            jam_images(*), 
+            profiles:creator_id(username, avatar_url)
+          )
         `)
         .eq('is_active', false)
         .order('end_date', { ascending: false });
         
       if (error) throw error;
       
-      // Convert to JamBattleType with optional properties
-      return data.map(battle => ({
+      // All are already voted since these are past battles
+      const battles = battlesData.map(battle => ({
         ...battle,
-        already_voted: false,
+        already_voted: true,
         voted_for: null
-      })) as JamBattleType[];
+      }));
+      
+      // Explicitly cast the data to JamBattleType[]
+      return battles as unknown as JamBattleType[];
     },
     enabled: activeTab === 'past'
   });
@@ -147,7 +170,7 @@ const JamBattles = () => {
       if (error) throw error;
       
       // Update the vote count
-      const fieldToUpdate = jamId === activeBattles?.find(b => b.id === battleId)?.jam_a_id 
+      const fieldToUpdate = jamId === activeBattles?.find(b => b.id === battleId)?.jam_a.id
         ? 'votes_for_a' 
         : 'votes_for_b';
       

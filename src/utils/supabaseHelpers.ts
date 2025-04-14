@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -82,9 +81,9 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Get a typed Supabase client for a specific table
  * Uses type assertion to overcome TypeScript limitations with dynamic table names
  */
-export const getTypedSupabaseQuery = (tableName: string) => {
+export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
   // Using type assertion to bypass TypeScript's strict checking
-  return supabase.from(tableName as any);
+  return supabase.from(tableName) as any;
 };
 
 /**
