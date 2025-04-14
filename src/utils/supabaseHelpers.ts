@@ -82,7 +82,9 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * Get a typed Supabase client for a specific table
  */
 export const getTypedSupabaseQuery = <T = any>(tableName: string) => {
-  // Use type assertion to avoid TypeScript errors
+  // Type assertion with `any` to bypass strict typing
+  // This allows us to use dynamic table names while still maintaining type information
+  // for the returned data through the generic T
   return supabase.from(tableName) as any;
 };
 
