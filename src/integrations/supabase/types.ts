@@ -748,6 +748,66 @@ export type Database = {
           },
         ]
       }
+      battle_rewards: {
+        Row: {
+          battle_id: string
+          created_at: string
+          distributed_at: string | null
+          id: string
+          is_distributed: boolean | null
+          reward_amount: number | null
+          reward_badge_id: string | null
+          reward_description: string
+          reward_image_url: string | null
+          reward_product_id: string | null
+          reward_type: string
+          updated_at: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          distributed_at?: string | null
+          id?: string
+          is_distributed?: boolean | null
+          reward_amount?: number | null
+          reward_badge_id?: string | null
+          reward_description: string
+          reward_image_url?: string | null
+          reward_product_id?: string | null
+          reward_type: string
+          updated_at?: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          distributed_at?: string | null
+          id?: string
+          is_distributed?: boolean | null
+          reward_amount?: number | null
+          reward_badge_id?: string | null
+          reward_description?: string
+          reward_image_url?: string | null
+          reward_product_id?: string | null
+          reward_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_rewards_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "jam_battles_new"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_rewards_reward_badge_id_fkey"
+            columns: ["reward_badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battle_shipments: {
         Row: {
           battle_id: string

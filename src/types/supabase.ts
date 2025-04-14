@@ -259,6 +259,21 @@ export type BattleResultType = {
   participant_b?: ProfileType;
 };
 
+export type BattleRewardType = {
+  id: string;
+  battle_id: string;
+  reward_type: string; // 'credits', 'badge', 'product'
+  reward_amount: number | null;
+  reward_description: string;
+  reward_image_url: string | null;
+  reward_badge_id: string | null;
+  reward_product_id: string | null;
+  is_distributed: boolean;
+  distributed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type BattleStarsType = {
   id: string;
   user_id: string;
