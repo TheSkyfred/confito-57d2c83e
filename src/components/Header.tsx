@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +44,8 @@ import {
   Coins,
   ChefHat,
   Book,
-  Newspaper
+  Newspaper,
+  Trophy
 } from 'lucide-react';
 
 const Header = () => {

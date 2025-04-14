@@ -19,7 +19,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { BattleResultType, NewBattleType } from '@/types/supabase';
+import { BattleResultType, NewBattleType, ProfileType } from '@/types/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import NewsItem from '@/components/news/NewsItem';
@@ -32,7 +32,12 @@ const News = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [news, setNews] = useState<any[]>([]);
-  const [battleResults, setBattleResults] = useState<(BattleResultType & { battle?: NewBattleType })[]>([]);
+  const [battleResults, setBattleResults] = useState<(BattleResultType & { 
+    battle?: NewBattleType;
+    winner?: ProfileType;
+    participant_a?: ProfileType;
+    participant_b?: ProfileType;
+  })[]>([]);
 
   useEffect(() => {
     const fetchNewsData = async () => {
@@ -53,7 +58,16 @@ const News = () => {
           .order('created_at', { ascending: false });
 
         if (resultsError) throw resultsError;
-        setBattleResults(resultsData || []);
+        
+        // Properly cast the result to match our expected type
+        const typedResults = (resultsData || []) as (BattleResultType & { 
+          battle?: NewBattleType;
+          winner?: ProfileType;
+          participant_a?: ProfileType;
+          participant_b?: ProfileType;
+        })[];
+        
+        setBattleResults(typedResults);
 
         // Here you would fetch other types of news as well
         // For example, advice articles, new features, etc.
@@ -69,7 +83,7 @@ const News = () => {
         // Combine all news items into a single array
         // Add a 'type' field to differentiate between different types of news
         const combinedNews = [
-          ...(resultsData || []).map(result => ({ 
+          ...(typedResults || []).map(result => ({ 
             ...result, 
             type: 'battle_result', 
             date: result.created_at 
