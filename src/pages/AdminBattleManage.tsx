@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,23 +102,30 @@ const AdminBattleManage = () => {
     
     setLoadingVotes(true);
     try {
-      // Charger les votes détaillés
+      // Charger les votes détaillés - specify the exact column for the join using profiles(username).profiles
       const { data: votes, error: votesError } = await supabase
         .from('battle_votes_detailed')
-        .select('*, judge:judge_id(username:profiles(username)), criteria:criteria_id(*)')
+        .select(`
+          *,
+          judge:profiles!battle_votes_detailed_judge_id_fkey(*),
+          criteria:battle_criterias!battle_votes_detailed_criteria_id_fkey(*)
+        `)
         .eq('battle_id', id);
       
       if (votesError) throw votesError;
-      setVoteDetails(votes || []);
+      setVoteDetails(votes as BattleVoteDetailedType[]);
       
-      // Charger les commentaires
+      // Charger les commentaires - specify the exact column for the join using profiles(username).profiles
       const { data: comments, error: commentsError } = await supabase
         .from('battle_vote_comments')
-        .select('*, judge:judge_id(username:profiles(username))')
+        .select(`
+          *,
+          judge:profiles!battle_vote_comments_judge_id_fkey(*)
+        `)
         .eq('battle_id', id);
       
       if (commentsError) throw commentsError;
-      setVoteComments(comments || []);
+      setVoteComments(comments as BattleVoteCommentType[]);
       
     } catch (error) {
       console.error('Erreur lors du chargement des votes:', error);
@@ -211,23 +217,26 @@ const AdminBattleManage = () => {
     setSelectedJudge(judgeId);
     
     try {
-      // Récupérer les votes du juge
+      // Récupérer les votes du juge - fixed the query to use proper foreign key references
       const { data: votes, error: votesError } = await supabase
         .from('battle_votes_detailed')
         .select(`
           score,
-          participant:participant_id(username:profiles(username)), 
-          criteria:criteria_id(name, description)
+          participant:profiles!battle_votes_detailed_participant_id_fkey(username), 
+          criteria:battle_criterias!battle_votes_detailed_criteria_id_fkey(name, description)
         `)
         .eq('battle_id', id)
         .eq('judge_id', judgeId);
         
       if (votesError) throw votesError;
       
-      // Récupérer les commentaires du juge
+      // Récupérer les commentaires du juge - fixed the query to use proper foreign key references
       const { data: comments, error: commentsError } = await supabase
         .from('battle_vote_comments')
-        .select('comment, participant:participant_id(username:profiles(username))')
+        .select(`
+          comment, 
+          participant:profiles!battle_vote_comments_participant_id_fkey(username)
+        `)
         .eq('battle_id', id)
         .eq('judge_id', judgeId);
         
@@ -375,6 +384,7 @@ const AdminBattleManage = () => {
           <TabsTrigger value="judges">Juges</TabsTrigger>
           <TabsTrigger value="results">Résultats</TabsTrigger>
         </TabsList>
+        
         
         <TabsContent value="overview">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -882,56 +892,3 @@ const AdminBattleManage = () => {
                               const file = e.target.files ? e.target.files[0] : null;
                               setNewsArticle({
                                 ...newsArticle,
-                                image: file
-                              });
-                            }}
-                          />
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <input 
-                            type="checkbox" 
-                            id="publishNow"
-                            checked={newsArticle.publishNow}
-                            onChange={(e) => setNewsArticle({
-                              ...newsArticle,
-                              publishNow: e.target.checked
-                            })}
-                          />
-                          <Label htmlFor="publishNow">Publier immédiatement</Label>
-                        </div>
-                        
-                        <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                          <Button 
-                            variant="outline" 
-                            className="sm:flex-1"
-                            onClick={() => setShowNewsForm(false)}
-                          >
-                            Annuler
-                          </Button>
-                          <Button 
-                            className="sm:flex-1"
-                            onClick={handleCreateNewsArticle}
-                          >
-                            <Send className="mr-2 h-4 w-4" />
-                            {newsArticle.publishNow ? "Publier l'actualité" : "Enregistrer en brouillon"}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-10 text-muted-foreground">
-                    La publication des résultats sera disponible une fois le battle terminé.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-};
-
-export default AdminBattleManage;
