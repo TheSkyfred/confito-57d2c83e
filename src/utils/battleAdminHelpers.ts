@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { validateBattleAdminHelper } from './supabaseHelpers';
 
 /**
  * Validate a battle judge
