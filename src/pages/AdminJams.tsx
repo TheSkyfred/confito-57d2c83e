@@ -30,9 +30,9 @@ import {
   EyeIcon,
   FilterIcon,
   AlertCircle,
-  Pencil,
-  PlusCircle,
-  Settings
+  Settings,
+  ArrowLeft,
+  PackageOpen
 } from 'lucide-react';
 
 // Updated interface to correctly handle the profiles property
@@ -40,6 +40,10 @@ interface JamWithProfile extends Omit<JamType, 'profiles'> {
   profiles?: {
     id: string;
     username: string;
+  } | null;
+  jam_stocks?: {
+    quantity: number;
+    is_available: boolean;
   } | null;
 }
 
@@ -58,7 +62,8 @@ const AdminJams = () => {
         .from('jams')
         .select(`
           *,
-          profiles:creator_id(id, username)
+          profiles:creator_id(id, username),
+          jam_stocks(quantity, is_available)
         `);
       
       if (statusFilter !== 'all') {
@@ -80,10 +85,9 @@ const AdminJams = () => {
     
     const searchLower = searchTerm.toLowerCase();
     const nameMatch = jam.name?.toLowerCase().includes(searchLower);
-    const typeMatch = jam.type?.toLowerCase().includes(searchLower);
     const creatorMatch = jam.profiles?.username?.toLowerCase().includes(searchLower);
     
-    return nameMatch || typeMatch || creatorMatch;
+    return nameMatch || creatorMatch;
   });
   
   if (!isAdmin && !isModerator) {
@@ -97,13 +101,41 @@ const AdminJams = () => {
     );
   }
   
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-orange-100 text-orange-800">En attente</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-100 text-green-800">Approuvé</Badge>;
+      case 'rejected': 
+        return <Badge variant="outline" className="bg-red-100 text-red-800">Rejeté</Badge>;
+      case 'draft':
+        return <Badge variant="outline" className="bg-amber-100 text-amber-800">Brouillon</Badge>;
+      default:
+        return <Badge variant="outline" className="bg-gray-100">Inconnu</Badge>;
+    }
+  };
+  
   return (
     <div className="container mx-auto py-8">
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="mb-4"
+        asChild
+      >
+        <Link to="/admin">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour à l'administration
+        </Link>
+      </Button>
+      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-serif font-bold">Administration des confitures</h1>
         <Button asChild className="bg-jam-raspberry hover:bg-jam-raspberry/90">
           <Link to="/jam/create">
-            <PlusCircle className="h-4 w-4 mr-2" />
+            <PackageOpen className="h-4 w-4 mr-2" />
             Nouvelle confiture
           </Link>
         </Button>
@@ -126,7 +158,7 @@ const AdminJams = () => {
         <div className="relative flex-1">
           <FilterIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Rechercher par nom, type ou créateur..." 
+            placeholder="Rechercher par nom ou créateur..." 
             className="pl-9"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -149,11 +181,10 @@ const AdminJams = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nom</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Créateur</TableHead>
-                <TableHead>Date de création</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead>Stock</TableHead>
                 <TableHead>Pro</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -162,21 +193,24 @@ const AdminJams = () => {
               {filteredJams.map((jam) => (
                 <TableRow key={jam.id}>
                   <TableCell className="font-medium">{jam.name}</TableCell>
-                  <TableCell>{jam.type}</TableCell>
                   <TableCell>{jam.profiles?.username || "Utilisateur supprimé"}</TableCell>
                   <TableCell>
-                    {new Date(jam.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>{jam.price_credits} crédits</TableCell>
-                  <TableCell>
-                    {jam.is_active ? (
-                      <Badge variant="outline" className="bg-green-100 text-green-800">
-                        Publié
-                      </Badge>
+                    {jam.is_pro ? (
+                      <span>{jam.price_euros} €</span>
                     ) : (
-                      <Badge variant="outline" className="bg-amber-100 text-amber-800">
-                        Brouillon
-                      </Badge>
+                      <span>{jam.price_credits} crédits</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {getStatusBadge(jam.status as string)}
+                  </TableCell>
+                  <TableCell>
+                    {jam.jam_stocks && jam.jam_stocks.length > 0 ? (
+                      <span className={jam.jam_stocks[0].is_available ? 'text-green-600' : 'text-red-600'}>
+                        {jam.jam_stocks[0].quantity}
+                      </span>
+                    ) : (
+                      <span className="text-amber-600">Non défini</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -192,11 +226,6 @@ const AdminJams = () => {
                     <Button variant="ghost" size="sm" asChild>
                       <Link to={`/jam/${jam.id}`}>
                         <EyeIcon className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to={`/jam/edit/${jam.id}`}>
-                        <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild className="text-slate-800">
