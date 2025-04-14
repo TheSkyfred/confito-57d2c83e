@@ -83,7 +83,7 @@ export const safeAccessNested = <T, K extends keyof T, J extends keyof T[K]>(
  * This is a utility function to help with TypeScript type inference
  */
 export const getTypedSupabaseQuery = <T>() => {
-  return supabase as unknown as T;
+  return supabase;
 };
 
 /**

@@ -261,3 +261,30 @@ export type BattleStarsType = {
   updated_at: string;
   profile?: ProfileType;
 };
+
+// Add these missing types that were causing the errors
+export type AllergenType = {
+  id: string;
+  name: string;
+  description?: string | null;
+  severity: number;
+  category?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProAccessory = {
+  id: string;
+  name: string;
+  brand: string;
+  short_description: string;
+  image_url?: string | null;
+  external_url?: string | null;
+  click_count: number;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+};
+
+// Add missing type for the Json type from Supabase
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
