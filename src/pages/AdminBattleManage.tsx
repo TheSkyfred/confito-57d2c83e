@@ -1,25 +1,70 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, X, Award, FileText } from 'lucide-react';
+import { ArrowLeft, Check, X, Award, FileText, Eye, Send } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import BattleStatus from '@/components/battle/BattleStatus';
 import { fetchBattleById } from '@/utils/battleHelpers';
-import { validateBattleJudge, validateBattleCandidate } from '@/utils/battleAdminHelpers';
+import { validateBattleJudge, validateBattleCandidate, declareBattleWinner, distributeBattleRewards } from '@/utils/battleAdminHelpers';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { BattleCandidateType, BattleJudgeType, BattleParticipantType, NewBattleType } from '@/types/supabase';
+import { 
+  BattleCandidateType, 
+  BattleJudgeType, 
+  BattleParticipantType, 
+  NewBattleType, 
+  BattleVoteDetailedType, 
+  BattleVoteCommentType 
+} from '@/types/supabase';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const AdminBattleManage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [battle, setBattle] = useState<NewBattleType | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [voteDetails, setVoteDetails] = useState<BattleVoteDetailedType[]>([]);
+  const [voteComments, setVoteComments] = useState<BattleVoteCommentType[]>([]);
+  const [loadingVotes, setLoadingVotes] = useState(false);
+  const [selectedParticipants, setSelectedParticipants] = useState<{
+    winner: string;
+    participantA: string;
+    participantB: string;
+    scoreA: number;
+    scoreB: number;
+  }>({
+    winner: '',
+    participantA: '',
+    participantB: '',
+    scoreA: 0,
+    scoreB: 0
+  });
+  const [newsArticle, setNewsArticle] = useState({
+    title: '',
+    content: '',
+    image: null as File | null,
+    publishNow: true
+  });
+  
+  // État pour savoir si on affiche le formulaire de publication d'actualité
+  const [showNewsForm, setShowNewsForm] = useState(false);
+  
+  // État pour le dialogue de visualisation des notes des juges
+  const [showJudgeVotes, setShowJudgeVotes] = useState(false);
+  const [selectedJudge, setSelectedJudge] = useState<string | null>(null);
+  const [judgeVotes, setJudgeVotes] = useState<any[]>([]);
+  const [judgeComments, setJudgeComments] = useState<string>('');
 
   useEffect(() => {
     const loadBattle = async () => {
@@ -27,12 +72,66 @@ const AdminBattleManage = () => {
       if (id) {
         const battleData = await fetchBattleById(id);
         setBattle(battleData);
+        
+        // Si nous avons des participants et que le statut est "vote" ou "termine", chargez les votes
+        if (battleData && 
+          battleData.battle_participants && 
+          battleData.battle_participants.length > 0 && 
+          (battleData.status === 'vote' || battleData.status === 'termine')) {
+          await loadVotesData();
+        }
+        
+        // Si le battle a un résultat, préremplissons le formulaire de déclaration du gagnant
+        if (battleData && battleData.battle_results) {
+          setSelectedParticipants({
+            winner: battleData.battle_results.winner_id,
+            participantA: battleData.battle_results.participant_a_id,
+            participantB: battleData.battle_results.participant_b_id,
+            scoreA: battleData.battle_results.participant_a_score || 0,
+            scoreB: battleData.battle_results.participant_b_score || 0
+          });
+        }
       }
       setLoading(false);
     };
 
     loadBattle();
   }, [id]);
+
+  const loadVotesData = async () => {
+    if (!id) return;
+    
+    setLoadingVotes(true);
+    try {
+      // Charger les votes détaillés
+      const { data: votes, error: votesError } = await supabase
+        .from('battle_votes_detailed')
+        .select('*, judge:judge_id(username:profiles(username)), criteria:criteria_id(*)')
+        .eq('battle_id', id);
+      
+      if (votesError) throw votesError;
+      setVoteDetails(votes || []);
+      
+      // Charger les commentaires
+      const { data: comments, error: commentsError } = await supabase
+        .from('battle_vote_comments')
+        .select('*, judge:judge_id(username:profiles(username))')
+        .eq('battle_id', id);
+      
+      if (commentsError) throw commentsError;
+      setVoteComments(comments || []);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des votes:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données des votes.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingVotes(false);
+    }
+  };
 
   const handleValidateCandidate = async (candidateId: string) => {
     if (!id) return;
@@ -76,6 +175,154 @@ const AdminBattleManage = () => {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleUpdateJudgeStatus = async (judgeId: string, field: 'has_ordered' | 'has_received', value: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('battle_judges')
+        .update({ [field]: value })
+        .eq('id', judgeId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Statut mis à jour",
+        description: `Le statut du juge a été mis à jour.`,
+      });
+      
+      // Rafraîchir les données
+      if (id) {
+        const battleData = await fetchBattleById(id);
+        setBattle(battleData);
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la mise à jour du statut.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const viewJudgeVotes = async (judgeId: string) => {
+    if (!id) return;
+    
+    setSelectedJudge(judgeId);
+    
+    try {
+      // Récupérer les votes du juge
+      const { data: votes, error: votesError } = await supabase
+        .from('battle_votes_detailed')
+        .select(`
+          score,
+          participant:participant_id(username:profiles(username)), 
+          criteria:criteria_id(name, description)
+        `)
+        .eq('battle_id', id)
+        .eq('judge_id', judgeId);
+        
+      if (votesError) throw votesError;
+      
+      // Récupérer les commentaires du juge
+      const { data: comments, error: commentsError } = await supabase
+        .from('battle_vote_comments')
+        .select('comment, participant:participant_id(username:profiles(username))')
+        .eq('battle_id', id)
+        .eq('judge_id', judgeId);
+        
+      if (commentsError) throw commentsError;
+      
+      setJudgeVotes(votes || []);
+      setJudgeComments(comments && comments.length > 0 ? comments[0].comment : '');
+      setShowJudgeVotes(true);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des votes du juge:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les votes de ce juge.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleDeclareWinner = async () => {
+    if (!id) return;
+    
+    const { winner, participantA, participantB, scoreA, scoreB } = selectedParticipants;
+    
+    if (!winner || !participantA || !participantB) {
+      toast({
+        title: "Données manquantes",
+        description: "Veuillez sélectionner les deux participants et un gagnant.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Vérifier que le gagnant est l'un des deux participants
+    if (winner !== participantA && winner !== participantB) {
+      toast({
+        title: "Erreur de sélection",
+        description: "Le gagnant doit être l'un des deux participants.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Déclarer le gagnant
+    const success = await declareBattleWinner(id, winner, participantA, scoreA, participantB, scoreB);
+    
+    if (success) {
+      toast({
+        title: "Gagnant déclaré",
+        description: "Le gagnant du battle a été enregistré avec succès.",
+      });
+      
+      // Distribuer les récompenses
+      const rewardResult = await distributeBattleRewards(id);
+      
+      if (rewardResult.success) {
+        toast({
+          title: "Récompenses distribuées",
+          description: rewardResult.message,
+        });
+      } else {
+        toast({
+          title: "Attention",
+          description: rewardResult.message,
+          variant: "destructive"
+        });
+      }
+      
+      // Rafraîchir les données
+      const battleData = await fetchBattleById(id);
+      setBattle(battleData);
+      
+      // Ouvrir automatiquement le formulaire de publication d'actualité
+      setShowNewsForm(true);
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la déclaration du gagnant.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleCreateNewsArticle = async () => {
+    if (!id || !battle) return;
+    
+    // Ici, on simule la création d'un article d'actualités - à compléter avec la vraie API
+    toast({
+      title: "Article créé",
+      description: "L'article sur les résultats du battle a été créé.",
+    });
+    
+    // Rediriger vers la page des actualités (à créer)
+    // navigate('/admin/news');
+    setShowNewsForm(false);
   };
 
   if (loading) {
@@ -263,6 +510,7 @@ const AdminBattleManage = () => {
                       <TableHead>Status</TableHead>
                       <TableHead>Commande</TableHead>
                       <TableHead>Réception</TableHead>
+                      <TableHead>Votes</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -277,16 +525,58 @@ const AdminBattleManage = () => {
                           }
                         </TableCell>
                         <TableCell>
-                          {judge.has_ordered ? 
-                            <Check className="h-4 w-4 text-green-500" /> : 
-                            <X className="h-4 w-4 text-red-500" />
-                          }
+                          <div className="flex items-center">
+                            {judge.has_ordered ? 
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6 text-green-500" 
+                                onClick={() => handleUpdateJudgeStatus(judge.id, 'has_ordered', false)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button> : 
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6 text-red-500" 
+                                onClick={() => handleUpdateJudgeStatus(judge.id, 'has_ordered', true)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            }
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {judge.has_received ? 
-                            <Check className="h-4 w-4 text-green-500" /> : 
-                            <X className="h-4 w-4 text-red-500" />
-                          }
+                          <div className="flex items-center">
+                            {judge.has_received ? 
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6 text-green-500" 
+                                onClick={() => handleUpdateJudgeStatus(judge.id, 'has_received', false)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button> : 
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-6 w-6 text-red-500" 
+                                onClick={() => handleUpdateJudgeStatus(judge.id, 'has_received', true)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            }
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="flex items-center gap-1"
+                            onClick={() => viewJudgeVotes(judge.user_id)}
+                          >
+                            <Eye className="h-4 w-4" /> Voir
+                          </Button>
                         </TableCell>
                         <TableCell>
                           {!judge.is_validated && (
@@ -311,6 +601,57 @@ const AdminBattleManage = () => {
               )}
             </CardContent>
           </Card>
+          
+          {/* Dialog pour afficher les votes d'un juge */}
+          <Dialog open={showJudgeVotes} onOpenChange={setShowJudgeVotes}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Votes du juge</DialogTitle>
+                <DialogDescription>
+                  Détails des votes et commentaires du juge
+                </DialogDescription>
+              </DialogHeader>
+              
+              {judgeVotes.length > 0 ? (
+                <div className="space-y-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Participant</TableHead>
+                        <TableHead>Critère</TableHead>
+                        <TableHead>Score</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {judgeVotes.map((vote, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{vote.participant?.username || 'Inconnu'}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{vote.criteria?.name || 'Inconnu'}</p>
+                              <p className="text-xs text-muted-foreground">{vote.criteria?.description}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{vote.score}/5</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  <div>
+                    <h3 className="font-medium mb-2">Commentaires</h3>
+                    <div className="bg-muted p-4 rounded-md">
+                      {judgeComments || 'Aucun commentaire'}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  Ce juge n'a pas encore soumis de votes.
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         
         <TabsContent value="results">
@@ -341,15 +682,143 @@ const AdminBattleManage = () => {
                         <p className="text-lg font-bold mt-1">{battle.battle_results.participant_b_score} pts</p>
                       </div>
                     </div>
+                    
+                    <div className="border-t pt-4 mt-4">
+                      <p className="flex items-center">
+                        <span className="flex-1">Récompenses distribuées:</span> 
+                        {battle.battle_results.reward_distributed ? 
+                          <Check className="text-green-500 h-5 w-5" /> : 
+                          <X className="text-red-500 h-5 w-5" />
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ) : battle.status === 'vote' ? (
+                  <div className="space-y-6">
+                    <p className="text-muted-foreground">
+                      Déterminez le gagnant du battle et les scores finaux.
+                    </p>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="participantA">Participant A</Label>
+                        <select 
+                          id="participantA"
+                          className="w-full p-2 border rounded-md"
+                          value={selectedParticipants.participantA}
+                          onChange={(e) => setSelectedParticipants({
+                            ...selectedParticipants,
+                            participantA: e.target.value
+                          })}
+                        >
+                          <option value="">Sélectionner un participant</option>
+                          {battle.battle_participants?.map((participant: BattleParticipantType) => (
+                            <option key={participant.id} value={participant.id}>
+                              {participant.profile?.username || 'Participant sans nom'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="scoreA">Score du participant A</Label>
+                        <Input 
+                          id="scoreA" 
+                          type="number" 
+                          min="0"
+                          value={selectedParticipants.scoreA}
+                          onChange={(e) => setSelectedParticipants({
+                            ...selectedParticipants,
+                            scoreA: parseInt(e.target.value, 10) || 0
+                          })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="participantB">Participant B</Label>
+                        <select 
+                          id="participantB"
+                          className="w-full p-2 border rounded-md"
+                          value={selectedParticipants.participantB}
+                          onChange={(e) => setSelectedParticipants({
+                            ...selectedParticipants,
+                            participantB: e.target.value
+                          })}
+                        >
+                          <option value="">Sélectionner un participant</option>
+                          {battle.battle_participants?.map((participant: BattleParticipantType) => (
+                            <option key={participant.id} value={participant.id}>
+                              {participant.profile?.username || 'Participant sans nom'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="scoreB">Score du participant B</Label>
+                        <Input 
+                          id="scoreB" 
+                          type="number"
+                          min="0" 
+                          value={selectedParticipants.scoreB}
+                          onChange={(e) => setSelectedParticipants({
+                            ...selectedParticipants,
+                            scoreB: parseInt(e.target.value, 10) || 0
+                          })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="winner">Gagnant</Label>
+                        <select 
+                          id="winner"
+                          className="w-full p-2 border rounded-md"
+                          value={selectedParticipants.winner}
+                          onChange={(e) => setSelectedParticipants({
+                            ...selectedParticipants,
+                            winner: e.target.value
+                          })}
+                        >
+                          <option value="">Sélectionner le gagnant</option>
+                          {selectedParticipants.participantA && (
+                            <option value={selectedParticipants.participantA}>
+                              Participant A
+                            </option>
+                          )}
+                          {selectedParticipants.participantB && (
+                            <option value={selectedParticipants.participantB}>
+                              Participant B
+                            </option>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="w-full">
+                          Proclamer le gagnant
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmer les résultats du battle</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Êtes-vous sûr de vouloir proclamer le gagnant ? Cette action est irréversible et attribuera automatiquement les récompenses.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeclareWinner}>Confirmer</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ) : (
                   <div className="text-center py-10">
                     <p className="text-muted-foreground">
-                      Les résultats seront disponibles une fois que le battle sera terminé.
+                      Les résultats seront disponibles une fois que le battle sera en phase de vote.
                     </p>
-                    <Button className="mt-4" disabled={battle.status !== 'vote'}>
-                      Clôturer le battle et procéder au comptage
-                    </Button>
                   </div>
                 )}
               </CardContent>
@@ -363,11 +832,93 @@ const AdminBattleManage = () => {
               <CardContent>
                 {battle.status === 'termine' ? (
                   <div className="space-y-4">
-                    <p>Publiez une actualité pour annoncer les résultats du battle à la communauté.</p>
-                    <Button className="w-full" variant="outline" disabled={battle.status !== 'termine'}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Créer une actualité
-                    </Button>
+                    {!showNewsForm ? (
+                      <>
+                        <p>Publiez une actualité pour annoncer les résultats du battle à la communauté.</p>
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => setShowNewsForm(true)}
+                        >
+                          <FileText className="mr-2 h-4 w-4" />
+                          Créer une actualité
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="newsTitle">Titre de l'actualité</Label>
+                          <Input 
+                            id="newsTitle" 
+                            placeholder="Résultats du Battle de confiture - [Thème]"
+                            value={newsArticle.title}
+                            onChange={(e) => setNewsArticle({
+                              ...newsArticle,
+                              title: e.target.value
+                            })}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="newsContent">Contenu</Label>
+                          <Textarea 
+                            id="newsContent"
+                            placeholder="Décrivez les résultats du battle et félicitez le gagnant..."
+                            className="min-h-[150px]"
+                            value={newsArticle.content}
+                            onChange={(e) => setNewsArticle({
+                              ...newsArticle,
+                              content: e.target.value
+                            })}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="newsImage">Image (optionnelle)</Label>
+                          <Input 
+                            id="newsImage" 
+                            type="file" 
+                            onChange={(e) => {
+                              const file = e.target.files ? e.target.files[0] : null;
+                              setNewsArticle({
+                                ...newsArticle,
+                                image: file
+                              });
+                            }}
+                          />
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            id="publishNow"
+                            checked={newsArticle.publishNow}
+                            onChange={(e) => setNewsArticle({
+                              ...newsArticle,
+                              publishNow: e.target.checked
+                            })}
+                          />
+                          <Label htmlFor="publishNow">Publier immédiatement</Label>
+                        </div>
+                        
+                        <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                          <Button 
+                            variant="outline" 
+                            className="sm:flex-1"
+                            onClick={() => setShowNewsForm(false)}
+                          >
+                            Annuler
+                          </Button>
+                          <Button 
+                            className="sm:flex-1"
+                            onClick={handleCreateNewsArticle}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            {newsArticle.publishNow ? "Publier l'actualité" : "Enregistrer en brouillon"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-10 text-muted-foreground">
