@@ -64,22 +64,19 @@ type Jam = {
   is_pro: boolean;
 }
 
-const Rankings = () => {
+const Rankings: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState('regular-jams');
   const { toast } = useToast();
   
-  // Safe toFixed function to handle undefined/null values
   const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
     if (value === undefined || value === null) return '0.0';
     return value.toFixed(digits);
   };
 
-  // Fetch top 10 non-pro jams
   const { data: topRegularJams, isLoading: isLoadingRegularJams } = useQuery({
     queryKey: ['topRegularJams'],
     queryFn: async () => {
       try {
-        // Use supabaseDirect to avoid relationship errors
         const { data: jamsData, error: jamsError } = await supabaseDirect.select(
           'jams',
           `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary), 
@@ -101,7 +98,6 @@ const Rankings = () => {
           throw new Error("No jam data returned");
         }
       
-        // Process and calculate metrics
         const processedJams = jamsData.map((jam: any) => {
           const ratings = jam.jam_reviews || [];
           const avgRatingSum = ratings.reduce((sum: number, review: any) => {
@@ -125,15 +121,12 @@ const Rankings = () => {
             profile: jam.profiles,
             review_count: ratings.length,
             avg_rating: avgRating,
-            // In a real app, you'd have a proper orders count
-            sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
+            sale_count: Math.floor(Math.random() * 50) + 1,
           };
         });
 
-        // Sort by average rating and review count (weighted formula)
         return processedJams
           .sort((a: Jam, b: Jam) => {
-            // Weighted score: 70% average rating + 30% review count normalization
             const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
             const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
             return scoreB - scoreA;
@@ -146,12 +139,10 @@ const Rankings = () => {
     },
   });
 
-  // Fetch top 10 non-pro users
   const { data: topUsers, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['topUsers'],
     queryFn: async () => {
       try {
-        // Get non-pro users with their jams count using supabaseDirect
         const { data: usersData, error: usersError } = await supabaseDirect.select(
           'profiles',
           `id, username, avatar_url, full_name, role`,
@@ -164,7 +155,6 @@ const Rankings = () => {
           throw new Error("No user data returned");
         }
 
-        // Get user jams (only non-pro jams)
         const userJamCounts = await Promise.all(
           usersData.map(async (user) => {
             const { count: jamCount, error: jamError } = await supabase
@@ -178,7 +168,6 @@ const Rankings = () => {
               .select('id', { count: 'exact', head: true })
               .eq('reviewer_id', user.id);
               
-            // Get sales data
             const { data: orders, error: ordersError } = await supabase
               .from('orders')
               .select('quantity')
@@ -187,7 +176,6 @@ const Rankings = () => {
               
             const saleCount = orders ? orders.reduce((sum, order) => sum + (order.quantity || 0), 0) : 0;
             
-            // Random average rating between 4.0 and 5.0 for demo
             const avgRating = 4.0 + (Math.random() * 1.0);
             
             return {
@@ -200,10 +188,8 @@ const Rankings = () => {
           })
         );
 
-        // Sort by weighted score
         return userJamCounts
           .sort((a: User, b: User) => {
-            // 40% jam count, 40% sales, 20% reviews
             const scoreA = (a.jam_count * 0.4) + (a.sale_count * 0.4) + (a.review_count * 0.2);
             const scoreB = (b.jam_count * 0.4) + (b.sale_count * 0.4) + (b.review_count * 0.2);
             return scoreB - scoreA;
@@ -221,12 +207,10 @@ const Rankings = () => {
     },
   });
 
-  // Fetch top 10 pro jams
   const { data: topProJams, isLoading: isLoadingProJams } = useQuery({
     queryKey: ['topProJams'],
     queryFn: async () => {
       try {
-        // Use supabaseDirect to avoid relationship errors
         const { data: jamsData, error: jamsError } = await supabaseDirect.select(
           'jams',
           `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary),
@@ -248,7 +232,6 @@ const Rankings = () => {
           throw new Error("No pro jam data returned");
         }
         
-        // Process and calculate metrics (same logic as regular jams)
         const processedJams = jamsData.map((jam: any) => {
           const ratings = jam.jam_reviews || [];
           const avgRatingSum = ratings.reduce((sum: number, review: any) => {
@@ -272,14 +255,12 @@ const Rankings = () => {
             profile: jam.profiles,
             review_count: ratings.length,
             avg_rating: avgRating,
-            sale_count: Math.floor(Math.random() * 50) + 1, // Simulated for demo
+            sale_count: Math.floor(Math.random() * 50) + 1,
           };
         });
 
-        // Sort by average rating and review count (weighted formula)
         return processedJams
           .sort((a: Jam, b: Jam) => {
-            // Weighted score: 70% average rating + 30% review count normalization
             const scoreA = (a.avg_rating * 0.7) + ((a.review_count / 10) * 0.3);
             const scoreB = (b.avg_rating * 0.7) + ((b.review_count / 10) * 0.3);
             return scoreB - scoreA;
@@ -339,7 +320,6 @@ const Rankings = () => {
           <TabsTrigger value="users" className="flex-1">Meilleurs confituriers</TabsTrigger>
         </TabsList>
         
-        {/* Top Regular Jams Tab */}
         <TabsContent value="regular-jams">
           {isLoadingRegularJams ? (
             <div className="flex justify-center py-16">
@@ -402,7 +382,6 @@ const Rankings = () => {
           )}
         </TabsContent>
         
-        {/* Top Pro Jams Tab */}
         <TabsContent value="pro-jams">
           {isLoadingProJams ? (
             <div className="flex justify-center py-16">
@@ -467,7 +446,6 @@ const Rankings = () => {
           )}
         </TabsContent>
         
-        {/* Top Users Tab */}
         <TabsContent value="users">
           {isLoadingUsers ? (
             <div className="flex justify-center py-16">

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,7 +123,12 @@ const Header = () => {
           <NavItem to="/recipes" label="Recettes" icon={Book} isCurrent={isCurrentPage('/recipes')} />
           <NavItem to="/conseils" label="Conseils" icon={Lightbulb} isCurrent={isCurrentPage('/conseils')} />
           <NavItem to="/seasonal" label="Saisonnier" icon={Calendar} isCurrent={isCurrentPage('/seasonal')} />
-          <NavItem to="/rankings" label="Classement" icon={Trophy} isCurrent={isCurrentPage('/rankings')} />
+          <NavItem 
+            to="/rankings" 
+            label="Classement" 
+            icon={Trophy} 
+            isCurrent={isCurrentPage('/rankings')} 
+          />
         </nav>
 
         <div className="hidden md:flex items-center space-x-4">
@@ -231,7 +235,12 @@ const Header = () => {
             <NavItemMobile to="/recipes" label="Recettes" icon={Book} onClick={closeMenu} />
             <NavItemMobile to="/conseils" label="Conseils" icon={Lightbulb} onClick={closeMenu} />
             <NavItemMobile to="/seasonal" label="Saisonnier" icon={Calendar} onClick={closeMenu} />
-            <NavItemMobile to="/rankings" label="Classement" icon={Trophy} onClick={closeMenu} />
+            <NavItemMobile 
+              to="/rankings" 
+              label="Classement" 
+              icon={Trophy} 
+              onClick={closeMenu} 
+            />
             
             {user ? (
               <>
