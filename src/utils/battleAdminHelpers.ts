@@ -1,321 +1,256 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { BattleCandidateType, BattleJudgeType, BattleRewardType } from '@/types/supabase';
 
-// Validate a candidate for participation in a battle
-export const validateBattleCandidate = async (candidateId: string, battleId: string) => {
+/**
+ * Validate a battle judge
+ */
+export const validateBattleJudge = async (judgeId: string): Promise<boolean> => {
   try {
-    // 1. Mark candidate as selected
-    const { error: selectionError } = await supabase
-      .from('battle_candidates')
-      .update({ is_selected: true })
-      .eq('id', candidateId);
-      
-    if (selectionError) throw selectionError;
-    
-    // 2. Get candidate details to add them as a participant
-    const { data: candidate, error: candidateError } = await supabase
-      .from('battle_candidates')
-      .select('user_id')
-      .eq('id', candidateId)
-      .single();
-      
-    if (candidateError || !candidate) throw candidateError || new Error('Candidate not found');
-    
-    // 3. Add the candidate as a participant
-    const { error: participantError } = await supabase
-      .from('battle_participants')
-      .insert({
-        battle_id: battleId,
-        user_id: candidate.user_id
-      });
-      
-    if (participantError) throw participantError;
-    
-    return true;
-  } catch (error: any) {
-    console.error('Error validating battle candidate:', error.message);
-    return false;
-  }
-};
-
-// Validate a judge for a battle
-export const validateBattleJudge = async (judgeId: string) => {
-  try {
-    // Just mark the judge as validated
     const { error } = await supabase
       .from('battle_judges')
       .update({ is_validated: true })
       .eq('id', judgeId);
       
-    if (error) throw error;
-    
-    return true;
-  } catch (error: any) {
-    console.error('Error validating battle judge:', error.message);
+    return !error;
+  } catch (error) {
+    console.error('Error validating judge:', error);
     return false;
   }
 };
 
-// Désigner un gagnant et enregistrer les résultats
-export const declareBattleWinner = async (
-  battleId: string, 
-  winnerParticipantId: string, 
-  participantAId: string, 
-  participantAScore: number, 
-  participantBId: string, 
-  participantBScore: number
-) => {
+/**
+ * Validate a battle candidate
+ */
+export const validateBattleCandidate = async (candidateId: string, battleId: string): Promise<boolean> => {
   try {
-    // 1. Get user_id from participant
-    const { data: winnerParticipant, error: winnerError } = await supabase
-      .from('battle_participants')
-      .select('user_id')
-      .eq('id', winnerParticipantId)
+    // First, get the candidate data
+    const { data: candidateData, error: fetchError } = await supabase
+      .from('battle_candidates')
+      .select('*')
+      .eq('id', candidateId)
       .single();
-      
-    if (winnerError || !winnerParticipant) throw winnerError || new Error('Winner participant not found');
     
-    // 2. Get participant A user_id
-    const { data: participantA, error: participantAError } = await supabase
+    if (fetchError) throw fetchError;
+    
+    // Update candidate to mark as selected
+    const { error: updateError } = await supabase
+      .from('battle_candidates')
+      .update({ is_selected: true })
+      .eq('id', candidateId);
+    
+    if (updateError) throw updateError;
+    
+    // Add the candidate to battle participants
+    const { error: insertError } = await supabase
       .from('battle_participants')
-      .select('user_id')
-      .eq('id', participantAId)
-      .single();
-      
-    if (participantAError || !participantA) throw participantAError || new Error('Participant A not found');
-    
-    // 3. Get participant B user_id
-    const { data: participantB, error: participantBError } = await supabase
-      .from('battle_participants')
-      .select('user_id')
-      .eq('id', participantBId)
-      .single();
-      
-    if (participantBError || !participantB) throw participantBError || new Error('Participant B not found');
-    
-    // 4. Create battle result
-    const { error: resultError } = await supabase
-      .from('battle_results')
       .insert({
         battle_id: battleId,
-        winner_id: winnerParticipant.user_id,
-        participant_a_id: participantA.user_id,
-        participant_b_id: participantB.user_id,
-        participant_a_score: participantAScore,
-        participant_b_score: participantBScore,
-        reward_distributed: false
+        user_id: candidateData.user_id
       });
-      
-    if (resultError) throw resultError;
     
-    // 5. Update battle status to "termine"
+    if (insertError) throw insertError;
+    
+    return true;
+  } catch (error) {
+    console.error('Error validating candidate:', error);
+    return false;
+  }
+};
+
+/**
+ * Declare a battle winner
+ */
+export const declareBattleWinner = async (
+  battleId: string,
+  winnerId: string,
+  participantAId: string,
+  participantAScore: number,
+  participantBId: string,
+  participantBScore: number
+): Promise<boolean> => {
+  try {
+    // Check if result already exists
+    const { data: existingResult } = await supabase
+      .from('battle_results')
+      .select('*')
+      .eq('battle_id', battleId)
+      .maybeSingle();
+    
+    if (existingResult) {
+      // Update existing result
+      const { error } = await supabase
+        .from('battle_results')
+        .update({
+          winner_id: winnerId,
+          participant_a_id: participantAId,
+          participant_a_score: participantAScore,
+          participant_b_id: participantBId,
+          participant_b_score: participantBScore,
+        })
+        .eq('id', existingResult.id);
+      
+      if (error) throw error;
+    } else {
+      // Create new result
+      const { error } = await supabase
+        .from('battle_results')
+        .insert({
+          battle_id: battleId,
+          winner_id: winnerId,
+          participant_a_id: participantAId,
+          participant_a_score: participantAScore,
+          participant_b_id: participantBId,
+          participant_b_score: participantBScore,
+        });
+      
+      if (error) throw error;
+    }
+    
+    // Update battle status to "termine"
     const { error: statusError } = await supabase
       .from('jam_battles_new')
       .update({ status: 'termine' })
       .eq('id', battleId);
-      
+    
     if (statusError) throw statusError;
     
     return true;
-  } catch (error: any) {
-    console.error('Error declaring battle winner:', error.message);
+  } catch (error) {
+    console.error('Error declaring winner:', error);
     return false;
   }
 };
 
-// Distribuer les récompenses au gagnant
-export const distributeBattleRewards = async (battleId: string) => {
+/**
+ * Distribute battle rewards
+ */
+export const distributeBattleRewards = async (battleId: string): Promise<{ success: boolean, message: string }> => {
   try {
-    // 1. Get battle result
-    const { data: battleResult, error: resultError } = await supabase
+    // Get battle results
+    const { data: battleResults, error: resultsError } = await supabase
       .from('battle_results')
-      .select(`
-        winner_id,
-        battle_id,
-        reward_distributed
-      `)
+      .select('*, battle:battle_id(*)')
       .eq('battle_id', battleId)
       .single();
-      
-    if (resultError || !battleResult) throw resultError || new Error('Battle result not found');
     
-    // 2. Check if reward already distributed
-    if (battleResult.reward_distributed) {
-      return { success: false, message: 'Reward already distributed' };
+    if (resultsError) throw resultsError;
+    
+    if (!battleResults || battleResults.reward_distributed) {
+      return { 
+        success: false, 
+        message: battleResults?.reward_distributed 
+          ? "Les récompenses ont déjà été distribuées." 
+          : "Aucun résultat trouvé pour ce battle." 
+      };
     }
     
-    // 3. Get all rewards for this battle
-    const { data: battleRewards, error: rewardsError } = await supabase
-      .from('battle_rewards')
-      .select('*')
-      .eq('battle_id', battleId)
-      .eq('is_distributed', false);
-      
-    if (rewardsError) throw rewardsError;
+    const rewardAmount = battleResults.battle?.reward_credits || 0;
     
-    // If no rewards are configured, fall back to default credits from jam_battles_new
-    if (!battleRewards || battleRewards.length === 0) {
-      const { data: battle, error: battleError } = await supabase
-        .from('jam_battles_new')
-        .select('reward_credits')
-        .eq('id', battleId)
-        .single();
-        
-      if (battleError) throw battleError;
-      
-      // No rewards to distribute
-      const rewardCredits = battle?.reward_credits || 0;
-      if (rewardCredits <= 0) {
-        return { success: false, message: 'No reward to distribute' };
-      }
-      
-      // Add credits to winner
-      const { data: userProfile, error: profileError } = await supabase
+    // Add credits to winner
+    if (rewardAmount > 0) {
+      // Update user credits
+      const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('credits')
-        .eq('id', battleResult.winner_id)
+        .eq('id', battleResults.winner_id)
         .single();
-        
-      if (profileError) throw profileError;
       
-      // Update the user credits
-      const { error: updateError } = await supabase
+      if (userError) throw userError;
+      
+      const { error: creditError } = await supabase
         .from('profiles')
         .update({ 
-          credits: (userProfile.credits || 0) + rewardCredits 
+          credits: (userData.credits || 0) + rewardAmount 
         })
-        .eq('id', battleResult.winner_id);
-        
-      if (updateError) throw updateError;
+        .eq('id', battleResults.winner_id);
       
-      // Create credit transaction
+      if (creditError) throw creditError;
+      
+      // Add credit transaction record
       const { error: transactionError } = await supabase
         .from('credit_transactions')
         .insert({
-          user_id: battleResult.winner_id,
-          amount: rewardCredits,
-          description: `Récompense pour avoir gagné le battle #${battleId}`
+          user_id: battleResults.winner_id,
+          amount: rewardAmount,
+          description: `Récompense pour le Battle: ${battleResults.battle?.theme || 'Battle de confiture'}`
         });
-        
+      
       if (transactionError) throw transactionError;
-    } else {
-      // Distribute all configured rewards
-      for (const reward of battleRewards) {
-        if (reward.reward_type === 'credits' && reward.reward_amount > 0) {
-          // Add credits to winner
-          const { data: userProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('id', battleResult.winner_id)
-            .single();
-            
-          if (profileError) throw profileError;
-          
-          // Update the user credits
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              credits: (userProfile.credits || 0) + reward.reward_amount 
-            })
-            .eq('id', battleResult.winner_id);
-            
-          if (updateError) throw updateError;
-          
-          // Create credit transaction
-          const { error: transactionError } = await supabase
-            .from('credit_transactions')
-            .insert({
-              user_id: battleResult.winner_id,
-              amount: reward.reward_amount,
-              description: reward.reward_description || `Récompense pour avoir gagné le battle #${battleId}`
-            });
-            
-          if (transactionError) throw transactionError;
-        }
-        
-        // Handle other reward types here (badges, products, etc.)
-        if (reward.reward_type === 'badge' && reward.reward_badge_id) {
-          // Award badge to winner
-          const { error: badgeError } = await supabase
-            .from('user_badges')
-            .insert({
-              user_id: battleResult.winner_id,
-              badge_id: reward.reward_badge_id
-            });
-            
-          if (badgeError) throw badgeError;
-        }
-        
-        // Mark this reward as distributed
-        const { error: updateRewardError } = await supabase
-          .from('battle_rewards')
-          .update({ 
-            is_distributed: true,
-            distributed_at: new Date().toISOString()
-          })
-          .eq('id', reward.id);
-          
-        if (updateRewardError) throw updateRewardError;
-      }
     }
     
-    // 6. Mark reward as distributed
-    const { error: updateResultError } = await supabase
+    // Update battle result to mark rewards as distributed
+    const { error: updateError } = await supabase
       .from('battle_results')
       .update({ reward_distributed: true })
-      .eq('battle_id', battleId);
-      
-    if (updateResultError) throw updateResultError;
+      .eq('id', battleResults.id);
     
-    return { success: true, message: 'Reward distributed successfully' };
-  } catch (error: any) {
-    console.error('Error distributing battle rewards:', error.message);
-    return { success: false, message: error.message };
+    if (updateError) throw updateError;
+    
+    // Update battle stars for the winner
+    await updateBattleStars(battleResults.winner_id, true);
+    
+    // Also update battle stars for the participants to increment their participation count
+    if (battleResults.participant_a_id !== battleResults.winner_id) {
+      await updateBattleStars(battleResults.participant_a_id, false);
+    }
+    if (battleResults.participant_b_id !== battleResults.winner_id && 
+        battleResults.participant_b_id !== battleResults.participant_a_id) {
+      await updateBattleStars(battleResults.participant_b_id, false);
+    }
+    
+    return { 
+      success: true, 
+      message: `${rewardAmount} crédits ont été attribués au gagnant.` 
+    };
+  } catch (error) {
+    console.error('Error distributing rewards:', error);
+    return { 
+      success: false, 
+      message: "Une erreur est survenue lors de la distribution des récompenses." 
+    };
   }
 };
 
-// Add a battle reward
-export const addBattleReward = async (battleId: string, rewardData: Omit<BattleRewardType, 'id' | 'created_at' | 'updated_at' | 'battle_id' | 'is_distributed' | 'distributed_at'>) => {
+// Helper function to update battle stars
+async function updateBattleStars(userId: string, isWinner: boolean): Promise<void> {
   try {
-    const { data, error } = await supabase
-      .from('battle_rewards')
-      .insert({
-        battle_id: battleId,
-        reward_type: rewardData.reward_type,
-        reward_amount: rewardData.reward_amount,
-        reward_description: rewardData.reward_description,
-        reward_image_url: rewardData.reward_image_url,
-        reward_badge_id: rewardData.reward_badge_id,
-        reward_product_id: rewardData.reward_product_id,
-        is_distributed: false
-      })
-      .select()
-      .single();
-      
-    if (error) throw error;
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Error adding battle reward:', error.message);
-    return { success: false, error: error.message };
-  }
-};
-
-// Get all rewards for a battle
-export const getBattleRewards = async (battleId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from('battle_rewards')
+    // Check if user already has a battle_stars entry
+    const { data: existingStars, error: fetchError } = await supabase
+      .from('battle_stars')
       .select('*')
-      .eq('battle_id', battleId)
-      .order('created_at', { ascending: false });
-      
-    if (error) throw error;
+      .eq('user_id', userId)
+      .maybeSingle();
     
-    return data || [];
-  } catch (error: any) {
-    console.error('Error getting battle rewards:', error.message);
-    return [];
+    if (fetchError) throw fetchError;
+    
+    const now = new Date().toISOString();
+    
+    if (existingStars) {
+      // Update existing entry
+      const { error: updateError } = await supabase
+        .from('battle_stars')
+        .update({
+          participations: existingStars.participations + 1,
+          victories: isWinner ? existingStars.victories + 1 : existingStars.victories,
+          last_battle_date: now
+        })
+        .eq('id', existingStars.id);
+      
+      if (updateError) throw updateError;
+    } else {
+      // Create new entry
+      const { error: insertError } = await supabase
+        .from('battle_stars')
+        .insert({
+          user_id: userId,
+          participations: 1,
+          victories: isWinner ? 1 : 0,
+          last_battle_date: now
+        });
+      
+      if (insertError) throw insertError;
+    }
+  } catch (error) {
+    console.error('Error updating battle stars:', error);
   }
-};
+}
