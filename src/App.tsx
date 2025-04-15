@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from "next-themes";
@@ -42,7 +42,6 @@ import RecipeCreate from './pages/RecipeCreate';
 import RecipeEdit from './pages/RecipeEdit';
 import AdminAds from './pages/AdminAds';
 import AdminCampaigns from './pages/AdminCampaigns';
-import AdminFruits from './pages/AdminFruits';
 import AdminSeasonalFruits from './pages/AdminSeasonalFruits';
 import AdminSeasonalFruitEdit from './pages/AdminSeasonalFruitEdit';
 import FruitDetail from './pages/FruitDetail';
@@ -100,7 +99,8 @@ function App() {
                   <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" />} />
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
-                  <Route path="/admin/fruits" element={<AdminFruits />} />
+                  {/* Redirection de l'ancienne route vers la nouvelle */}
+                  <Route path="/admin/fruits" element={<Navigate to="/admin/seasonal-fruits" replace />} />
                   <Route path="/admin/seasonal-fruits" element={<AdminSeasonalFruits />} />
                   <Route path="/admin/seasonal-fruits/edit/:id" element={<AdminSeasonalFruitEdit />} />
                   <Route path="/admin/seasonal-fruits/create" element={<AdminSeasonalFruitEdit />} />

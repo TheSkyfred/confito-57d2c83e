@@ -26,8 +26,8 @@ const getMonthName = (monthIndex: number): string => {
   return monthNames[monthIndex - 1];
 };
 
-// Interface explicite pour éviter l'erreur d'instantiation de type infinie
-interface SeasonalFruitResult extends FruitType {
+// Interface explicite pour le résultat de la requête
+interface SeasonalFruit extends FruitType {
   seasons?: number[];
 }
 
@@ -35,7 +35,7 @@ const SeasonalSection = () => {
   const currentMonth = getCurrentMonth();
   const monthField = monthToField(currentMonth);
   
-  const { data: seasonalFruits, isLoading } = useQuery<SeasonalFruitResult[]>({
+  const { data: seasonalFruits, isLoading } = useQuery<SeasonalFruit[]>({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
       try {
@@ -48,14 +48,14 @@ const SeasonalSection = () => {
         if (seasonError) throw seasonError;
 
         // If no seasonal fruits found, return empty array
-        if (!seasonData || seasonData.length === 0) return [] as SeasonalFruitResult[];
+        if (!seasonData || seasonData.length === 0) return [] as SeasonalFruit[];
 
         // Extract fruit IDs safely
         const fruitIds = seasonData
           .map(season => season.fruit_id)
           .filter(id => id !== null) as string[];
         
-        if (fruitIds.length === 0) return [] as SeasonalFruitResult[];
+        if (fruitIds.length === 0) return [] as SeasonalFruit[];
         
         // Get the fruit details
         const { data: fruitsData, error: fruitsError } = await supabase
@@ -67,10 +67,10 @@ const SeasonalSection = () => {
           
         if (fruitsError) throw fruitsError;
         
-        return (fruitsData || []) as SeasonalFruitResult[];
+        return (fruitsData || []) as SeasonalFruit[];
       } catch (error) {
         console.error("Error fetching seasonal fruits:", error);
-        return [] as SeasonalFruitResult[];
+        return [] as SeasonalFruit[];
       }
     },
   });
