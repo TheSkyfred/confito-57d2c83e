@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarDays, ArrowRight, Leaf } from 'lucide-react';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 
 const getCurrentMonth = (): number => {
   return new Date().getMonth() + 1; // JavaScript months are 0-indexed
@@ -31,15 +31,30 @@ const SeasonalSection = () => {
   const { data: seasonalFruits, isLoading } = useQuery({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
-      const { data, error } = await supabaseDirect.select(
-        'seasonal_fruits',
-        `id, name, image_url, description, ${monthField}`
-      );
+      // Get fruits with seasons for the current month
+      const { data: seasonData, error: seasonError } = await supabase
+        .from('fruit_seasons')
+        .select(`fruit_id, ${monthField}`)
+        .eq(monthField, true);
+
+      if (seasonError) throw seasonError;
+
+      // If no seasonal fruits found, return empty array
+      if (!seasonData || seasonData.length === 0) return [];
+
+      // Get the fruit IDs that are in season
+      const fruitIds = seasonData.map(season => season.fruit_id);
       
-      if (error) throw error;
-      
-      // Filtrer pour ne garder que les fruits de saison pour le mois en cours
-      return data.filter(fruit => fruit[monthField] === true).slice(0, 3);
+      // Get the fruit details
+      const { data: fruitsData, error: fruitsError } = await supabase
+        .from('fruits')
+        .select('id, name, image_url, description')
+        .in('id', fruitIds)
+        .filter('is_published', 'eq', true)
+        .limit(3);
+        
+      if (fruitsError) throw fruitsError;
+      return fruitsData || [];
     },
   });
 

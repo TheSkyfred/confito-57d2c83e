@@ -23,7 +23,7 @@ const AdminSeasonalFruitEdit = () => {
   const { toast } = useToast();
   const { isAdmin, isModerator, isLoading: roleLoading } = useUserRole();
   
-  // Updated: Fetch fruit data from the fruits table instead of seasonal_fruits
+  // Fetch fruit data from the fruits table
   const { 
     data: fruit, 
     isLoading, 
@@ -32,14 +32,32 @@ const AdminSeasonalFruitEdit = () => {
   } = useQuery({
     queryKey: ['seasonalFruitEdit', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, fetch the fruit data
+      const { data: fruitData, error: fruitError } = await supabase
         .from('fruits')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      return data;
+      if (fruitError) throw fruitError;
+
+      // Then, fetch the fruit seasons data
+      if (id) {
+        const { data: seasonsData, error: seasonsError } = await supabase
+          .from('fruit_seasons')
+          .select('jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec')
+          .eq('fruit_id', id);
+
+        if (seasonsError) console.error("Error fetching seasons:", seasonsError);
+
+        // Combine fruit data with seasons
+        return {
+          ...fruitData,
+          seasons: seasonsData || []
+        };
+      }
+
+      return fruitData;
     },
     enabled: !!id && (!roleLoading && (isAdmin || isModerator)),
   });

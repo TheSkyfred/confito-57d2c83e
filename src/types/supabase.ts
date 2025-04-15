@@ -283,4 +283,36 @@ export type ProAccessory = {
   creator?: ProfileType;
 };
 
+export type FruitType = {
+  id: string;
+  name: string;
+  description: string | null;
+  conservation_tips: string | null;
+  cooking_tips: string | null;
+  image_url: string | null;
+  family: string | null;
+  tags?: string[];
+  is_published: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type FruitSeasonType = {
+  id: string;
+  fruit_id: string | null;
+  month: number;
+  jan: boolean;
+  feb: boolean;
+  mar: boolean;
+  apr: boolean;
+  may: boolean;
+  jun: boolean;
+  jul: boolean;
+  aug: boolean;
+  sep: boolean;
+  oct: boolean;
+  nov: boolean;
+  dec: boolean;
+};
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];

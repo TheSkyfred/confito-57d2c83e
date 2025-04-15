@@ -30,7 +30,7 @@ const AdminSeasonalFruits = () => {
   const { toast } = useToast();
   const { isAdmin, isModerator, isLoading: roleLoading } = useUserRole();
 
-  // Updated: Fetch fruits from the fruits table instead of seasonal_fruits
+  // Fetch fruits from the fruits table
   const { data: fruits, isLoading, refetch } = useQuery({
     queryKey: ['adminSeasonalFruits'],
     queryFn: async () => {
@@ -70,7 +70,7 @@ const AdminSeasonalFruits = () => {
   const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${name}" ?`)) {
       try {
-        // Updated: Delete from the fruits table instead of seasonal_fruits
+        // Delete from the fruits table
         const { error } = await supabase
           .from('fruits')
           .delete()
@@ -101,12 +101,6 @@ const AdminSeasonalFruits = () => {
     }
   };
 
-  // Modified: Determine which months are in season based on all boolean fields for months
-  const countSeasonMonths = (fruit: any) => {
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    return months.filter(month => fruit[month]).length;
-  };
-  
   // Fix: Prevent rendering until role check is complete
   if (roleLoading) {
     return (

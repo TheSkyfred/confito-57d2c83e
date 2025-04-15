@@ -1291,19 +1291,55 @@ export type Database = {
       }
       fruit_seasons: {
         Row: {
+          apr: boolean
+          aug: boolean
+          dec: boolean
+          feb: boolean
           fruit_id: string | null
           id: string
+          jan: boolean
+          jul: boolean
+          jun: boolean
+          mar: boolean
+          may: boolean
           month: number
+          nov: boolean
+          oct: boolean
+          sep: boolean
         }
         Insert: {
+          apr?: boolean
+          aug?: boolean
+          dec?: boolean
+          feb?: boolean
           fruit_id?: string | null
           id?: string
+          jan?: boolean
+          jul?: boolean
+          jun?: boolean
+          mar?: boolean
+          may?: boolean
           month: number
+          nov?: boolean
+          oct?: boolean
+          sep?: boolean
         }
         Update: {
+          apr?: boolean
+          aug?: boolean
+          dec?: boolean
+          feb?: boolean
           fruit_id?: string | null
           id?: string
+          jan?: boolean
+          jul?: boolean
+          jun?: boolean
+          mar?: boolean
+          may?: boolean
           month?: number
+          nov?: boolean
+          oct?: boolean
+          sep?: boolean
         }
         Relationships: [
           {

@@ -73,7 +73,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ fruits }) => {
         <Card key={month} className={`border-2 ${getSeasonClass(month)}`}>
           <CardHeader className="pb-2 flex flex-row justify-between items-center">
             <div>
-              <CardTitle className="capitalize">{getMonthName(month - 1)}</CardTitle>
+              <CardTitle className="capitalize">{getMonthName(month)}</CardTitle>
               {monthsMap[month] ? (
                 <p className="text-sm text-muted-foreground">
                   {monthsMap[month].length} fruit{monthsMap[month].length > 1 ? 's' : ''}
