@@ -32,30 +32,35 @@ const SeasonalSection = () => {
   const { data: seasonalFruits, isLoading } = useQuery({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
-      // Get fruits with seasons for the current month
-      const { data: seasonData, error: seasonError } = await supabase
-        .from('fruit_seasons')
-        .select('fruit_id')
-        .eq(monthField, true);
+      try {
+        // Get fruits with seasons for the current month
+        const { data: seasonData, error: seasonError } = await supabase
+          .from('fruit_seasons')
+          .select('fruit_id')
+          .eq(monthField, true);
 
-      if (seasonError) throw seasonError;
+        if (seasonError) throw seasonError;
 
-      // If no seasonal fruits found, return empty array
-      if (!seasonData || seasonData.length === 0) return [];
+        // If no seasonal fruits found, return empty array
+        if (!seasonData || seasonData.length === 0) return [];
 
-      // Get the fruit IDs that are in season
-      const fruitIds = seasonData.map(season => season.fruit_id);
-      
-      // Get the fruit details
-      const { data: fruitsData, error: fruitsError } = await supabase
-        .from('fruits')
-        .select('id, name, image_url, description')
-        .in('id', fruitIds)
-        .filter('is_published', 'eq', true)
-        .limit(3);
+        // Get the fruit IDs that are in season
+        const fruitIds = seasonData.map(season => season.fruit_id);
         
-      if (fruitsError) throw fruitsError;
-      return fruitsData as FruitType[] || [];
+        // Get the fruit details
+        const { data: fruitsData, error: fruitsError } = await supabase
+          .from('fruits')
+          .select('id, name, image_url, description')
+          .in('id', fruitIds)
+          .filter('is_published', 'eq', true)
+          .limit(3);
+          
+        if (fruitsError) throw fruitsError;
+        return (fruitsData || []) as FruitType[];
+      } catch (error) {
+        console.error("Error fetching seasonal fruits:", error);
+        return [] as FruitType[];
+      }
     },
   });
 
