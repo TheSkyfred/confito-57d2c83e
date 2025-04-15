@@ -32,32 +32,45 @@ const AdminSeasonalFruitEdit = () => {
   } = useQuery({
     queryKey: ['seasonalFruitEdit', id],
     queryFn: async () => {
-      // First, fetch the fruit data
-      const { data: fruitData, error: fruitError } = await supabase
-        .from('fruits')
-        .select('*')
-        .eq('id', id)
-        .single();
+      try {
+        // First, fetch the fruit data
+        const { data: fruitData, error: fruitError } = await supabase
+          .from('fruits')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-      if (fruitError) throw fruitError;
+        if (fruitError) throw fruitError;
 
-      // Then, fetch the fruit seasons data
-      if (id) {
-        const { data: seasonsData, error: seasonsError } = await supabase
-          .from('fruit_seasons')
-          .select('jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec')
-          .eq('fruit_id', id);
+        // Then, fetch the fruit seasons data
+        if (id) {
+          const { data: seasonsData, error: seasonsError } = await supabase
+            .from('fruit_seasons')
+            .select('jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec')
+            .eq('fruit_id', id)
+            .maybeSingle();
 
-        if (seasonsError) console.error("Error fetching seasons:", seasonsError);
+          if (seasonsError) {
+            console.error("Error fetching seasons:", seasonsError);
+            return fruitData;
+          }
 
-        // Combine fruit data with seasons
-        return {
-          ...fruitData,
-          seasons: seasonsData || []
-        };
+          // Combine fruit data with seasons
+          return {
+            ...fruitData,
+            ...(seasonsData || {
+              jan: false, feb: false, mar: false, apr: false, 
+              may: false, jun: false, jul: false, aug: false, 
+              sep: false, oct: false, nov: false, dec: false
+            })
+          };
+        }
+
+        return fruitData;
+      } catch (error) {
+        console.error("Error fetching fruit data:", error);
+        throw error;
       }
-
-      return fruitData;
     },
     enabled: !!id && (!roleLoading && (isAdmin || isModerator)),
   });

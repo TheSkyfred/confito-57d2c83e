@@ -30,8 +30,8 @@ const SeasonalSection = () => {
   const currentMonth = getCurrentMonth();
   const monthField = monthToField(currentMonth);
   
-  // Use explicit type annotations to avoid excessive type instantiation
-  const { data: seasonalFruits, isLoading } = useQuery<FruitType[], Error>({
+  // Explicitly type the query result to avoid excessive type instantiation
+  const { data: seasonalFruits, isLoading } = useQuery({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
       try {
@@ -44,12 +44,14 @@ const SeasonalSection = () => {
         if (seasonError) throw seasonError;
 
         // If no seasonal fruits found, return empty array
-        if (!seasonData || seasonData.length === 0) return [];
+        if (!seasonData || seasonData.length === 0) return [] as FruitType[];
 
-        // Extract fruit IDs safely with type assertion
-        const fruitIds = seasonData.map(season => season.fruit_id as string).filter(Boolean);
+        // Extract fruit IDs safely
+        const fruitIds = seasonData
+          .map(season => season.fruit_id)
+          .filter(id => id !== null) as string[];
         
-        if (fruitIds.length === 0) return [];
+        if (fruitIds.length === 0) return [] as FruitType[];
         
         // Get the fruit details
         const { data: fruitsData, error: fruitsError } = await supabase
@@ -61,7 +63,6 @@ const SeasonalSection = () => {
           
         if (fruitsError) throw fruitsError;
         
-        // Explicit type cast to ensure correct typing
         return (fruitsData || []) as FruitType[];
       } catch (error) {
         console.error("Error fetching seasonal fruits:", error);

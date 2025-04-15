@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,6 +31,7 @@ const fruitFormSchema = z.object({
   conservation_tips: z.string().optional(),
   cooking_tips: z.string().optional(),
   family: z.string().optional(),
+  is_published: z.boolean().default(true),
   jan: z.boolean().default(false),
   feb: z.boolean().default(false),
   mar: z.boolean().default(false),
@@ -85,6 +87,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
       conservation_tips: fruit?.conservation_tips || '',
       cooking_tips: fruit?.cooking_tips || '',
       family: fruit?.family || '',
+      is_published: fruit?.is_published !== false, // default to true if undefined
       jan: fruit?.jan || false,
       feb: fruit?.feb || false,
       mar: fruit?.mar || false,
@@ -174,6 +177,7 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         }
       }
 
+      // Séparer les données du fruit et des saisons
       const fruitData = {
         name: values.name,
         description: values.description,
@@ -181,6 +185,10 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         conservation_tips: values.conservation_tips || null,
         cooking_tips: values.cooking_tips || null,
         family: values.family || null,
+        is_published: values.is_published
+      };
+      
+      const seasonData = {
         jan: values.jan,
         feb: values.feb,
         mar: values.mar,
@@ -195,19 +203,55 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         dec: values.dec,
       };
       
-      console.log("Data to be saved:", fruitData);
+      console.log("Fruit data to be saved:", fruitData);
+      console.log("Season data to be saved:", seasonData);
 
       if (fruit?.id) {
-        // Updated: Save to the fruits table instead of seasonal_fruits
+        // Update existing fruit
         console.log("Updating existing fruit with ID:", fruit.id);
-        const { error } = await supabase
+        
+        // Update the fruit data in the fruits table
+        const { error: fruitError } = await supabase
           .from('fruits')
           .update(fruitData)
           .eq('id', fruit.id);
 
-        if (error) {
-          console.error("Update error:", error);
-          throw error;
+        if (fruitError) {
+          console.error("Update fruit error:", fruitError);
+          throw fruitError;
+        }
+        
+        // Update or insert the season data in the fruit_seasons table
+        const { data: existingSeasons } = await supabase
+          .from('fruit_seasons')
+          .select('id')
+          .eq('fruit_id', fruit.id)
+          .maybeSingle();
+          
+        if (existingSeasons) {
+          // Update existing seasons
+          const { error: seasonError } = await supabase
+            .from('fruit_seasons')
+            .update(seasonData)
+            .eq('fruit_id', fruit.id);
+            
+          if (seasonError) {
+            console.error("Update seasons error:", seasonError);
+            throw seasonError;
+          }
+        } else {
+          // Insert new seasons
+          const { error: seasonError } = await supabase
+            .from('fruit_seasons')
+            .insert({
+              ...seasonData,
+              fruit_id: fruit.id
+            });
+            
+          if (seasonError) {
+            console.error("Insert seasons error:", seasonError);
+            throw seasonError;
+          }
         }
         
         toast({
@@ -215,15 +259,34 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           description: `Les informations de ${values.name} ont été mises à jour avec succès.`,
         });
       } else {
-        // Updated: Create a new fruit in the fruits table
+        // Create a new fruit
         console.log("Creating new fruit");
-        const { error } = await supabase
+        
+        // Insert into the fruits table
+        const { data: newFruit, error: fruitError } = await supabase
           .from('fruits')
-          .insert(fruitData);
+          .insert(fruitData)
+          .select('id')
+          .single();
 
-        if (error) {
-          console.error("Insert error:", error);
-          throw error;
+        if (fruitError) {
+          console.error("Insert fruit error:", fruitError);
+          throw fruitError;
+        }
+        
+        if (newFruit) {
+          // Insert into fruit_seasons with the new fruit_id
+          const { error: seasonError } = await supabase
+            .from('fruit_seasons')
+            .insert({
+              ...seasonData,
+              fruit_id: newFruit.id
+            });
+            
+          if (seasonError) {
+            console.error("Insert seasons error:", seasonError);
+            throw seasonError;
+          }
         }
         
         toast({
@@ -278,6 +341,29 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
                       Catégorie ou famille du fruit
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="is_published"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Publier ce fruit
+                      </FormLabel>
+                      <FormDescription>
+                        Cochez cette case pour rendre le fruit visible sur le site
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />
