@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { CalendarDays, ArrowRight, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FruitType } from '@/types/supabase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const getCurrentMonth = (): number => {
   return new Date().getMonth() + 1; // JavaScript months are 0-indexed
@@ -29,7 +30,8 @@ const SeasonalSection = () => {
   const currentMonth = getCurrentMonth();
   const monthField = monthToField(currentMonth);
   
-  const { data: seasonalFruits, isLoading } = useQuery({
+  // Use explicit type annotations to avoid excessive type instantiation
+  const { data: seasonalFruits, isLoading } = useQuery<FruitType[], Error>({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
       try {
@@ -44,8 +46,10 @@ const SeasonalSection = () => {
         // If no seasonal fruits found, return empty array
         if (!seasonData || seasonData.length === 0) return [];
 
-        // Get the fruit IDs that are in season
-        const fruitIds = seasonData.map(season => season.fruit_id);
+        // Extract fruit IDs safely with type assertion
+        const fruitIds = seasonData.map(season => season.fruit_id as string).filter(Boolean);
+        
+        if (fruitIds.length === 0) return [];
         
         // Get the fruit details
         const { data: fruitsData, error: fruitsError } = await supabase
@@ -56,6 +60,8 @@ const SeasonalSection = () => {
           .limit(3);
           
         if (fruitsError) throw fruitsError;
+        
+        // Explicit type cast to ensure correct typing
         return (fruitsData || []) as FruitType[];
       } catch (error) {
         console.error("Error fetching seasonal fruits:", error);
