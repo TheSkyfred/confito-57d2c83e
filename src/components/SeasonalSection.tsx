@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarDays, ArrowRight, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FruitType } from '@/types/supabase';
 
 const getCurrentMonth = (): number => {
   return new Date().getMonth() + 1; // JavaScript months are 0-indexed
@@ -34,7 +35,7 @@ const SeasonalSection = () => {
       // Get fruits with seasons for the current month
       const { data: seasonData, error: seasonError } = await supabase
         .from('fruit_seasons')
-        .select(`fruit_id, ${monthField}`)
+        .select('fruit_id')
         .eq(monthField, true);
 
       if (seasonError) throw seasonError;
@@ -54,7 +55,7 @@ const SeasonalSection = () => {
         .limit(3);
         
       if (fruitsError) throw fruitsError;
-      return fruitsData || [];
+      return fruitsData as FruitType[] || [];
     },
   });
 
