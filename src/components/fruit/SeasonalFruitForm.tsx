@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -48,18 +49,18 @@ const fruitFormSchema = z.object({
 type FruitFormValues = z.infer<typeof fruitFormSchema>;
 
 const months = [
-  { value: 'jan', label: "Janvier" },
-  { value: 'feb', label: "Février" },
-  { value: 'mar', label: "Mars" },
-  { value: 'apr', label: "Avril" },
-  { value: 'may', label: "Mai" },
-  { value: 'jun', label: "Juin" },
-  { value: 'jul', label: "Juillet" },
-  { value: 'aug', label: "Août" },
-  { value: 'sep', label: "Septembre" },
-  { value: 'oct', label: "Octobre" },
-  { value: 'nov', label: "Novembre" },
-  { value: 'dec', label: "Décembre" },
+  { value: 'jan', label: "Janvier", number: 1 },
+  { value: 'feb', label: "Février", number: 2 },
+  { value: 'mar', label: "Mars", number: 3 },
+  { value: 'apr', label: "Avril", number: 4 },
+  { value: 'may', label: "Mai", number: 5 },
+  { value: 'jun', label: "Juin", number: 6 },
+  { value: 'jul', label: "Juillet", number: 7 },
+  { value: 'aug', label: "Août", number: 8 },
+  { value: 'sep', label: "Septembre", number: 9 },
+  { value: 'oct', label: "Octobre", number: 10 },
+  { value: 'nov', label: "Novembre", number: 11 },
+  { value: 'dec', label: "Décembre", number: 12 },
 ];
 
 type SeasonalFruitFormProps = {
@@ -204,64 +205,65 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           throw fruitError;
         }
         
-        // Create monthly records for each month
-        const { data: existingSeasons } = await supabase
-          .from('fruit_seasons')
-          .select('id')
-          .eq('fruit_id', fruit.id)
-          .maybeSingle();
+        // Mettre à jour les mois de saison un par un
+        for (const monthInfo of months) {
+          const monthField = monthInfo.value;
+          const monthNumber = monthInfo.number;
+          const isInSeason = values[monthField as keyof FruitFormValues] as boolean;
           
-        // Update or insert season data for each month
-        const monthsToProcess = [
-          { name: 'jan', value: values.jan },
-          { name: 'feb', value: values.feb },
-          { name: 'mar', value: values.mar },
-          { name: 'apr', value: values.apr },
-          { name: 'may', value: values.may },
-          { name: 'jun', value: values.jun },
-          { name: 'jul', value: values.jul },
-          { name: 'aug', value: values.aug },
-          { name: 'sep', value: values.sep },
-          { name: 'oct', value: values.oct },
-          { name: 'nov', value: values.nov },
-          { name: 'dec', value: values.dec },
-        ];
-        
-        if (existingSeasons) {
-          // Update each month individually
-          for (let i = 0; i < monthsToProcess.length; i++) {
-            const month = monthsToProcess[i];
-            const monthNumber = i + 1;
+          // Vérifier si une entrée existe pour ce mois et ce fruit
+          const { data: existingSeason, error: checkError } = await supabase
+            .from('fruit_seasons')
+            .select('id')
+            .eq('fruit_id', fruit.id)
+            .eq('month', monthNumber)
+            .maybeSingle();
             
-            const { error: seasonError } = await supabase
-              .from('fruit_seasons')
-              .update({
-                [month.name]: month.value,
-                month: monthNumber
-              })
-              .eq('fruit_id', fruit.id)
-              .eq('month', monthNumber);
-              
-            if (seasonError) {
-              console.error(`Update season error for ${month.name}:`, seasonError);
-            }
+          if (checkError) {
+            console.error(`Check season error for month ${monthNumber}:`, checkError);
+            continue;
           }
-        } else {
-          // Insert new seasons for each month
-          for (let i = 0; i < monthsToProcess.length; i++) {
-            const month = monthsToProcess[i];
-            const monthNumber = i + 1;
+          
+          if (existingSeason) {
+            // Mettre à jour l'entrée existante
+            const updateData: Record<string, any> = {
+              [monthField]: isInSeason
+            };
             
-            const { error: seasonError } = await supabase
+            const { error: updateError } = await supabase
               .from('fruit_seasons')
-              .insert({
-                fruit_id: fruit.id,
-                month: monthNumber,
-                [month.name]: month.value
-              });
+              .update(updateData)
+              .eq('id', existingSeason.id);
               
-            if (seasonError) {
-              console.error(`Insert season error for ${month.name}:`, seasonError);
+            if (updateError) {
+              console.error(`Update season error for month ${monthNumber}:`, updateError);
+            }
+          } else {
+            // Créer une nouvelle entrée
+            const insertData = {
+              fruit_id: fruit.id,
+              month: monthNumber,
+              [monthField]: isInSeason,
+              jan: monthField === 'jan' ? isInSeason : false,
+              feb: monthField === 'feb' ? isInSeason : false,
+              mar: monthField === 'mar' ? isInSeason : false,
+              apr: monthField === 'apr' ? isInSeason : false,
+              may: monthField === 'may' ? isInSeason : false,
+              jun: monthField === 'jun' ? isInSeason : false,
+              jul: monthField === 'jul' ? isInSeason : false,
+              aug: monthField === 'aug' ? isInSeason : false,
+              sep: monthField === 'sep' ? isInSeason : false,
+              oct: monthField === 'oct' ? isInSeason : false,
+              nov: monthField === 'nov' ? isInSeason : false,
+              dec: monthField === 'dec' ? isInSeason : false,
+            };
+            
+            const { error: insertError } = await supabase
+              .from('fruit_seasons')
+              .insert(insertData);
+              
+            if (insertError) {
+              console.error(`Insert season error for month ${monthNumber}:`, insertError);
             }
           }
         }
@@ -288,35 +290,38 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         
         if (newFruit) {
           // Insert into fruit_seasons with the new fruit_id for each month
-          const monthsToProcess = [
-            { name: 'jan', value: values.jan },
-            { name: 'feb', value: values.feb },
-            { name: 'mar', value: values.mar },
-            { name: 'apr', value: values.apr },
-            { name: 'may', value: values.may },
-            { name: 'jun', value: values.jun },
-            { name: 'jul', value: values.jul },
-            { name: 'aug', value: values.aug },
-            { name: 'sep', value: values.sep },
-            { name: 'oct', value: values.oct },
-            { name: 'nov', value: values.nov },
-            { name: 'dec', value: values.dec },
-          ];
-          
-          for (let i = 0; i < monthsToProcess.length; i++) {
-            const month = monthsToProcess[i];
-            const monthNumber = i + 1;
+          for (const monthInfo of months) {
+            const monthField = monthInfo.value;
+            const monthNumber = monthInfo.number;
+            const isInSeason = values[monthField as keyof FruitFormValues] as boolean;
+            
+            // Créer une entrée dans la table fruit_seasons pour chaque mois
+            const seasonData = {
+              fruit_id: newFruit.id,
+              month: monthNumber,
+              jan: monthField === 'jan' ? isInSeason : false,
+              feb: monthField === 'feb' ? isInSeason : false,
+              mar: monthField === 'mar' ? isInSeason : false,
+              apr: monthField === 'apr' ? isInSeason : false,
+              may: monthField === 'may' ? isInSeason : false,
+              jun: monthField === 'jun' ? isInSeason : false,
+              jul: monthField === 'jul' ? isInSeason : false,
+              aug: monthField === 'aug' ? isInSeason : false,
+              sep: monthField === 'sep' ? isInSeason : false,
+              oct: monthField === 'oct' ? isInSeason : false,
+              nov: monthField === 'nov' ? isInSeason : false,
+              dec: monthField === 'dec' ? isInSeason : false,
+            };
+            
+            // Mettre à jour le mois actuel à la valeur correcte
+            seasonData[monthField] = isInSeason;
             
             const { error: seasonError } = await supabase
               .from('fruit_seasons')
-              .insert({
-                fruit_id: newFruit.id,
-                month: monthNumber,
-                [month.name]: month.value
-              });
+              .insert(seasonData);
               
             if (seasonError) {
-              console.error(`Insert season error for ${month.name}:`, seasonError);
+              console.error(`Insert season error for ${monthField}:`, seasonError);
             }
           }
         }
