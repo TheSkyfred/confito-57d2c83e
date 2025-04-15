@@ -362,7 +362,7 @@ const Credits = () => {
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-muted-foreground mt-1" />
                 <p className="text-sm text-muted-foreground">
-                  Les crédits achetés ne sont pas remboursables et sont uniquement utilisables sur Jam-Jar Jamboree.
+                  Les crédits achetés ne sont pas remboursables et sont uniquement utilisables sur Confito.
                 </p>
               </div>
             </CardContent>
