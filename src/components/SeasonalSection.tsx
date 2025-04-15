@@ -30,8 +30,8 @@ const SeasonalSection = () => {
   const currentMonth = getCurrentMonth();
   const monthField = monthToField(currentMonth);
   
-  // Explicitly type the query result to avoid excessive type instantiation
-  const { data: seasonalFruits, isLoading } = useQuery({
+  // Explicitly type the query result
+  const { data: seasonalFruits, isLoading } = useQuery<FruitType[]>({
     queryKey: ['seasonalFruits', currentMonth],
     queryFn: async () => {
       try {

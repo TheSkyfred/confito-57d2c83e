@@ -42,27 +42,44 @@ const AdminSeasonalFruitEdit = () => {
 
         if (fruitError) throw fruitError;
 
-        // Then, fetch the fruit seasons data
+        // Then, fetch the fruit seasons data for all months
         if (id) {
           const { data: seasonsData, error: seasonsError } = await supabase
             .from('fruit_seasons')
-            .select('jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec')
-            .eq('fruit_id', id)
-            .maybeSingle();
+            .select('month, jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec')
+            .eq('fruit_id', id);
 
           if (seasonsError) {
             console.error("Error fetching seasons:", seasonsError);
             return fruitData;
           }
 
+          // Create a season object with all months set to false by default
+          const seasonObj = {
+            jan: false, feb: false, mar: false, apr: false, 
+            may: false, jun: false, jul: false, aug: false, 
+            sep: false, oct: false, nov: false, dec: false
+          };
+
+          // Update with actual season data if available
+          if (seasonsData && seasonsData.length > 0) {
+            // Combine data from all month records
+            seasonsData.forEach(monthData => {
+              const monthField = [
+                'jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+              ][monthData.month - 1];
+              
+              if (monthField && monthData[monthField] !== undefined) {
+                seasonObj[monthField] = monthData[monthField];
+              }
+            });
+          }
+
           // Combine fruit data with seasons
           return {
             ...fruitData,
-            ...(seasonsData || {
-              jan: false, feb: false, mar: false, apr: false, 
-              may: false, jun: false, jul: false, aug: false, 
-              sep: false, oct: false, nov: false, dec: false
-            })
+            ...seasonObj
           };
         }
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -188,24 +187,8 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         is_published: values.is_published
       };
       
-      const seasonData = {
-        jan: values.jan,
-        feb: values.feb,
-        mar: values.mar,
-        apr: values.apr,
-        may: values.may,
-        jun: values.jun,
-        jul: values.jul,
-        aug: values.aug,
-        sep: values.sep,
-        oct: values.oct,
-        nov: values.nov,
-        dec: values.dec,
-      };
-      
       console.log("Fruit data to be saved:", fruitData);
-      console.log("Season data to be saved:", seasonData);
-
+      
       if (fruit?.id) {
         // Update existing fruit
         console.log("Updating existing fruit with ID:", fruit.id);
@@ -221,36 +204,65 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
           throw fruitError;
         }
         
-        // Update or insert the season data in the fruit_seasons table
+        // Create monthly records for each month
         const { data: existingSeasons } = await supabase
           .from('fruit_seasons')
           .select('id')
           .eq('fruit_id', fruit.id)
           .maybeSingle();
           
+        // Update or insert season data for each month
+        const monthsToProcess = [
+          { name: 'jan', value: values.jan },
+          { name: 'feb', value: values.feb },
+          { name: 'mar', value: values.mar },
+          { name: 'apr', value: values.apr },
+          { name: 'may', value: values.may },
+          { name: 'jun', value: values.jun },
+          { name: 'jul', value: values.jul },
+          { name: 'aug', value: values.aug },
+          { name: 'sep', value: values.sep },
+          { name: 'oct', value: values.oct },
+          { name: 'nov', value: values.nov },
+          { name: 'dec', value: values.dec },
+        ];
+        
         if (existingSeasons) {
-          // Update existing seasons
-          const { error: seasonError } = await supabase
-            .from('fruit_seasons')
-            .update(seasonData)
-            .eq('fruit_id', fruit.id);
+          // Update each month individually
+          for (let i = 0; i < monthsToProcess.length; i++) {
+            const month = monthsToProcess[i];
+            const monthNumber = i + 1;
             
-          if (seasonError) {
-            console.error("Update seasons error:", seasonError);
-            throw seasonError;
+            const { error: seasonError } = await supabase
+              .from('fruit_seasons')
+              .update({
+                [month.name]: month.value,
+                month: monthNumber
+              })
+              .eq('fruit_id', fruit.id)
+              .eq('month', monthNumber);
+              
+            if (seasonError) {
+              console.error(`Update season error for ${month.name}:`, seasonError);
+            }
           }
         } else {
-          // Insert new seasons
-          const { error: seasonError } = await supabase
-            .from('fruit_seasons')
-            .insert({
-              ...seasonData,
-              fruit_id: fruit.id
-            });
+          // Insert new seasons for each month
+          for (let i = 0; i < monthsToProcess.length; i++) {
+            const month = monthsToProcess[i];
+            const monthNumber = i + 1;
             
-          if (seasonError) {
-            console.error("Insert seasons error:", seasonError);
-            throw seasonError;
+            const { error: seasonError } = await supabase
+              .from('fruit_seasons')
+              .insert({
+                fruit_id: fruit.id,
+                month: monthNumber,
+                [month.name]: month.value
+              });
+              
+            if (seasonError) {
+              console.error(`Insert season error for ${month.name}:`, seasonError);
+            }
           }
         }
         
@@ -275,17 +287,37 @@ const SeasonalFruitForm: React.FC<SeasonalFruitFormProps> = ({ fruit, onSubmit, 
         }
         
         if (newFruit) {
-          // Insert into fruit_seasons with the new fruit_id
-          const { error: seasonError } = await supabase
-            .from('fruit_seasons')
-            .insert({
-              ...seasonData,
-              fruit_id: newFruit.id
-            });
+          // Insert into fruit_seasons with the new fruit_id for each month
+          const monthsToProcess = [
+            { name: 'jan', value: values.jan },
+            { name: 'feb', value: values.feb },
+            { name: 'mar', value: values.mar },
+            { name: 'apr', value: values.apr },
+            { name: 'may', value: values.may },
+            { name: 'jun', value: values.jun },
+            { name: 'jul', value: values.jul },
+            { name: 'aug', value: values.aug },
+            { name: 'sep', value: values.sep },
+            { name: 'oct', value: values.oct },
+            { name: 'nov', value: values.nov },
+            { name: 'dec', value: values.dec },
+          ];
+          
+          for (let i = 0; i < monthsToProcess.length; i++) {
+            const month = monthsToProcess[i];
+            const monthNumber = i + 1;
             
-          if (seasonError) {
-            console.error("Insert seasons error:", seasonError);
-            throw seasonError;
+            const { error: seasonError } = await supabase
+              .from('fruit_seasons')
+              .insert({
+                fruit_id: newFruit.id,
+                month: monthNumber,
+                [month.name]: month.value
+              });
+              
+            if (seasonError) {
+              console.error(`Insert season error for ${month.name}:`, seasonError);
+            }
           }
         }
         
