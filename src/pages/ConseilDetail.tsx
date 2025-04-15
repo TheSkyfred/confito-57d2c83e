@@ -13,6 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Heart, MessageSquare } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import AdviceAdminActions from '@/components/advice/AdviceAdminActions';
+import VideoPlayer from '@/components/advice/VideoPlayer';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 
@@ -184,6 +185,12 @@ const ConseilDetail: React.FC = () => {
       <div className="mb-4">
         <p className="text-gray-600">Publié le {dayjs(article.published_at).format('D MMMM YYYY')} par {article.author?.full_name}</p>
       </div>
+      
+      {article.video_url && (
+        <div className="mb-6">
+          <VideoPlayer videoUrl={article.video_url} title={article.title} />
+        </div>
+      )}
       
       {article.cover_image_url && (
         <div className="mb-6">
