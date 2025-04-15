@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarDays, ArrowRight, Leaf } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { FruitType, FruitSeasonType } from '@/types/supabase';
+import { FruitType } from '@/types/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const getCurrentMonth = (): number => {
@@ -26,8 +26,8 @@ const getMonthName = (monthIndex: number): string => {
   return monthNames[monthIndex - 1];
 };
 
-// Interface explicite pour le résultat de la requête
-interface SeasonalFruit extends FruitType {
+// Interface sans référence récursive pour éviter l'erreur
+interface SeasonalFruit extends Omit<FruitType, 'seasons'> {
   seasons?: number[];
 }
 
