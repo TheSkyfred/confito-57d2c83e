@@ -1,7 +1,6 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ThemeProvider } from "next-themes";
 import App from './App';
 import './index.css';
 import { initStorageBuckets } from './utils/initStorage';
@@ -14,8 +13,6 @@ initStorageBuckets()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider attribute="class" defaultTheme="light">
-      <App />
-    </ThemeProvider>
+    <App />
   </React.StrictMode>,
 );
