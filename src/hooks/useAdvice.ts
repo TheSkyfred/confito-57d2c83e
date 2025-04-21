@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,6 +120,11 @@ export const useAdviceArticle = (id: string) => {
   const { profile } = useAuth();
   
   const fetchAdviceArticle = async () => {
+    // Vérifier que l'ID est valide
+    if (!id || id.trim() === '') {
+      throw new Error('ID de conseil invalide');
+    }
+    
     console.log('Fetching single advice article with ID:', id);
     
     let query = supabase
@@ -151,6 +157,7 @@ export const useAdviceArticle = (id: string) => {
       console.error('Error fetching author:', authorError);
     }
     
+    // Fetch comments
     const { data: commentsData, error: commentsError } = await supabase
       .from('advice_comments')
       .select(`
@@ -162,6 +169,7 @@ export const useAdviceArticle = (id: string) => {
       console.error('Error fetching comments:', commentsError);
     }
     
+    // Process comments and add user data
     let commentsWithUsers = [];
     if (commentsData && commentsData.length > 0) {
       const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
@@ -188,6 +196,7 @@ export const useAdviceArticle = (id: string) => {
         isLiked: false
       }));
       
+      // Check if current user has liked any comments
       if (profile) {
         const commentIds = commentsData.map(comment => comment.id);
         
@@ -208,6 +217,7 @@ export const useAdviceArticle = (id: string) => {
       }
     }
     
+    // Fetch associated products
     const { data: productsData, error: productsError } = await supabase
       .from('advice_products')
       .select('*')
@@ -217,6 +227,7 @@ export const useAdviceArticle = (id: string) => {
       console.error('Error fetching advice products:', productsError);
     }
     
+    // Build complete result
     const result = {
       ...articleData,
       has_video: Boolean(articleData.video_url),
@@ -233,6 +244,6 @@ export const useAdviceArticle = (id: string) => {
   return useQuery({
     queryKey: ['advice', id, profile?.id, profile?.role],
     queryFn: fetchAdviceArticle,
-    enabled: !!id
+    enabled: !!id && id.trim() !== '' // Ne pas exécuter la requête si l'ID est vide
   });
 };

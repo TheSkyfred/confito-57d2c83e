@@ -3,11 +3,21 @@ import React from 'react';
 import { Video } from 'lucide-react';
 
 interface VideoPlayerProps {
-  videoUrl: string;
+  videoUrl: string | null | undefined;
   title?: string;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, title = "Vidéo" }) => {
+  // Si l'URL est vide, null ou undefined, afficher un message
+  if (!videoUrl) {
+    return (
+      <div className="bg-muted rounded-lg p-4 text-center">
+        <Video className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+        <p>Aucune vidéo disponible</p>
+      </div>
+    );
+  }
+
   // Extraire l'ID de la vidéo YouTube de l'URL
   const getYoutubeVideoId = (url: string): string | null => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
