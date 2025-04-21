@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -7,7 +6,6 @@ import { JamFormData } from "@/hooks/useJamForm";
 import { JamType } from "@/types/supabase";
 import { RecipeStep } from "@/components/jam-editor/RecipeForm";
 
-// Define the Ingredient interface to ensure type consistency
 interface Ingredient {
   name: string;
   quantity: string;
@@ -58,6 +56,7 @@ export const useJamLoader = ({
     is_active: false,
     images: [],
     main_image_index: 0,
+    cover_image_url: null,
   });
 
   useEffect(() => {
@@ -75,8 +74,6 @@ export const useJamLoader = ({
           .select(`*, jam_images(*)`)
           .eq("id", jamId);
         
-        // Modification principale : les administrateurs peuvent modifier n'importe quelle confiture
-        // Les modérateurs peuvent modifier les confitures non-pro uniquement
         if (!isAdmin) {
           if (isModerator) {
             const { data: jamCheck, error: checkError } = await supabase
@@ -118,7 +115,6 @@ export const useJamLoader = ({
           return;
         }
 
-        // Set the creator ID and isProJam flag explicitly from the jam data
         setJamCreatorId(jam.creator_id);
         setIsProJam(jam.is_pro || false);
         
@@ -127,20 +123,17 @@ export const useJamLoader = ({
 
         const jamWithTypes = jam as unknown as JamType;
 
-        // Parse the ingredients data to ensure it's in the correct format
         let parsedIngredients: Ingredient[] = [{ name: "", quantity: "" }];
         
         if (jamWithTypes.ingredients) {
           if (Array.isArray(jamWithTypes.ingredients) && jamWithTypes.ingredients.length > 0) {
             if (typeof jamWithTypes.ingredients[0] === 'string') {
-              // If they're strings, parse them into objects
               parsedIngredients = jamWithTypes.ingredients.map((ing: unknown) => {
                 const ingString = ing as string;
                 const [name, quantity] = ingString.split('|');
                 return { name: name || ingString, quantity: quantity || '' };
               });
             } else {
-              // If they're already objects, use them as-is
               parsedIngredients = jamWithTypes.ingredients as unknown as Ingredient[];
             }
           }
@@ -159,18 +152,17 @@ export const useJamLoader = ({
           }
         }
         
-        let mainImageUrl = null;
-        if (jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
+        let mainImageUrl = jamWithTypes.cover_image_url || null;
+        if (!mainImageUrl && jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
           const primaryImage = jamWithTypes.jam_images.find((img: any) => img.is_primary);
           if (primaryImage) {
             mainImageUrl = primaryImage.url;
           } else if (jamWithTypes.jam_images[0]) {
             mainImageUrl = jamWithTypes.jam_images[0].url;
           }
-          setMainImagePreview(mainImageUrl);
         }
+        setMainImagePreview(mainImageUrl);
         
-        // Ensure we explicitly set the is_pro flag from the database when initializing the form
         setInitialFormData({
           name: jamWithTypes.name || "",
           description: jamWithTypes.description || "",
@@ -189,7 +181,8 @@ export const useJamLoader = ({
           is_active: jamWithTypes.is_active,
           images: [],
           main_image_index: 0,
-          is_pro: jamWithTypes.is_pro || false, // Explicitly set is_pro flag from database
+          is_pro: jamWithTypes.is_pro || false,
+          cover_image_url: jamWithTypes.cover_image_url || null,
         });
         
         setLoading(false);

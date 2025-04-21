@@ -30,6 +30,7 @@ export interface JamFormData {
   images: File[];
   main_image_index: number;
   is_pro?: boolean; // Added is_pro flag
+  cover_image_url?: string | null; // Added cover_image_url field
 }
 
 export interface UseJamFormProps {
@@ -68,6 +69,7 @@ export const useJamForm = ({
     images: [],
     main_image_index: 0,
     is_pro: isProJam, // Initialize with the provided value
+    cover_image_url: null, // Initialize cover_image_url field
   });
 
   const updateFormData = (key: string, value: any) => {
@@ -113,6 +115,7 @@ export const useJamForm = ({
         recipe: recipeString,
         is_active: publish,
         is_pro: formData.is_pro,
+        cover_image_url: formData.cover_image_url, // Include cover_image_url in the update
       };
       
       let jam_id = initialJamId;
@@ -140,6 +143,7 @@ export const useJamForm = ({
       }
       
       if (formData.images.length > 0 && jam_id) {
+        // If new image is uploaded, update the cover_image_url
         await handleImageUpload(jam_id, formData.images, formData.main_image_index, jamCreatorId);
       }
 
@@ -197,6 +201,17 @@ export const useJamForm = ({
       
       const publicUrl = publicUrlData.publicUrl;
       
+      // Update the cover_image_url in the jam record if this is the main image
+      if (isMainImage) {
+        const { error: updateCoverError } = await supabase
+          .from("jams")
+          .update({ cover_image_url: publicUrl })
+          .eq("id", jamId);
+          
+        if (updateCoverError) throw updateCoverError;
+      }
+      
+      // Still maintain jam_images for backward compatibility
       try {
         const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
           p_jam_id: jamId,

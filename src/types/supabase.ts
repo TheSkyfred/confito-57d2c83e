@@ -57,6 +57,7 @@ export type JamType = {
   profiles?: ProfileType;
   reviews?: ReviewType[];
   avgRating?: number;
+  cover_image_url?: string | null;
 };
 
 export type ReviewType = {

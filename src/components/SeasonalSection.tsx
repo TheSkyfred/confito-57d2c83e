@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon } from 'lucide-react';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import JamCard from './JamCard';
+import { JamType } from '@/types/supabase';
 
 const SeasonalSection = () => {
   const { data: seasonalJams, isLoading } = useQuery({
@@ -21,7 +23,7 @@ const SeasonalSection = () => {
         .limit(4);
 
       if (error) throw error;
-      return data;
+      return data as unknown as JamType[];
     }
   });
 
