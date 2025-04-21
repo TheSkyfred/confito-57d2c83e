@@ -1608,6 +1608,7 @@ export type Database = {
           allergens: string[] | null
           available_quantity: number
           badges: string[] | null
+          cover_image_url: string | null
           created_at: string
           creator_id: string
           description: string
@@ -1633,6 +1634,7 @@ export type Database = {
           allergens?: string[] | null
           available_quantity?: number
           badges?: string[] | null
+          cover_image_url?: string | null
           created_at?: string
           creator_id: string
           description: string
@@ -1658,6 +1660,7 @@ export type Database = {
           allergens?: string[] | null
           available_quantity?: number
           badges?: string[] | null
+          cover_image_url?: string | null
           created_at?: string
           creator_id?: string
           description?: string

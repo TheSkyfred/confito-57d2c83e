@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRightIcon } from 'lucide-react';
@@ -15,7 +14,6 @@ const SeasonalSection = () => {
         .from('jams')
         .select(`
           *,
-          jam_images (*),
           profiles:creator_id (*)
         `)
         .eq('status', 'approved')
