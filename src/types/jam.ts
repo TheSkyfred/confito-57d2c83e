@@ -1,5 +1,4 @@
 
-
 export interface Jam {
   id: string;
   name: string;

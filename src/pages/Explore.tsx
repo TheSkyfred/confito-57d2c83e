@@ -31,12 +31,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import JamCard from '@/components/JamCard';
 
 const Explore = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState('');
   
-  const { data: jams, isLoading } = useQuery({
+  const { data: jams, isLoading, error } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -58,10 +59,14 @@ const Explore = () => {
       console.log('Fetched jams:', data);
       
       // Map the data to the correct structure
-      const mappedJams = data ? data.map(jam => ({
-        ...jam,
-        avgRating: calculateAverageRating(jam.reviews)
-      })) : [];
+      const mappedJams = data ? data.map(jam => {
+        // Calculate average rating
+        const avgRating = calculateAverageRating(jam.reviews);
+        return {
+          ...jam,
+          avgRating
+        };
+      }) : [];
       
       return mappedJams as Jam[];
     }
@@ -81,11 +86,22 @@ const Explore = () => {
     return (
       jam.name.toLowerCase().includes(searchTerm) || 
       jam.description.toLowerCase().includes(searchTerm) ||
-      jam.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchTerm))
+      (jam.ingredients && jam.ingredients.some(ingredient => 
+        typeof ingredient === 'string' && ingredient.toLowerCase().includes(searchTerm)
+      ))
     );
   });
 
   console.log('Filtered jams:', filteredJams);
+
+  if (error) {
+    console.error("Error loading jams:", error);
+    toast({
+      title: "Erreur de chargement",
+      description: "Impossible de charger les confitures. Veuillez réessayer plus tard.",
+      variant: "destructive",
+    });
+  }
 
   return (
     <div className="container py-8">
