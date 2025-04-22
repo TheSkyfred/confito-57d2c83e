@@ -27,6 +27,13 @@ import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { getProfileUsername, isProfileType } from '@/utils/profileTypeGuards';
 import { Jam } from "@/types/jam";
 
+interface BadgeItem {
+  id?: string;
+  name?: string;
+  description?: string;
+  image_url?: string;
+}
+
 const UserDashboard = () => {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
@@ -36,7 +43,7 @@ const UserDashboard = () => {
   const [purchases, setPurchases] = useState<OrderType[]>([]);
   const [sales, setSales] = useState<OrderType[]>([]);
   const [favorites, setFavorites] = useState<Jam[]>([]);
-  const [badges, setBadges] = useState<Badge[]>([]);
+  const [badges, setBadges] = useState<BadgeItem[]>([]);
 
   useEffect(() => {
     if (user) {
