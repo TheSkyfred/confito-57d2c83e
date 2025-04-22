@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -50,7 +51,8 @@ const Explore = () => {
         .eq('is_active', true);
 
       if (error) throw error;
-      return data as JamType[];
+      // Use type assertion to handle the conversion
+      return data as unknown as JamType[];
     }
   });
 
@@ -101,7 +103,7 @@ const Explore = () => {
                 </CardDescription>
               </CardHeader>
               <img
-                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                src={jam.cover_image_url || (jam.jam_images && jam.jam_images.length > 0 ? jam.jam_images[0]?.url : '/placeholder.svg')}
                 alt={jam.name}
                 className="w-full h-48 object-cover rounded-md"
               />

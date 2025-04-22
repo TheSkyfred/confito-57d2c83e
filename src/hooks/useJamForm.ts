@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +74,11 @@ export const useJamForm = ({
 
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
+    
+    // If updating cover_image_url, also update the main image preview
+    if (key === 'cover_image_url' && typeof value === 'string') {
+      setMainImagePreview(value);
+    }
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,12 +89,16 @@ export const useJamForm = ({
       
       updateFormData('images', [file]);
       updateFormData('main_image_index', 0);
+      
+      // Clear the cover_image_url when a new file is uploaded
+      // The new URL will be set after upload
+      updateFormData('cover_image_url', null);
     }
   };
 
   const handleImageUpload = async (jamId: string) => {
     try {
-      // Si une nouvelle image est uploadée, mettre à jour l'URL de couverture
+      // If a new image is uploaded, update the cover_image_url
       if (formData.images.length > 0) {
         const file = formData.images[0];
         const fileExt = file.name.split('.').pop();
@@ -100,6 +110,7 @@ export const useJamForm = ({
           .upload(filePath, file);
 
         if (uploadError) {
+          console.error("Upload error:", uploadError);
           throw uploadError;
         }
 
@@ -111,7 +122,7 @@ export const useJamForm = ({
           throw new Error('Failed to get public URL');
         }
 
-        // Mettre à jour l'URL de couverture dans la table jams
+        // Update cover_image_url in the jams table
         const { error: updateError } = await supabase
           .from('jams')
           .update({ cover_image_url: publicUrlData.publicUrl })
@@ -189,9 +200,13 @@ export const useJamForm = ({
         }
       }
       
-      // Gérer l'upload de l'image de couverture
+      // Handle the cover image upload if there are new images
       if (formData.images.length > 0 && jam_id) {
-        await handleImageUpload(jam_id);
+        const uploadedImageUrl = await handleImageUpload(jam_id);
+        if (uploadedImageUrl) {
+          // Update the form data with the new URL
+          updateFormData('cover_image_url', uploadedImageUrl);
+        }
       }
 
       toast({

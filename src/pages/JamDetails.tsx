@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -215,7 +216,7 @@ const JamDetails = () => {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <img
-                src={jam.cover_image_url || '/placeholder.svg'}
+                src={jam.cover_image_url || (jam.jam_images && jam.jam_images.length > 0 ? jam.jam_images[0]?.url : '/placeholder.svg')}
                 alt={jam.name}
                 className="w-full h-64 object-cover rounded-md"
               />

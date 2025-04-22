@@ -25,23 +25,7 @@ import {
 import { OrderType, ProfileType } from "@/types/supabase";
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { getProfileUsername, isProfileType } from '@/utils/profileTypeGuards';
-
-interface Jam {
-  id: string;
-  name: string;
-  description: string;
-  price_credits: number;
-  created_at: string;
-  is_active: boolean;
-  jam_images: { url: string }[];
-}
-
-interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  image_url: string;
-}
+import { Jam } from "@/types/jam";
 
 const UserDashboard = () => {
   const { user, profile } = useAuth();
@@ -82,7 +66,8 @@ const UserDashboard = () => {
         .order("created_at", { ascending: false });
 
       if (jamsError) throw jamsError;
-      setUserJams(jamsData || []);
+      // Cast to the Jam interface type
+      setUserJams((jamsData || []) as Jam[]);
 
       // Fetch user's purchases
       const { data: purchasesData, error: purchasesError } = await supabase
@@ -113,7 +98,8 @@ const UserDashboard = () => {
       if (favoritesError) throw favoritesError;
       
       const formattedFavorites = favoritesData?.map(fav => fav.jams) || [];
-      setFavorites(formattedFavorites);
+      // Cast to the Jam interface type
+      setFavorites(formattedFavorites as Jam[]);
 
       // Fetch user's badges
       const { data: badgesData, error: badgesError } = await supabase
