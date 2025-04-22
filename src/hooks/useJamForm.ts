@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +86,55 @@ export const useJamForm = ({
     }
   };
 
-  const handleSubmit = async (publish: boolean = false): Promise<boolean | void> => {
+  const handleImageUpload = async (jamId: string) => {
+    try {
+      // Si une nouvelle image est uploadée, mettre à jour l'URL de couverture
+      if (formData.images.length > 0) {
+        const file = formData.images[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${jamId}_cover.${fileExt}`;
+        const filePath = `jams/covers/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('jam-images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('jam-images')
+          .getPublicUrl(filePath);
+
+        if (!publicUrlData.publicUrl) {
+          throw new Error('Failed to get public URL');
+        }
+
+        // Mettre à jour l'URL de couverture dans la table jams
+        const { error: updateError } = await supabase
+          .from('jams')
+          .update({ cover_image_url: publicUrlData.publicUrl })
+          .eq('id', jamId);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        return publicUrlData.publicUrl;
+      }
+    } catch (error) {
+      console.error('Erreur lors du téléchargement de l\'image:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger l'image de couverture",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
+  const handleSubmit = async (publish: boolean = false) => {
     try {
       setSaving(true);
       
@@ -142,9 +189,9 @@ export const useJamForm = ({
         }
       }
       
+      // Gérer l'upload de l'image de couverture
       if (formData.images.length > 0 && jam_id) {
-        // If new image is uploaded, update the cover_image_url
-        await handleImageUpload(jam_id, formData.images, formData.main_image_index, jamCreatorId);
+        await handleImageUpload(jam_id);
       }
 
       toast({
@@ -170,72 +217,6 @@ export const useJamForm = ({
       return false;
     } finally {
       setSaving(false);
-    }
-  };
-  
-  const handleImageUpload = async (
-    jamId: string,
-    images: File[],
-    mainImageIndex: number,
-    creatorId: string | null
-  ) => {
-    for (let i = 0; i < images.length; i++) {
-      const file = images[i];
-      const isMainImage = i === mainImageIndex;
-      
-      const filePath = `jams/${jamId}/${Date.now()}_${file.name}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("jam-images")
-        .upload(filePath, file);
-        
-      if (uploadError) throw uploadError;
-      
-      const { data: publicUrlData } = supabase.storage
-        .from("jam-images")
-        .getPublicUrl(filePath);
-        
-      if (!publicUrlData) {
-        throw new Error("Failed to get public URL for uploaded image");
-      }
-      
-      const publicUrl = publicUrlData.publicUrl;
-      
-      // Update the cover_image_url in the jam record if this is the main image
-      if (isMainImage) {
-        const { error: updateCoverError } = await supabase
-          .from("jams")
-          .update({ cover_image_url: publicUrl })
-          .eq("id", jamId);
-          
-        if (updateCoverError) throw updateCoverError;
-      }
-      
-      // Still maintain jam_images for backward compatibility
-      try {
-        const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
-          p_jam_id: jamId,
-          p_url: publicUrl,
-          p_is_primary: isMainImage,
-          p_creator_id: creatorId
-        });
-        
-        if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
-          const { error: directInsertError } = await supabase
-            .from("jam_images")
-            .insert({
-              jam_id: jamId,
-              url: publicUrl,
-              is_primary: isMainImage
-            });
-            
-          if (directInsertError) throw directInsertError;
-        } else if (imageInsertError) {
-          throw imageInsertError;
-        }
-      } catch (error) {
-        throw error;
-      }
     }
   };
 

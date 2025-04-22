@@ -1524,38 +1524,6 @@ export type Database = {
         }
         Relationships: []
       }
-      jam_images: {
-        Row: {
-          created_at: string
-          id: string
-          is_primary: boolean
-          jam_id: string
-          url: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean
-          jam_id: string
-          url: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean
-          jam_id?: string
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_images_jam_id_fkey"
-            columns: ["jam_id"]
-            isOneToOne: false
-            referencedRelation: "jams"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       jam_reviews: {
         Row: {
           balance_rating: number

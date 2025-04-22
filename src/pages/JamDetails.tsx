@@ -215,7 +215,7 @@ const JamDetails = () => {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <img
-                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                src={jam.cover_image_url || '/placeholder.svg'}
                 alt={jam.name}
                 className="w-full h-64 object-cover rounded-md"
               />
