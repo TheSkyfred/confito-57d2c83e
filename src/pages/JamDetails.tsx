@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useUserRole } from '@/hooks/useUserRole';
+import JamAdminBanner from '@/components/JamAdminBanner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,6 +57,7 @@ const JamDetails = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { canManage } = useUserRole();
   
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isRegistering, setIsRegistering] = useState(false);
@@ -83,7 +86,6 @@ const JamDetails = () => {
       if (error) throw error;
       if (!data) throw new Error('No jam found');
       
-      // Add average rating
       const avgRating = calculateAverageRating(data.reviews);
       
       return {
@@ -116,7 +118,6 @@ const JamDetails = () => {
       if (!user || !jam) return;
 
       if (isFavorite) {
-        // Remove from favorites
         const { error } = await supabase
           .from('favorites')
           .delete()
@@ -125,7 +126,6 @@ const JamDetails = () => {
 
         if (error) throw error;
       } else {
-        // Add to favorites
         const { error } = await supabase
           .from('favorites')
           .insert([{ user_id: user.id, jam_id: jam.id }]);
@@ -181,120 +181,123 @@ const JamDetails = () => {
   }
 
   return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <Button asChild variant="ghost">
-          <Link to="/explore">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Retour à l'exploration
-          </Link>
-        </Button>
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleToggleFavorite} 
-            disabled={toggleFavoriteMutation.isPending}
-          >
-            {isFavorite ? <Heart className="h-5 w-5 fill-red-500 text-red-500" /> : <Heart className="h-5 w-5" />}
-          </Button>
-          <Button variant="default">
-            <ShoppingCart className="mr-2 h-4 w-4" />
-            Acheter
-          </Button>
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">{jam.name}</CardTitle>
-          <CardDescription>{jam.description}</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <img
-              src={jam.jam_images[0]?.url || '/placeholder.svg'}
-              alt={jam.name}
-              className="w-full h-64 object-cover rounded-md"
-            />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span>{jam.avgRating?.toFixed(1) || 'Pas d\'avis'} ({jam.reviews?.length} avis)</span>
-            </div>
-            <div className="flex items-center space-x-2 mb-4">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={jam.profiles?.avatar_url || undefined} />
-                <AvatarFallback>{jam.profiles?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <span>Par {jam.profiles?.username}</span>
-            </div>
-            <Separator className="my-4" />
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Ingrédients</h3>
-              <ul>
-                {jam.ingredients.map((ingredient, index) => (
-                  <li key={index} className="text-sm">{ingredient}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter className="flex justify-between items-center">
-          <div>
-            <span className="text-2xl font-bold">{jam.price_credits}</span>
-            <span className="ml-1 text-muted-foreground">crédits</span>
-          </div>
-          <Button asChild>
-            <Link to={`/seller/${jam.creator_id}`}>
-              Voir la boutique
+    <>
+      {canManage && <JamAdminBanner jamId={id!} />}
+      <div className="container py-8">
+        <div className="flex justify-between items-center mb-6">
+          <Button asChild variant="ghost">
+            <Link to="/explore">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Retour à l'exploration
             </Link>
           </Button>
-        </CardFooter>
-      </Card>
-
-      <div className="mt-8">
-        <h2 className="text-2xl font-bold mb-4">Avis</h2>
-        {jam.reviews && jam.reviews.length > 0 ? (
-          <div className="space-y-4">
-            {jam.reviews.map((review: ReviewWithReviewer) => (
-              <Card key={review.id}>
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={review.reviewer?.avatar_url || undefined} />
-                      <AvatarFallback>{review.reviewer?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle>{review.reviewer?.username}</CardTitle>
-                      <CardDescription>
-                        {format(new Date(review.created_at), 'PPP', { locale: fr })}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center space-x-2 mb-2">
-                    {[...Array(review.rating)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 text-yellow-500" />
-                    ))}
-                  </div>
-                  <p>{review.comment}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleToggleFavorite} 
+              disabled={toggleFavoriteMutation.isPending}
+            >
+              {isFavorite ? <Heart className="h-5 w-5 fill-red-500 text-red-500" /> : <Heart className="h-5 w-5" />}
+            </Button>
+            <Button variant="default">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Acheter
+            </Button>
           </div>
-        ) : (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <Info className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">Aucun avis pour le moment.</p>
-            </CardContent>
-          </Card>
-        )}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">{jam.name}</CardTitle>
+            <CardDescription>{jam.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <img
+                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                alt={jam.name}
+                className="w-full h-64 object-cover rounded-md"
+              />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Star className="h-4 w-4 text-yellow-500" />
+                <span>{jam.avgRating?.toFixed(1) || 'Pas d\'avis'} ({jam.reviews?.length} avis)</span>
+              </div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={jam.profiles?.avatar_url || undefined} />
+                  <AvatarFallback>{jam.profiles?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span>Par {jam.profiles?.username}</span>
+              </div>
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Ingrédients</h3>
+                <ul>
+                  {jam.ingredients.map((ingredient, index) => (
+                    <li key={index} className="text-sm">{ingredient}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex justify-between items-center">
+            <div>
+              <span className="text-2xl font-bold">{jam.price_credits}</span>
+              <span className="ml-1 text-muted-foreground">crédits</span>
+            </div>
+            <Button asChild>
+              <Link to={`/seller/${jam.creator_id}`}>
+                Voir la boutique
+              </Link>
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Avis</h2>
+          {jam.reviews && jam.reviews.length > 0 ? (
+            <div className="space-y-4">
+              {jam.reviews.map((review: ReviewWithReviewer) => (
+                <Card key={review.id}>
+                  <CardHeader>
+                    <div className="flex items-center space-x-4">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={review.reviewer?.avatar_url || undefined} />
+                        <AvatarFallback>{review.reviewer?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <CardTitle>{review.reviewer?.username}</CardTitle>
+                        <CardDescription>
+                          {format(new Date(review.created_at), 'PPP', { locale: fr })}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center space-x-2 mb-2">
+                      {[...Array(review.rating)].map((_, i) => (
+                        <Star key={i} className="h-4 w-4 text-yellow-500" />
+                      ))}
+                    </div>
+                    <p>{review.comment}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Info className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Aucun avis pour le moment.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
