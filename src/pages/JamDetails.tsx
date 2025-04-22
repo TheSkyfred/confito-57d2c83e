@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import JamAdminBanner from '@/components/JamAdminBanner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

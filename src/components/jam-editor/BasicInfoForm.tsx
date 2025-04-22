@@ -8,11 +8,15 @@ import CoverImageUpload from './CoverImageUpload';
 interface BasicInfoFormProps {
   formData: JamFormData;
   updateFormData: (key: string, value: any) => void;
+  mainImagePreview?: string;
+  handleImageChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   formData,
   updateFormData,
+  mainImagePreview,
+  handleImageChange,
 }) => {
   return (
     <div className="space-y-4">
