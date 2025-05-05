@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import StatusDropdown from "@/components/jam-editor/StatusDropdown";
+import DeleteJamDialog from "@/components/jam-editor/DeleteJamDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Tooltip,
@@ -37,6 +38,7 @@ const AdminJamEdit: React.FC = () => {
   
   // We will sync this with formData
   const [jamStatus, setJamStatus] = useState<string>("pending");
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   
   const {
     loading,
@@ -97,6 +99,39 @@ const AdminJamEdit: React.FC = () => {
   
   const handleGoBack = () => {
     navigate('/admin/jams');
+  };
+
+  const handleDeleteJam = async (): Promise<void> => {
+    if (!id || !isAdmin) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      // Delete the jam from the database
+      const { error } = await supabase
+        .from('jams')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture supprimée",
+        description: "La confiture a été supprimée avec succès",
+      });
+      
+      // Navigate back to the jams list
+      navigate('/admin/jams');
+    } catch (error: any) {
+      console.error("Error deleting jam:", error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de supprimer la confiture : ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
   
   // Handle cover image update
@@ -268,30 +303,41 @@ const AdminJamEdit: React.FC = () => {
               
               <Separator className="my-6" />
               
-              <div className="flex justify-end gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={handleGoBack}
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  variant="default" 
-                  disabled={saving || !formData.name} 
-                  onClick={() => handleSubmit(false)}
-                  className="bg-slate-800 hover:bg-slate-900"
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enregistrer en brouillon
-                </Button>
-                <Button 
-                  variant="default" 
-                  disabled={saving || !formData.name} 
-                  onClick={() => handleSubmit(true)}
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Publier
-                </Button>
+              <div className="flex justify-between gap-3">
+                {/* Delete button for admins only */}
+                {isAdmin && (
+                  <DeleteJamDialog
+                    jamName={formData.name}
+                    onDelete={handleDeleteJam}
+                    isDeleting={isDeleting}
+                  />
+                )}
+                
+                <div className="flex gap-3 ml-auto">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGoBack}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    disabled={saving || !formData.name} 
+                    onClick={() => handleSubmit(false)}
+                    className="bg-slate-800 hover:bg-slate-900"
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Enregistrer en brouillon
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    disabled={saving || !formData.name} 
+                    onClick={() => handleSubmit(true)}
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Publier
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
