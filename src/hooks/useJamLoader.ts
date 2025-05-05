@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -71,7 +72,8 @@ export const useJamLoader = ({
         
         let query = supabase
           .from("jams")
-          .select(`*, jam_images(*)`)
+          // Enlever la référence à jam_images
+          .select(`*`)
           .eq("id", jamId);
         
         if (!isAdmin) {
@@ -152,15 +154,8 @@ export const useJamLoader = ({
           }
         }
         
-        let mainImageUrl = jamWithTypes.cover_image_url || null;
-        if (!mainImageUrl && jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
-          const primaryImage = jamWithTypes.jam_images.find((img: any) => img.is_primary);
-          if (primaryImage) {
-            mainImageUrl = primaryImage.url;
-          } else if (jamWithTypes.jam_images[0]) {
-            mainImageUrl = jamWithTypes.jam_images[0].url;
-          }
-        }
+        // Utiliser directement cover_image_url
+        const mainImageUrl = jamWithTypes.cover_image_url || null;
         setMainImagePreview(mainImageUrl);
         
         setInitialFormData({

@@ -66,12 +66,7 @@ interface JamWithProfile {
     id: string;
     username: string;
   } | null;
-  // Make jam_stocks optional since we're not using the relationship directly
-  jam_stocks?: any;
-  jam_images?: {
-    url: string;
-    is_primary: boolean;
-  }[] | null;
+  cover_image_url?: string | null;
 }
 
 const AdminJams = () => {
@@ -86,35 +81,42 @@ const AdminJams = () => {
     queryKey: ['adminJams', statusFilter],
     queryFn: async () => {
       try {
-        // Using supabaseDirect utility to fetch jams without relying on Supabase relationships
+        console.log("Fetching jams data...");
+        
+        // Build the query condition for status filter
         let queryFilter = '';
         if (statusFilter !== 'all') {
           queryFilter = `is_active=eq.${statusFilter === 'active' ? 'true' : 'false'}`;
         }
         
         // Get all jams with their creators' profiles
+        // Removing the jam_images relationship since it no longer exists
         const { data: jamsData, error: jamsError } = await supabaseDirect.select(
           'jams', 
-          `*, profiles:creator_id(id, username), jam_images(url, is_primary)`,
+          `*, profiles:creator_id(id, username)`,
           queryFilter
         );
         
-        if (jamsError) throw jamsError;
+        if (jamsError) {
+          console.error("Error fetching jams:", jamsError);
+          throw jamsError;
+        }
         
-        // Get jam images separately
+        console.log("Jams data received:", jamsData);
+        
         if (!jamsData || !Array.isArray(jamsData)) {
           throw new Error("No jam data returned");
         }
         
         // Transform the data to match our expected format
-        const jamWithProfiles: JamWithProfile[] = jamsData.map(jam => ({
+        const jamsWithProfiles: JamWithProfile[] = jamsData.map(jam => ({
           ...jam,
-          jam_stocks: { quantity: jam.available_quantity, is_available: jam.is_active }
+          // No need to process jam_images as it doesn't exist anymore
         }));
         
-        return jamWithProfiles;
+        return jamsWithProfiles;
       } catch (error) {
-        console.error("Error fetching jams:", error);
+        console.error("Error in queryFn:", error);
         throw error;
       }
     },

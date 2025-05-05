@@ -12,7 +12,7 @@ const RandomJamsSection = () => {
   const { data: randomJams, isLoading } = useQuery({
     queryKey: ['randomJams'],
     queryFn: async () => {
-      // Modification de la requête pour ne pas utiliser jam_images
+      // Utiliser cover_image_url au lieu de jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`
