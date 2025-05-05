@@ -15,6 +15,7 @@ export interface Jam {
   available_quantity: number;
   creator_id: string;
   avgRating?: number;
+  status?: string;
   profiles?: {
     id?: string;
     username?: string;

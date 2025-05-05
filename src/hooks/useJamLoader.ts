@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -178,6 +177,7 @@ export const useJamLoader = ({
           main_image_index: 0,
           is_pro: jamWithTypes.is_pro || false,
           cover_image_url: jamWithTypes.cover_image_url || null,
+          status: jamWithTypes.status || 'pending',
         });
         
         setLoading(false);

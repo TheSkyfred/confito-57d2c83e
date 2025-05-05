@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,8 @@ import JamEditorAccordion from "@/components/jam-editor/JamEditorAccordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import StatusDropdown from "@/components/jam-editor/StatusDropdown";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Tooltip,
   TooltipContent,
@@ -31,6 +34,8 @@ const AdminJamEdit: React.FC = () => {
     "basic-info",
     "pricing"
   ]);
+
+  const [jamStatus, setJamStatus] = useState<string>("pending");
   
   const {
     loading,
@@ -63,6 +68,11 @@ const AdminJamEdit: React.FC = () => {
       Object.keys(initialFormData).forEach(key => {
         updateFormData(key, initialFormData[key as keyof JamFormData]);
       });
+      
+      // Set initial status when jam data is loaded
+      if (initialFormData.status) {
+        setJamStatus(initialFormData.status);
+      }
     }
   }, [initialFormData]);
   
@@ -74,6 +84,33 @@ const AdminJamEdit: React.FC = () => {
     }
     
     updateFormData('is_pro', !formData.is_pro);
+  };
+  
+  const handleStatusChange = async (status: string) => {
+    setJamStatus(status);
+    updateFormData('status', status);
+    
+    try {
+      const { error } = await supabase
+        .from('jams')
+        .update({ status })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Statut mis à jour",
+        description: `Le statut de la confiture a été modifié avec succès.`,
+        duration: 3000,
+      });
+    } catch (error: any) {
+      console.error("Error updating jam status:", error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de mettre à jour le statut: ${error.message}`,
+        variant: "destructive",
+      });
+    }
   };
   
   const handleGoBack = () => {
@@ -142,7 +179,18 @@ const AdminJamEdit: React.FC = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Status Dropdown */}
+            <div className="mr-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium mb-2 text-muted-foreground">Statut</span>
+                <StatusDropdown 
+                  currentStatus={jamStatus}
+                  onStatusChange={handleStatusChange}
+                />
+              </div>
+            </div>
+            
             {isAdmin && (
               <div className={`flex items-center space-x-2 p-3 rounded-md ${formData.is_pro ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
                 <div className="flex items-center space-x-2">
