@@ -40,13 +40,13 @@ const Explore = () => {
   const { data: jams, isLoading, error } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
+      // Modification de la requête pour ne pas utiliser jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`
           *,
-          jam_images (*),
-          reviews (*, reviewer:reviewer_id(username, avatar_url)),
-          profiles:creator_id (id, username, full_name, avatar_url, role)
+          profiles:creator_id (id, username, full_name, avatar_url, role),
+          reviews (*, reviewer:reviewer_id(username, avatar_url))
         `)
         .eq('status', 'approved')
         .eq('is_active', true);

@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { safeAccess, safeAccessNested, isNullOrUndefined } from '@/utils/supabaseHelpers';
-import { JamType, ProfileType, ReviewType, JamImageType } from '@/types/supabase';
+import { JamType, ProfileType, ReviewType } from '@/types/supabase';
 import {
   Star,
   Heart,
@@ -72,11 +72,11 @@ const JamDetails = () => {
     queryFn: async () => {
       if (!id) throw new Error('No ID provided');
       
+      // Modification de la requête pour ne pas utiliser jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`
           *,
-          jam_images(*),
           profiles:creator_id (*),
           reviews (*, reviewer:reviewer_id (*))
         `)
@@ -215,7 +215,7 @@ const JamDetails = () => {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <img
-                src={jam.cover_image_url || (jam.jam_images && jam.jam_images.length > 0 ? jam.jam_images[0] : '/placeholder.svg')}
+                src={jam.cover_image_url || '/placeholder.svg'}
                 alt={jam.name}
                 className="w-full h-64 object-cover rounded-md"
               />
