@@ -109,6 +109,9 @@ export const useJamForm = ({
   const handleSubmit = async (publish = false): Promise<boolean> => {
     try {
       setSaving(true);
+      console.log("Submitting jam form data:", formData);
+      console.log("Status being saved:", formData.status);
+      console.log("Cover image URL being saved:", formData.cover_image_url);
 
       // Validate required fields
       if (!formData.name.trim()) {
@@ -158,9 +161,12 @@ export const useJamForm = ({
         recipe: formattedRecipeSteps,
         is_active: publish ? true : formData.is_active,
         badges: formData.badges,
-        status: isAdmin ? formData.status : 'pending',
+        status: formData.status || 'pending',
         is_pro: formData.is_pro || false,
+        cover_image_url: formData.cover_image_url,
       };
+
+      console.log("Data being sent to Supabase:", jamData);
 
       // Different logic for create vs update
       let jamId = initialJamId;

@@ -18,6 +18,11 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
   mainImagePreview,
   handleImageChange,
 }) => {
+  const handleCoverImageUploaded = (url: string) => {
+    console.log("Cover image uploaded in BasicInfoForm:", url);
+    updateFormData('cover_image_url', url);
+  };
+  
   return (
     <div className="space-y-4">
       <div>
@@ -51,7 +56,7 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
         </label>
         <CoverImageUpload
           currentImageUrl={formData.cover_image_url}
-          onImageUploaded={(url) => updateFormData('cover_image_url', url)}
+          onImageUploaded={handleCoverImageUploaded}
           className="mt-2"
         />
       </div>

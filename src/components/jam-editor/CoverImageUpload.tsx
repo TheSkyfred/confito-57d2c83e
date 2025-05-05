@@ -26,7 +26,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       
       const file = event.target.files[0];
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
+      const fileName = `covers/${Date.now()}.${fileExt}`;
       const filePath = `covers/${fileName}`;
       
       setUploading(true);
@@ -47,6 +47,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         throw new Error('Failed to get public URL');
       }
 
+      console.log("Image uploaded successfully, URL:", publicUrlData.publicUrl);
       onImageUploaded(publicUrlData.publicUrl);
       
       toast({

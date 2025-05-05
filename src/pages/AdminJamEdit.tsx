@@ -34,7 +34,8 @@ const AdminJamEdit: React.FC = () => {
     "basic-info",
     "pricing"
   ]);
-
+  
+  // We will sync this with formData
   const [jamStatus, setJamStatus] = useState<string>("pending");
   
   const {
@@ -63,6 +64,7 @@ const AdminJamEdit: React.FC = () => {
     isAdmin: true,
   });
   
+  // Sync initialFormData with formData when it's loaded
   useEffect(() => {
     if (initialFormData && initialFormData.name && !formData.name) {
       Object.keys(initialFormData).forEach(key => {
@@ -72,6 +74,7 @@ const AdminJamEdit: React.FC = () => {
       // Set initial status when jam data is loaded
       if (initialFormData.status) {
         setJamStatus(initialFormData.status);
+        updateFormData('status', initialFormData.status);
       }
     }
   }, [initialFormData]);
@@ -86,35 +89,20 @@ const AdminJamEdit: React.FC = () => {
     updateFormData('is_pro', !formData.is_pro);
   };
   
-  const handleStatusChange = async (status: string) => {
+  const handleStatusChange = (status: string) => {
+    console.log("Status changed to:", status);
     setJamStatus(status);
     updateFormData('status', status);
-    
-    try {
-      const { error } = await supabase
-        .from('jams')
-        .update({ status })
-        .eq('id', id);
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Statut mis à jour",
-        description: `Le statut de la confiture a été modifié avec succès.`,
-        duration: 3000,
-      });
-    } catch (error: any) {
-      console.error("Error updating jam status:", error);
-      toast({
-        title: "Erreur",
-        description: `Impossible de mettre à jour le statut: ${error.message}`,
-        variant: "destructive",
-      });
-    }
   };
   
   const handleGoBack = () => {
     navigate('/admin/jams');
+  };
+  
+  // Handle cover image update
+  const handleCoverImageUpdated = (url: string) => {
+    console.log("Cover image updated:", url);
+    updateFormData('cover_image_url', url);
   };
   
   if (!isAdmin && !isModerator) {
