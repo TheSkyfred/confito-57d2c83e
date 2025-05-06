@@ -11,7 +11,7 @@ export interface Jam {
   jam_images?: { url: string }[] | any;
   cover_image_url?: string | null;
   // Add any other properties needed
-  ingredients: string[];
+  ingredients: Array<{name: string, quantity: string}> | string[];
   allergens?: string[] | null;
   weight_grams: number;
   available_quantity: number;

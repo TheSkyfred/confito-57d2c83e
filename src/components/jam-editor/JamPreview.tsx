@@ -13,6 +13,13 @@ interface JamPreviewProps {
 const JamPreview: React.FC<JamPreviewProps> = ({ formData, fullPreview = false }) => {
   const previewImage = formData.cover_image_url || '/placeholder.svg';
 
+  // Function to get ingredient name based on type
+  const getIngredientName = (ingredient: any): string => {
+    if (typeof ingredient === 'string') return ingredient;
+    if (typeof ingredient === 'object' && ingredient.name) return ingredient.name;
+    return String(ingredient);
+  };
+
   return (
     <div className={`group overflow-hidden rounded-lg border border-muted bg-background ${fullPreview ? "w-full max-w-md mx-auto" : ""}`}>
       <div className="aspect-square overflow-hidden relative">
@@ -46,7 +53,7 @@ const JamPreview: React.FC<JamPreviewProps> = ({ formData, fullPreview = false }
         <div className="flex flex-wrap gap-1 mb-2">
           {formData.ingredients.slice(0, 2).map((ingredient, idx) => (
             <Badge key={idx} variant="outline" className="text-xs">
-              {ingredient.name || "Ingrédient"}
+              {getIngredientName(ingredient)}
             </Badge>
           ))}
           {formData.ingredients.length > 2 && (

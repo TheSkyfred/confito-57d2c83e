@@ -19,6 +19,13 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
     if (value === undefined || value === null) return '0.0';
     return value.toFixed(digits);
   };
+
+  // Function to get ingredient name based on type
+  const getIngredientName = (ingredient: any): string => {
+    if (typeof ingredient === 'string') return ingredient;
+    if (typeof ingredient === 'object' && ingredient.name) return ingredient.name;
+    return String(ingredient);
+  };
   
   return (
     <div className="group relative overflow-hidden rounded-lg border border-muted bg-background hover:shadow-md transition-shadow">
@@ -53,7 +60,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
         <div className="flex flex-wrap gap-1">
           {jam.ingredients?.slice(0, 2).map((ingredient, idx) => (
             <Badge key={idx} variant="outline" className="text-xs">
-              {ingredient}
+              {getIngredientName(ingredient)}
             </Badge>
           ))}
           {jam.ingredients && jam.ingredients.length > 2 && (

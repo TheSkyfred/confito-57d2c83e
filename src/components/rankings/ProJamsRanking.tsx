@@ -24,6 +24,7 @@ interface Jam {
   avg_rating: number;
   price_euros?: number;
   is_pro: boolean;
+  ingredients?: Array<{name: string, quantity: string}> | string[];
 }
 
 interface ProJamsRankingProps {
