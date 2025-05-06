@@ -4,8 +4,10 @@ export interface Jam {
   name: string;
   description: string;
   price_credits: number;
+  price_euros?: number | null;
   created_at: string;
   is_active: boolean;
+  is_pro?: boolean;
   jam_images?: { url: string }[] | any;
   cover_image_url?: string | null;
   // Add any other properties needed

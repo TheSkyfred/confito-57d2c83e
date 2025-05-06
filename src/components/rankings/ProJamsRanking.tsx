@@ -19,6 +19,7 @@ interface Jam {
   jam_images: Array<{
     url: string;
   }>;
+  cover_image_url?: string;
   review_count: number;
   avg_rating: number;
   price_euros?: number;
@@ -59,55 +60,56 @@ const ProJamsRanking: React.FC<ProJamsRankingProps> = ({ jams, isLoading }) => {
 
   return (
     <div className="space-y-6">
-      {jams?.map((jam: Jam, index: number) => (
-        <Card key={jam.id} className={index < 3 ? "border-jam-honey" : ""}>
-          <CardContent className="p-0">
-            <div className="flex items-center p-4">
-              <div className="flex items-center justify-center w-10 mr-4">
-                {getJamRankBadge(index)}
-              </div>
-              <div className="flex-shrink-0 mr-4">
-                <img 
-                  src={jam.jam_images?.[0]?.url || '/placeholder.svg'} 
-                  alt={jam.name}
-                  className="h-16 w-16 object-cover rounded-md"
-                />
-              </div>
-              <div className="flex-grow">
-                <div className="flex items-center">
-                  <h3 className="font-medium">{jam.name}</h3>
-                  <Crown className="ml-2 h-4 w-4 text-amber-500" />
+      {jams && jams.length > 0 ? (
+        jams.map((jam: Jam, index: number) => (
+          <Card key={jam.id} className={index < 3 ? "border-jam-honey" : ""}>
+            <CardContent className="p-0">
+              <div className="flex items-center p-4">
+                <div className="flex items-center justify-center w-10 mr-4">
+                  {getJamRankBadge(index)}
                 </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Avatar className="h-4 w-4 mr-1">
-                    <AvatarImage src={jam.profile?.avatar_url || undefined} />
-                    <AvatarFallback>{jam.profile?.username?.[0]?.toUpperCase() || 'J'}</AvatarFallback>
-                  </Avatar>
-                  <span>{jam.profile?.username || 'Utilisateur'}</span>
+                <div className="flex-shrink-0 mr-4">
+                  <img 
+                    src={jam.cover_image_url || jam.jam_images?.[0]?.url || '/placeholder.svg'} 
+                    alt={jam.name}
+                    className="h-16 w-16 object-cover rounded-md"
+                  />
                 </div>
+                <div className="flex-grow">
+                  <div className="flex items-center">
+                    <h3 className="font-medium">{jam.name}</h3>
+                    <Crown className="ml-2 h-4 w-4 text-amber-500" />
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Avatar className="h-4 w-4 mr-1">
+                      <AvatarImage src={jam.profile?.avatar_url || undefined} />
+                      <AvatarFallback>{jam.profile?.username?.[0]?.toUpperCase() || 'J'}</AvatarFallback>
+                    </Avatar>
+                    <span>{jam.profile?.username || 'Utilisateur'}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center mb-1">
+                    <Star className="h-4 w-4 text-jam-honey fill-jam-honey mr-1" />
+                    <span className="font-medium">{safeToFixed(jam.avg_rating)}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({jam.review_count || 0})
+                    </span>
+                  </div>
+                  <div className="flex items-center text-sm font-medium">
+                    {jam.price_euros ? `${jam.price_euros} €` : '0 €'}
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" asChild className="ml-2">
+                  <Link to={`/jam/${jam.id}`}>
+                    <ArrowUpRight className="h-5 w-5" />
+                  </Link>
+                </Button>
               </div>
-              <div className="flex flex-col items-end">
-                <div className="flex items-center mb-1">
-                  <Star className="h-4 w-4 text-jam-honey fill-jam-honey mr-1" />
-                  <span className="font-medium">{safeToFixed(jam.avg_rating)}</span>
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({jam.review_count || 0})
-                  </span>
-                </div>
-                <div className="flex items-center text-sm font-medium">
-                  {jam.price_euros} €
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" asChild className="ml-2">
-                <Link to={`/jam/${jam.id}`}>
-                  <ArrowUpRight className="h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {(!jams || jams.length === 0) && (
+            </CardContent>
+          </Card>
+        ))
+      ) : (
         <div className="text-center py-8">
           <p className="text-muted-foreground">Aucune confiture professionnelle trouvée</p>
         </div>
