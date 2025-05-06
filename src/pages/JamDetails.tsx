@@ -51,6 +51,68 @@ type ReviewWithReviewer = ReviewType & {
   reviewer: ProfileType;
 };
 
+// Function to get ingredient name based on type
+const getIngredientName = (ingredient: any): string => {
+  // Si c'est une chaîne simple
+  if (typeof ingredient === 'string' && !ingredient.includes('{')) {
+    return ingredient;
+  }
+  
+  // Si c'est un objet
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    if (ingredient.name) {
+      // Handle nested stringified objects
+      if (typeof ingredient.name === 'string' && ingredient.name.includes('{')) {
+        try {
+          const parsedName = JSON.parse(ingredient.name);
+          if (parsedName.name) {
+            if (typeof parsedName.name === 'string' && parsedName.name.includes('{')) {
+              try {
+                const deeperParsed = JSON.parse(parsedName.name);
+                if (deeperParsed.name) {
+                  return deeperParsed.name;
+                }
+              } catch (e) {
+                return parsedName.name;
+              }
+            }
+            return parsedName.name;
+          }
+        } catch (e) {
+          return ingredient.name;
+        }
+      }
+      return ingredient.name;
+    }
+  }
+  
+  // Si c'est une chaîne qui contient un objet JSON
+  if (typeof ingredient === 'string' && ingredient.includes('{')) {
+    try {
+      const parsed = JSON.parse(ingredient);
+      if (parsed.name) {
+        // Handle deeper nesting
+        if (typeof parsed.name === 'string' && parsed.name.includes('{')) {
+          try {
+            const deeperParsed = JSON.parse(parsed.name);
+            if (deeperParsed.name) {
+              return deeperParsed.name;
+            }
+          } catch (e) {
+            return parsed.name;
+          }
+        }
+        return parsed.name;
+      }
+    } catch (e) {
+      // Si le parsing échoue, retourner la chaîne originale
+    }
+  }
+  
+  // Fallback
+  return String(ingredient);
+};
+
 const JamDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -237,7 +299,7 @@ const JamDetails = () => {
                 <h3 className="text-lg font-semibold">Ingrédients</h3>
                 <ul>
                   {jam.ingredients.map((ingredient, index) => (
-                    <li key={index} className="text-sm">{ingredient}</li>
+                    <li key={index} className="text-sm">{getIngredientName(ingredient)}</li>
                   ))}
                 </ul>
               </div>
