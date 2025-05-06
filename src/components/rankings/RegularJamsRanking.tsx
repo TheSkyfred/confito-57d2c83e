@@ -22,6 +22,7 @@ interface Jam {
   review_count: number;
   avg_rating: number;
   sale_count: number;
+  ingredients?: Array<{name: string, quantity: string}> | string[];
 }
 
 interface RegularJamsRankingProps {
@@ -45,6 +46,13 @@ const getJamRankBadge = (index: number) => {
 const safeToFixed = (value: number | undefined | null, digits: number = 1): string => {
   if (value === undefined || value === null) return '0.0';
   return value.toFixed(digits);
+};
+
+// Function to get ingredient name based on type
+const getIngredientName = (ingredient: any): string => {
+  if (typeof ingredient === 'string') return ingredient;
+  if (typeof ingredient === 'object' && ingredient.name) return ingredient.name;
+  return String(ingredient);
 };
 
 const RegularJamsRanking: React.FC<RegularJamsRankingProps> = ({ jams, isLoading }) => {

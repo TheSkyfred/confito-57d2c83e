@@ -50,6 +50,13 @@ const safeToFixed = (value: number | undefined | null, digits: number = 1): stri
   return value.toFixed(digits);
 };
 
+// Function to get ingredient name based on type
+const getIngredientName = (ingredient: any): string => {
+  if (typeof ingredient === 'string') return ingredient;
+  if (typeof ingredient === 'object' && ingredient.name) return ingredient.name;
+  return String(ingredient);
+};
+
 const ProJamsRanking: React.FC<ProJamsRankingProps> = ({ jams, isLoading }) => {
   if (isLoading) {
     return (
