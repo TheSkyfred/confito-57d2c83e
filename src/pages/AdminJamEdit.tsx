@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -82,13 +81,28 @@ const AdminJamEdit: React.FC = () => {
   }, [initialFormData]);
   
   const handleToggleProStatus = () => {
-    if (formData.is_pro && formData.price_euros) {
-      updateFormData('price_credits', Math.round(formData.price_euros));
-    } else if (!formData.is_pro && formData.price_credits) {
-      updateFormData('price_euros', formData.price_credits);
+    const newIsProValue = !formData.is_pro;
+    
+    if (newIsProValue) {
+      // Switching to Pro mode
+      // Set price_credits to 0 to avoid null constraint violation
+      // But keep track of the old value for switching back
+      const currentPriceCredits = formData.price_credits || 10;
+      updateFormData('previous_price_credits', currentPriceCredits);
+      updateFormData('price_credits', 0);
+      
+      // Set price_euros if it's not already set
+      if (!formData.price_euros) {
+        updateFormData('price_euros', currentPriceCredits);
+      }
+    } else {
+      // Switching back to regular mode
+      // Restore previous price_credits or use current price_euros
+      const priceToRestore = formData.previous_price_credits || formData.price_euros || 10;
+      updateFormData('price_credits', priceToRestore);
     }
     
-    updateFormData('is_pro', !formData.is_pro);
+    updateFormData('is_pro', newIsProValue);
   };
   
   const handleStatusChange = (status: string) => {

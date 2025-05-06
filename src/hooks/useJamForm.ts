@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +13,7 @@ export interface JamFormData {
   weight_grams: number;
   available_quantity: number;
   price_credits: number;
+  previous_price_credits?: number; // To store the previous value when switching to pro
   price_euros?: number | null;
   production_date: string;
   shelf_life_months: number;
@@ -111,6 +111,9 @@ export const useJamForm = ({
       setSaving(true);
       console.log("Submitting jam form data:", formData);
       console.log("Status being saved:", formData.status);
+      console.log("Is pro:", formData.is_pro);
+      console.log("Price credits:", formData.price_credits);
+      console.log("Price euros:", formData.price_euros);
       console.log("Cover image URL being saved:", formData.cover_image_url);
 
       // Validate required fields
@@ -153,7 +156,8 @@ export const useJamForm = ({
         allergens: formData.allergens.length ? formData.allergens : null,
         weight_grams: formData.weight_grams,
         available_quantity: formData.available_quantity,
-        price_credits: formData.is_pro ? null : formData.price_credits,
+        // For pro jams, always keep price_credits as 0 to avoid null constraint violation
+        price_credits: formData.is_pro ? 0 : formData.price_credits,
         price_euros: formData.is_pro ? formData.price_euros : null,
         production_date: formData.production_date,
         shelf_life_months: formData.shelf_life_months,
