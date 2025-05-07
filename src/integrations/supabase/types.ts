@@ -1140,6 +1140,7 @@ export type Database = {
           description: string
           id: string
           related_order_id: string | null
+          stripe_session_id: string | null
           user_id: string
         }
         Insert: {
@@ -1148,6 +1149,7 @@ export type Database = {
           description: string
           id?: string
           related_order_id?: string | null
+          stripe_session_id?: string | null
           user_id: string
         }
         Update: {
@@ -1156,6 +1158,7 @@ export type Database = {
           description?: string
           id?: string
           related_order_id?: string | null
+          stripe_session_id?: string | null
           user_id?: string
         }
         Relationships: [
