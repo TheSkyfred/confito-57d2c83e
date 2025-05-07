@@ -127,24 +127,29 @@ const Credits = () => {
     setIsProcessing(true);
     
     try {
-      // Call the Stripe checkout function
+      // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { packageId: selectedPackage }
       });
       
-      if (error) throw error;
-      
-      if (data && data.url) {
-        // Redirect to Stripe checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
+      if (error) {
+        console.error("Error calling create-checkout function:", error);
+        throw new Error(`Erreur lors de la création du checkout: ${error.message}`);
       }
+      
+      if (!data || !data.url) {
+        throw new Error("Aucune URL de paiement n'a été retournée");
+      }
+      
+      console.log("Redirecting to Stripe checkout:", data.url);
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+      
     } catch (error) {
       console.error("Error creating checkout session:", error);
       toast({
         title: "Erreur lors de l'achat",
-        description: "Une erreur est survenue lors du traitement de votre paiement",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement",
         variant: "destructive"
       });
       setIsProcessing(false);

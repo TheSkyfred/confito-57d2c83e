@@ -15,32 +15,60 @@ serve(async (req) => {
   }
 
   try {
-    const { packageId } = await req.json();
+    console.log("Starting create-checkout function");
+    
+    let reqBody;
+    try {
+      reqBody = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      throw new Error("Requête invalide : le format JSON est incorrect");
+    }
+    
+    const { packageId } = reqBody;
+    if (!packageId) {
+      console.error("Missing packageId in request");
+      throw new Error("PackageId est requis pour créer une session de paiement");
+    }
+    
+    console.log("Package ID received:", packageId);
     
     // Get the Stripe secret key from environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      throw new Error("STRIPE_SECRET_KEY is not configured");
+      console.error("STRIPE_SECRET_KEY not configured");
+      throw new Error("Configuration Stripe manquante côté serveur");
     }
+    
+    console.log("Stripe API key available");
 
     // Authenticate the user from the request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      throw new Error("Missing Authorization header");
+      console.error("Missing Authorization header");
+      throw new Error("Vous devez être connecté pour effectuer cette action");
     }
 
     // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_ANON_KEY") || "",
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Missing Supabase configuration");
+      throw new Error("Configuration Supabase manquante côté serveur");
+    }
+    
+    console.log("Supabase configuration available");
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Get authenticated user
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !userData.user) {
-      throw new Error("Invalid auth token or user not found");
+      console.error("User authentication error:", userError);
+      throw new Error("Session utilisateur invalide ou utilisateur non trouvé");
     }
 
     const user = userData.user;
@@ -76,58 +104,70 @@ serve(async (req) => {
 
     const selectedPackage = creditPackages.find(pkg => pkg.id === packageId);
     if (!selectedPackage) {
-      throw new Error("Invalid package selected");
+      console.error("Invalid package selected:", packageId);
+      throw new Error("Pack de crédits invalide sélectionné");
     }
 
     console.log("Selected package:", selectedPackage);
 
     // Initialize Stripe
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2023-10-16",
-    });
+    try {
+      const stripe = new Stripe(stripeKey, {
+        apiVersion: "2023-10-16",
+      });
 
-    // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "eur",
-            product_data: {
-              name: `${selectedPackage.amount} crédits Confito`,
-              description: selectedPackage.description,
+      // Create Stripe checkout session
+      console.log("Creating Stripe checkout session");
+      const origin = req.headers.get("origin") || "http://localhost:3000";
+      
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price_data: {
+              currency: "eur",
+              product_data: {
+                name: `${selectedPackage.amount} crédits Confito`,
+                description: selectedPackage.description,
+              },
+              unit_amount: selectedPackage.price,
             },
-            unit_amount: selectedPackage.price,
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        mode: "payment",
+        success_url: `${origin}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/payment-canceled`,
+        client_reference_id: user.id,
+        customer_email: user.email,
+        metadata: {
+          userId: user.id,
+          creditsAmount: selectedPackage.amount.toString(),
+          packageId: selectedPackage.id,
         },
-      ],
-      mode: "payment",
-      success_url: `${req.headers.get("origin")}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/payment-canceled`,
-      client_reference_id: user.id,
-      customer_email: user.email,
-      metadata: {
-        userId: user.id,
-        creditsAmount: selectedPackage.amount.toString(),
-        packageId: selectedPackage.id,
-      },
-    });
+      });
 
-    console.log("Checkout session created:", session.id);
+      console.log("Checkout session created:", session.id);
 
-    // Return the session ID and URL to redirect to
-    return new Response(
-      JSON.stringify({ sessionId: session.id, url: session.url }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+      // Return the session ID and URL to redirect to
+      return new Response(
+        JSON.stringify({ sessionId: session.id, url: session.url }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    } catch (stripeError) {
+      console.error("Stripe error:", stripeError);
+      throw new Error(`Erreur Stripe: ${stripeError.message}`);
+    }
+    
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Une erreur inconnue est survenue" 
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
