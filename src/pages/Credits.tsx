@@ -34,7 +34,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 const creditPackages = [
@@ -69,12 +69,13 @@ const creditPackages = [
 ];
 
 const Credits = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState(creditPackages[1].id);
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Fetch user profile
-  const { data: profile, isLoading: loadingProfile } = useQuery({
+  const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = useQuery({
     queryKey: ['userProfile', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -92,7 +93,7 @@ const Credits = () => {
   });
   
   // Fetch credit transactions
-  const { data: transactions, isLoading: loadingTransactions } = useQuery({
+  const { data: transactions, isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['creditTransactions', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -116,6 +117,7 @@ const Credits = () => {
         description: "Veuillez vous connecter pour acheter des crédits",
         variant: "destructive"
       });
+      navigate("/auth");
       return;
     }
     
@@ -124,50 +126,29 @@ const Credits = () => {
     
     setIsProcessing(true);
     
-    // In a real app, this would be a payment gateway integration
-    // For this demo, we're just simulating a successful payment
-    setTimeout(async () => {
-      try {
-        // Add credits to user's profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            credits: (profile?.credits || 0) + selectedPkg.amount
-          })
-          .eq('id', user.id);
-        
-        if (updateError) throw updateError;
-        
-        // Record the transaction
-        const { error: transactionError } = await supabase
-          .from('credit_transactions')
-          .insert([{
-            user_id: user.id,
-            amount: selectedPkg.amount,
-            description: `Achat de ${selectedPkg.amount} crédits`
-          }]);
-        
-        if (transactionError) throw transactionError;
-        
-        toast({
-          title: "Achat réussi !",
-          description: `Vous avez acheté ${selectedPkg.amount} crédits`,
-        });
-        
-        // Force refetch of profile and transactions
-        window.location.reload();
-        
-      } catch (error) {
-        console.error("Error processing payment:", error);
-        toast({
-          title: "Erreur lors de l'achat",
-          description: "Une erreur est survenue lors du traitement de votre paiement",
-          variant: "destructive"
-        });
-      } finally {
-        setIsProcessing(false);
+    try {
+      // Call the Stripe checkout function
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { packageId: selectedPackage }
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
       }
-    }, 2000);
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      toast({
+        title: "Erreur lors de l'achat",
+        description: "Une erreur est survenue lors du traitement de votre paiement",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+    }
   };
 
   if (!user) {
