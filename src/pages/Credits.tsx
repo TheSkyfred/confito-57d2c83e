@@ -15,7 +15,6 @@ import {
   Loader2,
   AlertCircle
 } from 'lucide-react';
-import { ProfileType, CreditTransactionType } from '@/types/supabase';
 
 import {
   Card,
@@ -73,6 +72,7 @@ const Credits = () => {
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState(creditPackages[1].id);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch user profile
   const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = useQuery({
@@ -125,8 +125,11 @@ const Credits = () => {
     if (!selectedPkg) return;
     
     setIsProcessing(true);
+    setError(null);
     
     try {
+      console.log("Calling create-checkout function with package:", selectedPackage);
+      
       // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { packageId: selectedPackage }
@@ -134,10 +137,11 @@ const Credits = () => {
       
       if (error) {
         console.error("Error calling create-checkout function:", error);
-        throw new Error(`Erreur lors de la création du checkout: ${error.message}`);
+        throw new Error(`Erreur lors de la création du checkout: ${error.message || error}`);
       }
       
       if (!data || !data.url) {
+        console.error("Invalid response from create-checkout:", data);
         throw new Error("Aucune URL de paiement n'a été retournée");
       }
       
@@ -147,11 +151,14 @@ const Credits = () => {
       
     } catch (error) {
       console.error("Error creating checkout session:", error);
+      setError(error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement");
+      
       toast({
         title: "Erreur lors de l'achat",
         description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement",
         variant: "destructive"
       });
+      
       setIsProcessing(false);
     }
   };
@@ -224,6 +231,16 @@ const Credits = () => {
                   </div>
                 ))}
               </div>
+              
+              {error && (
+                <div className="mt-4 p-4 bg-destructive/10 border border-destructive rounded-md">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <p className="text-destructive font-medium">Erreur</p>
+                  </div>
+                  <p className="mt-1 text-sm text-destructive">{error}</p>
+                </div>
+              )}
               
               <div className="flex justify-center mt-8">
                 <Button 

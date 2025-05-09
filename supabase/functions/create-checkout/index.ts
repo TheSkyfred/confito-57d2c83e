@@ -9,8 +9,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log("create-checkout function called");
+  
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -20,6 +23,7 @@ serve(async (req) => {
     let reqBody;
     try {
       reqBody = await req.json();
+      console.log("Request body parsed:", JSON.stringify(reqBody));
     } catch (parseError) {
       console.error("Error parsing request body:", parseError);
       throw new Error("Requête invalide : le format JSON est incorrect");
@@ -59,16 +63,24 @@ serve(async (req) => {
     }
     
     console.log("Supabase configuration available");
+    console.log("Supabase URL:", supabaseUrl);
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Get authenticated user
     const token = authHeader.replace("Bearer ", "");
+    console.log("Token extracted from Authorization header");
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
-    if (userError || !userData.user) {
+    if (userError) {
       console.error("User authentication error:", userError);
-      throw new Error("Session utilisateur invalide ou utilisateur non trouvé");
+      throw new Error("Session utilisateur invalide: " + userError.message);
+    }
+    
+    if (!userData.user) {
+      console.error("No user found");
+      throw new Error("Utilisateur non trouvé");
     }
 
     const user = userData.user;
@@ -112,6 +124,7 @@ serve(async (req) => {
 
     // Initialize Stripe
     try {
+      console.log("Initializing Stripe with API key");
       const stripe = new Stripe(stripeKey, {
         apiVersion: "2023-10-16",
       });
@@ -119,6 +132,7 @@ serve(async (req) => {
       // Create Stripe checkout session
       console.log("Creating Stripe checkout session");
       const origin = req.headers.get("origin") || "http://localhost:3000";
+      console.log("Origin:", origin);
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -148,6 +162,7 @@ serve(async (req) => {
       });
 
       console.log("Checkout session created:", session.id);
+      console.log("Session URL:", session.url);
 
       // Return the session ID and URL to redirect to
       return new Response(
@@ -166,7 +181,8 @@ serve(async (req) => {
     console.error("Error creating checkout session:", error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Une erreur inconnue est survenue" 
+        error: error instanceof Error ? error.message : "Une erreur inconnue est survenue",
+        success: false
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
