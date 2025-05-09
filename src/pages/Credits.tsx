@@ -130,10 +130,16 @@ const Credits = () => {
     try {
       console.log("Calling create-checkout function with package:", selectedPackage);
       
+      // Log the session info and auth status for debugging
+      const session = supabase.auth.getSession();
+      console.log("Current session:", session);
+      
       // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { packageId: selectedPackage }
       });
+      
+      console.log("Response from create-checkout:", data, error);
       
       if (error) {
         console.error("Error calling create-checkout function:", error);

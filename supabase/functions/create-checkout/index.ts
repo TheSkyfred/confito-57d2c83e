@@ -18,7 +18,10 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Starting create-checkout function");
+    console.log("Starting create-checkout function with POST request");
+    console.log("Request URL:", req.url);
+    console.log("Request method:", req.method);
+    console.log("Headers:", JSON.stringify(Object.fromEntries(req.headers.entries())));
     
     let reqBody;
     try {
