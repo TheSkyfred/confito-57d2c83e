@@ -38,30 +38,40 @@ export const useCredits = () => {
       }
       
       // Call the Stripe checkout function with proper timeout
-      const { data, error: functionError } = await supabase.functions.invoke('create-checkout', {
+      // The abortSignal option is not supported, using a simple timeout instead
+      const functionPromise = supabase.functions.invoke('create-checkout', {
         body: { packageId: selectedPackage },
         headers: {
           Authorization: `Bearer ${sessionData.session.access_token}`
-        },
-        // Add a longer timeout to prevent quick failures
-        abortSignal: AbortSignal.timeout(15000)
+        }
       });
       
-      console.log("Response from create-checkout:", data, functionError);
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Délai d'attente dépassé")), 15000);
+      });
       
-      if (functionError) {
-        console.error("Error calling create-checkout function:", functionError);
-        throw new Error(`Erreur lors de la création du checkout: ${functionError.message || functionError}`);
+      // Race between the function call and the timeout
+      const data = await Promise.race([
+        functionPromise,
+        timeoutPromise
+      ]) as { data?: { url: string }, error?: any };
+      
+      console.log("Response from create-checkout:", data);
+      
+      if (data.error) {
+        console.error("Error calling create-checkout function:", data.error);
+        throw new Error(`Erreur lors de la création du checkout: ${data.error.message || data.error}`);
       }
       
-      if (!data || !data.url) {
+      if (!data.data || !data.data.url) {
         console.error("Invalid response from create-checkout:", data);
         throw new Error("Aucune URL de paiement n'a été retournée");
       }
       
-      console.log("Redirecting to Stripe checkout:", data.url);
+      console.log("Redirecting to Stripe checkout:", data.data.url);
       // Redirect to Stripe checkout
-      window.location.href = data.url;
+      window.location.href = data.data.url;
       
     } catch (error) {
       console.error("Error creating checkout session:", error);
