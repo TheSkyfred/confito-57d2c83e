@@ -10,3 +10,14 @@ export const getPaymentUrls = () => {
     cancelUrl: `${origin}/payment-canceled`
   };
 };
+
+// Fonctions d'aide pour la vérification des erreurs
+export const handleStripeError = (error: any): string => {
+  if (error instanceof Error) {
+    if (error.message.includes('Failed to fetch') || error.message.includes('Failed to send')) {
+      return "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion internet et réessayer.";
+    }
+    return error.message;
+  }
+  return "Une erreur est survenue lors de la communication avec Stripe";
+};

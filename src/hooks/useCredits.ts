@@ -29,19 +29,24 @@ export const useCredits = () => {
       console.log("Calling create-checkout function with package:", selectedPackage);
       
       // Log the session info and auth status for debugging
-      const session = await supabase.auth.getSession();
-      console.log("Current session:", session);
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Current session:", sessionData);
+      
+      // Check if we have a valid session before proceeding
+      if (!sessionData?.session?.access_token) {
+        throw new Error("Session d'authentification invalide");
+      }
       
       // Call the Stripe checkout function with error handling
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
+      const { data, error: functionError } = await supabase.functions.invoke('create-checkout', {
         body: { packageId: selectedPackage }
       });
       
-      console.log("Response from create-checkout:", data, error);
+      console.log("Response from create-checkout:", data, functionError);
       
-      if (error) {
-        console.error("Error calling create-checkout function:", error);
-        throw new Error(`Erreur lors de la création du checkout: ${error.message || error}`);
+      if (functionError) {
+        console.error("Error calling create-checkout function:", functionError);
+        throw new Error(`Erreur lors de la création du checkout: ${functionError.message || functionError}`);
       }
       
       if (!data || !data.url) {
@@ -60,7 +65,7 @@ export const useCredits = () => {
       
       if (error instanceof Error) {
         if (error.message.includes('Failed to fetch') || error.message.includes('Failed to send')) {
-          errorMessage = "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion et réessayer.";
+          errorMessage = "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion internet et réessayer. Si le problème persiste, contactez notre support.";
         } else {
           errorMessage = error.message;
         }
