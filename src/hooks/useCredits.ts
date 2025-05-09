@@ -28,8 +28,12 @@ export const useCredits = () => {
     try {
       console.log("Calling create-checkout function with package:", selectedPackage);
       
+      // Vérifier l'URL complète pour le débogage
+      const functionUrl = `${supabase.functions.url}/create-checkout`;
+      console.log("Function URL:", functionUrl);
+      
       // Log the session info and auth status for debugging
-      const session = supabase.auth.getSession();
+      const session = await supabase.auth.getSession();
       console.log("Current session:", session);
       
       // Call the Stripe checkout function with error handling
@@ -55,14 +59,28 @@ export const useCredits = () => {
       
     } catch (error) {
       console.error("Error creating checkout session:", error);
-      setError(error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement");
+      
+      let errorMessage: string;
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('Failed to send')) {
+          errorMessage = "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion et réessayer.";
+        } else {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = "Une erreur est survenue lors du traitement de votre paiement";
+      }
+      
+      setError(errorMessage);
       
       toast({
         title: "Erreur lors de l'achat",
-        description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement",
+        description: errorMessage,
         variant: "destructive"
       });
       
+    } finally {
       setIsProcessing(false);
     }
   };

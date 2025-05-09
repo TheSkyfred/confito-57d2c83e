@@ -29,13 +29,31 @@ serve(async (req) => {
       console.log("Request body parsed:", JSON.stringify(reqBody));
     } catch (parseError) {
       console.error("Error parsing request body:", parseError);
-      throw new Error("Requête invalide : le format JSON est incorrect");
+      return new Response(
+        JSON.stringify({ 
+          error: "Requête invalide : le format JSON est incorrect",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
     
     const { packageId } = reqBody;
     if (!packageId) {
       console.error("Missing packageId in request");
-      throw new Error("PackageId est requis pour créer une session de paiement");
+      return new Response(
+        JSON.stringify({
+          error: "PackageId est requis pour créer une session de paiement",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
     
     console.log("Package ID received:", packageId);
@@ -44,7 +62,16 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       console.error("STRIPE_SECRET_KEY not configured");
-      throw new Error("Configuration Stripe manquante côté serveur");
+      return new Response(
+        JSON.stringify({
+          error: "Configuration Stripe manquante côté serveur",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
     }
     
     console.log("Stripe API key available");
@@ -53,7 +80,16 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       console.error("Missing Authorization header");
-      throw new Error("Vous devez être connecté pour effectuer cette action");
+      return new Response(
+        JSON.stringify({
+          error: "Vous devez être connecté pour effectuer cette action",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
     }
 
     // Initialize Supabase client
@@ -62,11 +98,19 @@ serve(async (req) => {
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("Missing Supabase configuration");
-      throw new Error("Configuration Supabase manquante côté serveur");
+      return new Response(
+        JSON.stringify({
+          error: "Configuration Supabase manquante côté serveur",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
     }
     
     console.log("Supabase configuration available");
-    console.log("Supabase URL:", supabaseUrl);
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -78,12 +122,30 @@ serve(async (req) => {
     
     if (userError) {
       console.error("User authentication error:", userError);
-      throw new Error("Session utilisateur invalide: " + userError.message);
+      return new Response(
+        JSON.stringify({
+          error: "Session utilisateur invalide: " + userError.message,
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
     }
     
     if (!userData.user) {
       console.error("No user found");
-      throw new Error("Utilisateur non trouvé");
+      return new Response(
+        JSON.stringify({
+          error: "Utilisateur non trouvé",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404,
+        }
+      );
     }
 
     const user = userData.user;
@@ -124,7 +186,16 @@ serve(async (req) => {
     const selectedPackage = creditPackages.find(pkg => pkg.id === packageId);
     if (!selectedPackage) {
       console.error("Invalid package selected:", packageId);
-      throw new Error("Pack de crédits invalide sélectionné");
+      return new Response(
+        JSON.stringify({
+          error: "Pack de crédits invalide sélectionné",
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
 
     console.log("Selected package:", selectedPackage);
@@ -138,7 +209,7 @@ serve(async (req) => {
 
       // Create Stripe checkout session with the product ID
       console.log("Creating Stripe checkout session with product ID:", selectedPackage.productId);
-      const origin = req.headers.get("origin") || "http://localhost:3000";
+      const origin = new URL(req.url).origin || "http://localhost:3000";
       console.log("Origin:", origin);
       
       const session = await stripe.checkout.sessions.create({
@@ -178,7 +249,16 @@ serve(async (req) => {
       );
     } catch (stripeError) {
       console.error("Stripe error:", stripeError);
-      throw new Error(`Erreur Stripe: ${stripeError.message}`);
+      return new Response(
+        JSON.stringify({
+          error: `Erreur Stripe: ${stripeError.message}`,
+          success: false
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
     }
     
   } catch (error) {
@@ -190,7 +270,7 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
+        status: 500,
       }
     );
   }

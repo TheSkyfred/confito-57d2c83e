@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { CreditCard, DollarSign, Loader2, AlertCircle } from 'lucide-react';
+import { CreditCard, DollarSign, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -92,18 +92,9 @@ const Credits = () => {
               <CreditPackages 
                 creditPackages={creditPackages} 
                 selectedPackage={selectedPackage} 
-                setSelectedPackage={setSelectedPackage} 
+                setSelectedPackage={setSelectedPackage}
+                error={error}
               />
-              
-              {error && (
-                <div className="mt-4 p-4 bg-destructive/10 border border-destructive rounded-md">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                    <p className="text-destructive font-medium">Erreur</p>
-                  </div>
-                  <p className="mt-1 text-sm text-destructive">{error}</p>
-                </div>
-              )}
               
               <div className="flex justify-center mt-8">
                 <Button 
