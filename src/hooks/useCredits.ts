@@ -37,9 +37,14 @@ export const useCredits = () => {
         throw new Error("Session d'authentification invalide");
       }
       
-      // Call the Stripe checkout function with error handling
+      // Call the Stripe checkout function with proper timeout
       const { data, error: functionError } = await supabase.functions.invoke('create-checkout', {
-        body: { packageId: selectedPackage }
+        body: { packageId: selectedPackage },
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`
+        },
+        // Add a longer timeout to prevent quick failures
+        abortSignal: AbortSignal.timeout(15000)
       });
       
       console.log("Response from create-checkout:", data, functionError);
