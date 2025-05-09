@@ -86,31 +86,35 @@ serve(async (req) => {
     const user = userData.user;
     console.log("User authenticated:", user.email);
 
-    // Get the credits package based on the packageId
+    // Map of package IDs to their Stripe product IDs and attributes
     const creditPackages = [
       {
         id: 'credits-10',
         amount: 10,
         price: 599, // in cents for Stripe
-        description: 'Pour goûter quelques confitures'
+        description: 'Pour goûter quelques confitures',
+        productId: 'prod_SHKlMY5fad4jpJ'
       },
       {
         id: 'credits-25',
         amount: 25,
         price: 1299,
-        description: 'Notre offre la plus populaire'
+        description: 'Notre offre la plus populaire',
+        productId: 'prod_SHKjhWMkbrnn4w'
       },
       {
         id: 'credits-50',
         amount: 50,
         price: 2299,
-        description: 'Pour les amateurs de confitures'
+        description: 'Pour les amateurs de confitures',
+        productId: 'prod_SHKmJPb3URoR5j'
       },
       {
         id: 'credits-100',
         amount: 100,
         price: 3999,
-        description: 'Pour les passionnés'
+        description: 'Pour les passionnés',
+        productId: 'prod_SHKmsUaZugXmoD'
       }
     ];
 
@@ -129,8 +133,8 @@ serve(async (req) => {
         apiVersion: "2023-10-16",
       });
 
-      // Create Stripe checkout session
-      console.log("Creating Stripe checkout session");
+      // Create Stripe checkout session with the product ID
+      console.log("Creating Stripe checkout session with product ID:", selectedPackage.productId);
       const origin = req.headers.get("origin") || "http://localhost:3000";
       console.log("Origin:", origin);
       
@@ -140,10 +144,7 @@ serve(async (req) => {
           {
             price_data: {
               currency: "eur",
-              product_data: {
-                name: `${selectedPackage.amount} crédits Confito`,
-                description: selectedPackage.description,
-              },
+              product: selectedPackage.productId,
               unit_amount: selectedPackage.price,
             },
             quantity: 1,
