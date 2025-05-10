@@ -15,6 +15,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   },
   global: {
+    fetch: (url: RequestInfo | URL, options?: RequestInit) => fetch(url, options),
     headers: {
       'x-application-name': 'confito',
     },

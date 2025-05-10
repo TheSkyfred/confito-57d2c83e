@@ -15,7 +15,6 @@ export interface RankedJam {
   jam_images: Array<{
     url: string;
   }>;
-  cover_image_url?: string;
   review_count: number;
   avg_rating: number;
   sale_count: number;
@@ -71,16 +70,12 @@ export const useRankingsData = () => {
     queryKey: ['topRegularJams'],
     queryFn: async () => {
       try {
-        const { data: jamsData, error: jamsError } = await supabase
-          .from('jams')
-          .select(`
-            *,
-            profiles:creator_id (*),
-            jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
-          `)
-          .eq('is_active', true)
-          .eq('is_pro', false)
-          .eq('status', 'approved');
+        const { data: jamsData, error: jamsError } = await supabaseDirect.select(
+          'jams',
+          `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary), 
+           jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)`,
+          `is_active=eq.true&is_pro=eq.false`
+        );
 
         if (jamsError) {
           console.error("Error fetching regular jams:", jamsError);
@@ -116,10 +111,11 @@ export const useRankingsData = () => {
     queryKey: ['topUsers'],
     queryFn: async () => {
       try {
-        const { data: usersData, error: usersError } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url, full_name, role')
-          .neq('role', 'pro');
+        const { data: usersData, error: usersError } = await supabaseDirect.select(
+          'profiles',
+          `id, username, avatar_url, full_name, role`,
+          `role=neq.pro`
+        );
 
         if (usersError) throw usersError;
         
@@ -183,16 +179,12 @@ export const useRankingsData = () => {
     queryKey: ['topProJams'],
     queryFn: async () => {
       try {
-        const { data: jamsData, error: jamsError } = await supabase
-          .from('jams')
-          .select(`
-            *,
-            profiles:creator_id (*),
-            jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
-          `)
-          .eq('is_active', true)
-          .eq('is_pro', true)
-          .eq('status', 'approved');
+        const { data: jamsData, error: jamsError } = await supabaseDirect.select(
+          'jams',
+          `*, profiles:creator_id (username, avatar_url), jam_images (url, is_primary),
+           jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)`,
+          `is_active=eq.true&is_pro=eq.true`
+        );
 
         if (jamsError) {
           console.error("Error fetching pro jams:", jamsError);
@@ -205,12 +197,10 @@ export const useRankingsData = () => {
         }
 
         if (!jamsData || !Array.isArray(jamsData)) {
-          console.log("No pro jam data returned or not in expected format");
-          return [];
+          throw new Error("No pro jam data returned");
         }
         
         const processedJams = processJamData(jamsData);
-        console.log("Processed pro jams:", processedJams);
 
         return processedJams
           .sort((a: RankedJam, b: RankedJam) => {

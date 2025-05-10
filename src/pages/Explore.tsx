@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -6,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Jam } from '@/types/jam';
+import { JamType } from '@/types/supabase';
 import {
   Star,
   Heart,
@@ -31,77 +30,29 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import JamCard from '@/components/JamCard';
 
 const Explore = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState('');
   
-  const { data: jams, isLoading, error } = useQuery({
+  const { data: jams, isLoading } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      // Modification de la requête pour ne pas utiliser jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`
           *,
-          profiles:creator_id (id, username, full_name, avatar_url, role),
-          reviews (*, reviewer:reviewer_id(username, avatar_url))
+          jam_images (*),
+          reviews (*, reviewer:reviewer_id(username, avatar_url)),
+          profiles:creator_id (id, username, full_name, avatar_url, role)
         `)
         .eq('status', 'approved')
         .eq('is_active', true);
 
-      if (error) {
-        console.error('Error fetching jams:', error);
-        throw error;
-      }
-      
-      console.log('Fetched jams:', data);
-      
-      // Map the data to the correct structure
-      const mappedJams = data ? data.map(jam => {
-        // Calculate average rating
-        const avgRating = calculateAverageRating(jam.reviews);
-        return {
-          ...jam,
-          avgRating
-        };
-      }) : [];
-      
-      return mappedJams as Jam[];
+      if (error) throw error;
+      return data as JamType[];
     }
   });
-
-  // Calculate average rating from reviews
-  const calculateAverageRating = (reviews: any[] | null | undefined) => {
-    if (!reviews || reviews.length === 0) return 0;
-    const totalRating = reviews.reduce((sum, review) => sum + (review.rating || 0), 0);
-    return totalRating / reviews.length;
-  };
-
-  // Filter jams by name or description
-  const filteredJams = jams?.filter(jam => {
-    if (!filters) return true;
-    const searchTerm = filters.toLowerCase();
-    return (
-      jam.name.toLowerCase().includes(searchTerm) || 
-      jam.description.toLowerCase().includes(searchTerm) ||
-      (jam.ingredients && jam.ingredients.some(ingredient => 
-        typeof ingredient === 'string' && ingredient.toLowerCase().includes(searchTerm)
-      ))
-    );
-  });
-
-  console.log('Filtered jams:', filteredJams);
-
-  if (error) {
-    console.error("Error loading jams:", error);
-    toast({
-      title: "Erreur de chargement",
-      description: "Impossible de charger les confitures. Veuillez réessayer plus tard.",
-      variant: "destructive",
-    });
-  }
 
   return (
     <div className="container py-8">
@@ -139,9 +90,9 @@ const Explore = () => {
             </Card>
           ))}
         </div>
-      ) : filteredJams && filteredJams.length > 0 ? (
+      ) : jams && jams.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredJams.map((jam) => (
+          {jams.map((jam) => (
             <Card key={jam.id}>
               <CardHeader>
                 <CardTitle>{jam.name}</CardTitle>
@@ -149,13 +100,11 @@ const Explore = () => {
                   {jam.description.substring(0, 50)}...
                 </CardDescription>
               </CardHeader>
-              <div className="w-full h-48 overflow-hidden">
-                <img
-                  src={jam.cover_image_url || '/placeholder.svg'}
-                  alt={jam.name}
-                  className="w-full h-full object-cover rounded-md"
-                />
-              </div>
+              <img
+                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                alt={jam.name}
+                className="w-full h-48 object-cover rounded-md"
+              />
               <CardContent>
                 <div className="flex items-center space-x-2">
                   <Star className="h-4 w-4 text-yellow-500" />
@@ -197,11 +146,9 @@ const Explore = () => {
           <p className="mt-2 text-muted-foreground">
             Essayez de modifier vos critères de recherche.
           </p>
-          <Button className="mt-4" asChild>
-            <Link to="/jam/new">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Proposer une confiture
-            </Link>
+          <Button>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Proposer une confiture
           </Button>
         </div>
       )}

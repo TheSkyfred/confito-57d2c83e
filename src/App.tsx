@@ -19,8 +19,6 @@ import UserProfile from './pages/UserProfile';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Credits from './pages/Credits';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCanceled from './pages/PaymentCanceled';
 import NotFound from './pages/NotFound';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJams from './pages/AdminJams';
@@ -76,8 +74,6 @@ function App() {
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/credits" element={<Credits />} />
-                  <Route path="/payment-success" element={<PaymentSuccess />} />
-                  <Route path="/payment-canceled" element={<PaymentCanceled />} />
                   <Route path="/dashboard" element={<UserDashboard />} />
                   <Route path="/profile" element={<UserProfile />} />
                   <Route path="/profile/:id" element={<UserProfile />} />

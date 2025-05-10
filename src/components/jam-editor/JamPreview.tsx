@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Star, BadgeEuro } from "lucide-react";
 import { JamFormData } from "@/hooks/useJamForm";
@@ -8,68 +9,6 @@ interface JamPreviewProps {
   formData: JamFormData;
   fullPreview?: boolean;
 }
-
-// Function to get ingredient name based on type
-const getIngredientName = (ingredient: any): string => {
-  // Si c'est une chaîne simple
-  if (typeof ingredient === 'string' && !ingredient.includes('{')) {
-    return ingredient;
-  }
-  
-  // Si c'est un objet
-  if (typeof ingredient === 'object' && ingredient !== null) {
-    if (ingredient.name) {
-      // Handle nested stringified objects
-      if (typeof ingredient.name === 'string' && ingredient.name.includes('{')) {
-        try {
-          const parsedName = JSON.parse(ingredient.name);
-          if (parsedName.name) {
-            if (typeof parsedName.name === 'string' && parsedName.name.includes('{')) {
-              try {
-                const deeperParsed = JSON.parse(parsedName.name);
-                if (deeperParsed.name) {
-                  return deeperParsed.name;
-                }
-              } catch (e) {
-                return parsedName.name;
-              }
-            }
-            return parsedName.name;
-          }
-        } catch (e) {
-          return ingredient.name;
-        }
-      }
-      return ingredient.name;
-    }
-  }
-  
-  // Si c'est une chaîne qui contient un objet JSON
-  if (typeof ingredient === 'string' && ingredient.includes('{')) {
-    try {
-      const parsed = JSON.parse(ingredient);
-      if (parsed.name) {
-        // Handle deeper nesting
-        if (typeof parsed.name === 'string' && parsed.name.includes('{')) {
-          try {
-            const deeperParsed = JSON.parse(parsed.name);
-            if (deeperParsed.name) {
-              return deeperParsed.name;
-            }
-          } catch (e) {
-            return parsed.name;
-          }
-        }
-        return parsed.name;
-      }
-    } catch (e) {
-      // Si le parsing échoue, retourner la chaîne originale
-    }
-  }
-  
-  // Fallback
-  return String(ingredient);
-};
 
 const JamPreview: React.FC<JamPreviewProps> = ({ formData, fullPreview = false }) => {
   const previewImage = formData.cover_image_url || '/placeholder.svg';
@@ -107,7 +46,7 @@ const JamPreview: React.FC<JamPreviewProps> = ({ formData, fullPreview = false }
         <div className="flex flex-wrap gap-1 mb-2">
           {formData.ingredients.slice(0, 2).map((ingredient, idx) => (
             <Badge key={idx} variant="outline" className="text-xs">
-              {getIngredientName(ingredient)}
+              {ingredient.name || "Ingrédient"}
             </Badge>
           ))}
           {formData.ingredients.length > 2 && (

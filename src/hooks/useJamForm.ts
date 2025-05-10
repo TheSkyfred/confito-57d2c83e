@@ -1,49 +1,55 @@
+
 import { useState } from "react";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { RecipeStep } from "@/components/jam-editor/RecipeForm";
+
+interface Ingredient {
+  name: string;
+  quantity: string;
+  is_allergen?: boolean;
+}
 
 export interface JamFormData {
   name: string;
   description: string;
   type: string;
-  ingredients: { name: string; quantity: string; is_allergen?: boolean }[];
+  badges: string[];
+  ingredients: Ingredient[];
   allergens: string[];
+  production_date: string;
   weight_grams: number;
   available_quantity: number;
-  price_credits: number;
-  previous_price_credits?: number; // To store the previous value when switching to pro
-  price_euros?: number | null;
-  production_date: string;
   shelf_life_months: number;
   special_edition: boolean;
-  is_active: boolean;
+  price_credits: number;
+  price_euros?: number | null; // Added price_euros field for pro jams
   recipe_steps: RecipeStep[];
+  is_active: boolean;
   images: File[];
   main_image_index: number;
-  cover_image_url?: string | null;
-  badges?: string[];
-  is_pro?: boolean;
-  status?: string;
+  is_pro?: boolean; // Added is_pro flag
+  cover_image_url?: string | null; // Added cover_image_url field
 }
 
-interface UseJamFormOptions {
+export interface UseJamFormProps {
   initialJamId?: string;
-  jamCreatorId: string | null;
+  jamCreatorId?: string | null;
   isProJam?: boolean;
   isAdmin?: boolean;
 }
 
-export const useJamForm = ({
-  initialJamId,
-  jamCreatorId,
-  isProJam = false,
-  isAdmin = false,
-}: UseJamFormOptions) => {
-  const { toast } = useToast();
+export const useJamForm = ({ 
+  initialJamId, 
+  jamCreatorId, 
+  isProJam = false, 
+  isAdmin = false 
+}: UseJamFormProps = {}) => {
   const navigate = useNavigate();
-
+  const [saving, setSaving] = useState(false);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState<JamFormData>({
     name: "",
     description: "",
@@ -57,190 +63,179 @@ export const useJamForm = ({
     shelf_life_months: 12,
     special_edition: false,
     price_credits: 10,
+    price_euros: isProJam ? 10 : null, // Initialize price_euros if pro
     recipe_steps: [],
     is_active: false,
     images: [],
     main_image_index: 0,
-    is_pro: isProJam || false,
-    status: 'pending',
+    is_pro: isProJam, // Initialize with the provided value
+    cover_image_url: null, // Initialize cover_image_url field
   });
 
-  const [saving, setSaving] = useState<boolean>(false);
-
   const updateFormData = (key: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newImages = Array.from(files);
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...newImages],
-      }));
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const imageUrl = URL.createObjectURL(file);
+      setMainImagePreview(imageUrl);
+      
+      updateFormData('images', [file]);
+      updateFormData('main_image_index', 0);
     }
   };
 
-  const uploadImage = async (imageFile: File, jamId: string): Promise<string | null> => {
-    try {
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${jamId}/${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('jam-images')
-        .upload(fileName, imageFile);
-
-      if (uploadError) {
-        console.error("Error uploading image:", uploadError);
-        return null;
-      }
-
-      const { data } = supabase.storage.from('jam-images').getPublicUrl(fileName);
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error in image upload:", error);
-      return null;
-    }
-  };
-
-  const handleSubmit = async (publish = false): Promise<boolean> => {
+  const handleSubmit = async (publish: boolean = false): Promise<boolean | void> => {
     try {
       setSaving(true);
-      console.log("Submitting jam form data:", formData);
-      console.log("Status being saved:", formData.status);
-      console.log("Is pro:", formData.is_pro);
-      console.log("Price credits:", formData.price_credits);
-      console.log("Price euros:", formData.price_euros);
-      console.log("Cover image URL being saved:", formData.cover_image_url);
-
-      // Validate required fields
-      if (!formData.name.trim()) {
-        toast({
-          title: "Champ requis",
-          description: "Le nom de la confiture est obligatoire",
-          variant: "destructive",
-        });
-        setSaving(false);
-        return false;
-      }
-
-      // Format ingredients
-      const formattedIngredients = formData.ingredients.filter(
-        (ing) => ing.name.trim() !== ""
+      
+      const ingredientsForStorage = formData.ingredients.map(
+        ing => `${ing.name}|${ing.quantity}`
       );
-
-      if (formattedIngredients.length === 0) {
-        toast({
-          title: "Ingrédients requis",
-          description: "Veuillez ajouter au moins un ingrédient",
-          variant: "destructive",
-        });
-        setSaving(false);
-        return false;
-      }
-
-      // Format recipe steps
-      const formattedRecipeSteps = formData.recipe_steps.length
-        ? JSON.stringify(formData.recipe_steps)
-        : null;
-
-      // Prepare data for Supabase
-      const jamData: any = {
+      
+      const recipeString = JSON.stringify(formData.recipe_steps);
+      
+      // Ensure both price fields are included, but one will be null based on is_pro
+      const jamData = {
         name: formData.name,
         description: formData.description,
-        type: formData.type || null,
-        ingredients: formattedIngredients,
-        allergens: formData.allergens.length ? formData.allergens : null,
+        type: formData.type,
+        badges: formData.badges,
+        ingredients: ingredientsForStorage,
+        allergens: formData.allergens,
         weight_grams: formData.weight_grams,
         available_quantity: formData.available_quantity,
-        // For pro jams, always keep price_credits as 0 to avoid null constraint violation
-        price_credits: formData.is_pro ? 0 : formData.price_credits,
-        price_euros: formData.is_pro ? formData.price_euros : null,
         production_date: formData.production_date,
         shelf_life_months: formData.shelf_life_months,
         special_edition: formData.special_edition,
-        recipe: formattedRecipeSteps,
-        is_active: publish ? true : formData.is_active,
-        badges: formData.badges,
-        status: formData.status || 'pending',
-        is_pro: formData.is_pro || false,
-        cover_image_url: formData.cover_image_url,
+        price_credits: formData.is_pro ? null : formData.price_credits,
+        price_euros: formData.is_pro ? formData.price_euros || formData.price_credits : null,
+        recipe: recipeString,
+        is_active: publish,
+        is_pro: formData.is_pro,
+        cover_image_url: formData.cover_image_url, // Include cover_image_url in the update
       };
-
-      console.log("Data being sent to Supabase:", jamData);
-
-      // Different logic for create vs update
-      let jamId = initialJamId;
-
-      if (jamId) {
-        // Update existing jam
-        const { error } = await supabase
+      
+      let jam_id = initialJamId;
+      
+      if (initialJamId) {
+        const { error: updateError } = await supabase
           .from("jams")
           .update(jamData)
-          .eq("id", jamId);
-
-        if (error) throw error;
+          .eq("id", initialJamId);
+          
+        if (updateError) throw updateError;
       } else {
-        // Create new jam
-        jamData.creator_id = jamCreatorId;
-
-        const { data, error } = await supabase
+        const { data: newJam, error: insertError } = await supabase
           .from("jams")
-          .insert(jamData)
-          .select("id")
-          .single();
-
-        if (error) throw error;
-        jamId = data.id;
+          .insert({
+            ...jamData,
+            creator_id: jamCreatorId,
+          })
+          .select();
+          
+        if (insertError) throw insertError;
+        if (newJam && newJam.length > 0) {
+          jam_id = newJam[0].id;
+        }
       }
-
-      // Handle image uploads if we have new images
-      if (formData.images.length > 0) {
-        if (!jamId) {
-          throw new Error("ID de confiture manquant pour le téléchargement d'image");
-        }
-
-        // Upload the selected main image first
-        const mainImageFile = formData.images[formData.main_image_index];
-        const mainImageUrl = await uploadImage(mainImageFile, jamId);
-
-        if (mainImageUrl) {
-          // Update the jam with the cover image URL
-          await supabase
-            .from("jams")
-            .update({ cover_image_url: mainImageUrl })
-            .eq("id", jamId);
-        }
+      
+      if (formData.images.length > 0 && jam_id) {
+        // If new image is uploaded, update the cover_image_url
+        await handleImageUpload(jam_id, formData.images, formData.main_image_index, jamCreatorId);
       }
 
       toast({
-        title: "Succès",
-        description: initialJamId
-          ? "Confiture mise à jour avec succès"
-          : "Confiture créée avec succès",
+        title: initialJamId ? "Modifications enregistrées" : "Confiture créée",
+        description: publish 
+          ? "Votre confiture est maintenant publiée" 
+          : "Votre confiture a été enregistrée en brouillon",
       });
-
-      // Navigate to the appropriate page based on user role
+      
       if (isAdmin) {
         navigate(`/admin/jams`);
       } else {
-        navigate(`/jam/${jamId}`);
+        navigate(publish ? `/jam/${jam_id}` : "/dashboard");
       }
-
-      setSaving(false);
       return true;
     } catch (error: any) {
       console.error("Error saving jam:", error);
       toast({
-        title: "Erreur",
-        description: `Erreur lors de l'enregistrement: ${error.message}`,
+        title: "Erreur d'enregistrement",
+        description: error.message || "Une erreur est survenue lors de l'enregistrement",
         variant: "destructive",
       });
-      setSaving(false);
       return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  const handleImageUpload = async (
+    jamId: string,
+    images: File[],
+    mainImageIndex: number,
+    creatorId: string | null
+  ) => {
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
+      const isMainImage = i === mainImageIndex;
+      
+      const filePath = `jams/${jamId}/${Date.now()}_${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("jam-images")
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: publicUrlData } = supabase.storage
+        .from("jam-images")
+        .getPublicUrl(filePath);
+        
+      if (!publicUrlData) {
+        throw new Error("Failed to get public URL for uploaded image");
+      }
+      
+      const publicUrl = publicUrlData.publicUrl;
+      
+      // Update the cover_image_url in the jam record if this is the main image
+      if (isMainImage) {
+        const { error: updateCoverError } = await supabase
+          .from("jams")
+          .update({ cover_image_url: publicUrl })
+          .eq("id", jamId);
+          
+        if (updateCoverError) throw updateCoverError;
+      }
+      
+      // Still maintain jam_images for backward compatibility
+      try {
+        const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
+          p_jam_id: jamId,
+          p_url: publicUrl,
+          p_is_primary: isMainImage,
+          p_creator_id: creatorId
+        });
+        
+        if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
+          const { error: directInsertError } = await supabase
+            .from("jam_images")
+            .insert({
+              jam_id: jamId,
+              url: publicUrl,
+              is_primary: isMainImage
+            });
+            
+          if (directInsertError) throw directInsertError;
+        } else if (imageInsertError) {
+          throw imageInsertError;
+        }
+      } catch (error) {
+        throw error;
+      }
     }
   };
 
@@ -249,6 +244,7 @@ export const useJamForm = ({
     updateFormData,
     handleSubmit,
     saving,
+    mainImagePreview,
     handleImageChange,
   };
 };

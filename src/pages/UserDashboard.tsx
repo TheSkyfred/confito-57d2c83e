@@ -25,13 +25,22 @@ import {
 import { OrderType, ProfileType } from "@/types/supabase";
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { getProfileUsername, isProfileType } from '@/utils/profileTypeGuards';
-import { Jam } from "@/types/jam";
 
-interface BadgeItem {
-  id?: string;
-  name?: string;
-  description?: string;
-  image_url?: string;
+interface Jam {
+  id: string;
+  name: string;
+  description: string;
+  price_credits: number;
+  created_at: string;
+  is_active: boolean;
+  jam_images: { url: string }[];
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
 }
 
 const UserDashboard = () => {
@@ -43,7 +52,7 @@ const UserDashboard = () => {
   const [purchases, setPurchases] = useState<OrderType[]>([]);
   const [sales, setSales] = useState<OrderType[]>([]);
   const [favorites, setFavorites] = useState<Jam[]>([]);
-  const [badges, setBadges] = useState<BadgeItem[]>([]);
+  const [badges, setBadges] = useState<Badge[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -73,8 +82,7 @@ const UserDashboard = () => {
         .order("created_at", { ascending: false });
 
       if (jamsError) throw jamsError;
-      // Cast to the Jam interface type
-      setUserJams((jamsData || []) as Jam[]);
+      setUserJams(jamsData || []);
 
       // Fetch user's purchases
       const { data: purchasesData, error: purchasesError } = await supabase
@@ -105,8 +113,7 @@ const UserDashboard = () => {
       if (favoritesError) throw favoritesError;
       
       const formattedFavorites = favoritesData?.map(fav => fav.jams) || [];
-      // Cast to the Jam interface type
-      setFavorites(formattedFavorites as Jam[]);
+      setFavorites(formattedFavorites);
 
       // Fetch user's badges
       const { data: badgesData, error: badgesError } = await supabase

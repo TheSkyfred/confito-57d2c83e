@@ -1,6 +1,24 @@
 
-# A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
-project_id = "confito"
+# Configuration du bucket de stockage pour les images
+[[storage.buckets]]
+name = "images"
+public = true
+file_size_limit = "10MB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
-[functions.create-checkout]
-verify_jwt = false
+# Add RLS policies to allow image uploads
+[[storage.policies]]
+name = "Public Access"
+bucket = "images"
+schema = "storage"
+table = "objects"
+action = "SELECT"
+policy = "true"
+
+[[storage.policies]]
+name = "Anyone can upload"
+bucket = "images"
+schema = "storage"
+table = "objects"
+action = "INSERT"
+policy = "true"
