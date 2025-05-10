@@ -211,31 +211,8 @@ export const useJamForm = ({
         if (updateCoverError) throw updateCoverError;
       }
       
-      // Still maintain jam_images for backward compatibility
-      try {
-        const { error: imageInsertError } = await supabase.rpc('insert_jam_image', {
-          p_jam_id: jamId,
-          p_url: publicUrl,
-          p_is_primary: isMainImage,
-          p_creator_id: creatorId
-        });
-        
-        if (imageInsertError && imageInsertError.message.includes('function "insert_jam_image" does not exist')) {
-          const { error: directInsertError } = await supabase
-            .from("jam_images")
-            .insert({
-              jam_id: jamId,
-              url: publicUrl,
-              is_primary: isMainImage
-            });
-            
-          if (directInsertError) throw directInsertError;
-        } else if (imageInsertError) {
-          throw imageInsertError;
-        }
-      } catch (error) {
-        throw error;
-      }
+      // Note: We're no longer storing data in jam_images table as it's been removed
+      // Instead, we're using the cover_image_url field directly in the jams table
     }
   };
 

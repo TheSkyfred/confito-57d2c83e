@@ -22,7 +22,7 @@ import {
   BarChart3,
   Loader2,
 } from "lucide-react";
-import { OrderType, ProfileType } from "@/types/supabase";
+import { OrderType, ProfileType, JamType } from "@/types/supabase";
 import { ProfileDisplay } from '@/components/ProfileDisplay';
 import { getProfileUsername, isProfileType } from '@/utils/profileTypeGuards';
 
@@ -33,7 +33,7 @@ interface Jam {
   price_credits: number;
   created_at: string;
   is_active: boolean;
-  jam_images: { url: string }[];
+  cover_image_url?: string | null;
 }
 
 interface Badge {
@@ -77,7 +77,7 @@ const UserDashboard = () => {
       // Fetch user's jams
       const { data: jamsData, error: jamsError } = await supabase
         .from("jams")
-        .select("*, jam_images(*)")
+        .select("id, name, description, price_credits, created_at, is_active, cover_image_url")
         .eq("creator_id", user?.id)
         .order("created_at", { ascending: false });
 
@@ -107,12 +107,12 @@ const UserDashboard = () => {
       // Fetch user's favorites
       const { data: favoritesData, error: favoritesError } = await supabase
         .from("favorites")
-        .select("jams(*), jams(jam_images(*))")
+        .select("jams(id, name, description, price_credits, created_at, is_active, cover_image_url)")
         .eq("user_id", user?.id);
 
       if (favoritesError) throw favoritesError;
       
-      const formattedFavorites = favoritesData?.map(fav => fav.jams) || [];
+      const formattedFavorites = favoritesData?.map(fav => fav.jams as Jam) || [];
       setFavorites(formattedFavorites);
 
       // Fetch user's badges
@@ -280,9 +280,9 @@ const UserDashboard = () => {
                       <Link to={`/jam/${jam.id}`} key={jam.id} className="block">
                         <div className="border rounded-md overflow-hidden hover:shadow-md transition-shadow">
                           <div className="aspect-[4/3] bg-muted overflow-hidden">
-                            {jam.jam_images && jam.jam_images.length > 0 ? (
+                            {jam.cover_image_url ? (
                               <img
-                                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                                src={jam.cover_image_url || '/placeholder.svg'}
                                 alt={jam.name}
                                 className="w-full h-full object-cover"
                               />
@@ -459,18 +459,13 @@ const UserDashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {userJams.map(jam => {
-                    // Find the main image or use the first one
-                    const mainImage = jam.jam_images && jam.jam_images.length > 0
-                      ? jam.jam_images.find((img: any) => img?.is_main) || jam.jam_images[0]
-                      : null;
-                      
                     return (
                       <Link to={`/jam/${jam.id}`} key={jam.id} className="block">
                         <div className="border rounded-md overflow-hidden hover:shadow-md transition-shadow">
                           <div className="aspect-[4/3] bg-muted overflow-hidden">
-                            {mainImage ? (
+                            {jam.cover_image_url ? (
                               <img
-                                src={mainImage?.url || '/placeholder.svg'}
+                                src={jam.cover_image_url || '/placeholder.svg'}
                                 alt={jam.name}
                                 className="w-full h-full object-cover"
                               />
@@ -629,18 +624,13 @@ const UserDashboard = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {favorites.map(jam => {
-                    // Find the main image or use the first one
-                    const mainImage = jam.jam_images && jam.jam_images.length > 0
-                      ? jam.jam_images.find((img: any) => img?.is_main) || jam.jam_images[0]
-                      : null;
-                      
                     return (
                       <Link to={`/jam/${jam.id}`} key={jam.id} className="block">
                         <div className="border rounded-md overflow-hidden hover:shadow-md transition-shadow">
                           <div className="aspect-[4/3] bg-muted overflow-hidden">
-                            {mainImage ? (
+                            {jam.cover_image_url ? (
                               <img
-                                src={mainImage?.url || '/placeholder.svg'}
+                                src={jam.cover_image_url || '/placeholder.svg'}
                                 alt={jam.name}
                                 className="w-full h-full object-cover"
                               />

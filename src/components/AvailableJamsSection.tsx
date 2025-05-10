@@ -6,38 +6,35 @@ import { ArrowRightIcon, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import JamCard from '@/components/JamCard';
-import { supabaseDirect } from '@/utils/supabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { JamType } from '@/types/supabase';
-import { getProfileUsername } from '@/utils/profileTypeGuards';
 
 const AvailableJamsSection = () => {
   const { data: availableJams, isLoading } = useQuery({
     queryKey: ['availableTopRatedJams'],
     queryFn: async () => {
-      // Récupérer les confitures disponibles (avec stock > 0)
-      const { data: jams, error } = await supabaseDirect.select(
-        'jams', 
-        `
+      // Fetch available jams (with stock > 0)
+      const { data: jams, error } = await supabase
+        .from('jams')
+        .select(`
           id,
           name,
           description,
           price_credits,
           ingredients,
           available_quantity,
+          cover_image_url,
           creator_id,
           profiles (username),
-          jam_images (url, is_primary),
           jam_reviews (taste_rating, texture_rating, originality_rating, balance_rating)
-        `
-      );
+        `)
+        .eq('is_active', true)
+        .gt('available_quantity', 0);
       
       if (error) throw error;
       
-      // Filtrer les confitures avec un stock disponible
-      const availableJams = jams.filter(jam => jam.available_quantity > 0);
-      
-      // Calculer la note moyenne pour chaque confiture en excluant les zéros
-      const jamsWithRatings = availableJams.map(jam => {
+      // Calculate average rating for each jam excluding zeros
+      const jamsWithRatings = jams.map(jam => {
         // Calculate average rating for each review
         const reviewScores = jam.jam_reviews ? jam.jam_reviews.map(review => {
           const ratings = [
@@ -58,17 +55,14 @@ const AvailableJamsSection = () => {
         return {
           ...jam,
           avgRating,
-          primaryImage: jam.jam_images && jam.jam_images.length > 0 
-            ? (jam.jam_images.find(img => img.is_primary)?.url || jam.jam_images[0]?.url)
-            : '/placeholder.svg',
           reviews: jam.jam_reviews || []
-        };
+        } as unknown as JamType;
       });
       
-      // Trier par note moyenne décroissante et ne prendre que les 4 premières
+      // Sort by average rating in descending order and take only the top 4
       return jamsWithRatings
         .sort((a, b) => b.avgRating - a.avgRating)
-        .slice(0, 4) as JamType[];
+        .slice(0, 4);
     },
   });
 

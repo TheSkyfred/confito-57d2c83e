@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -42,15 +43,23 @@ const Explore = () => {
         .from('jams')
         .select(`
           *,
-          jam_images (*),
-          reviews (*, reviewer:reviewer_id(username, avatar_url)),
           profiles:creator_id (id, username, full_name, avatar_url, role)
         `)
         .eq('status', 'approved')
         .eq('is_active', true);
 
       if (error) throw error;
-      return data as JamType[];
+      
+      // Convert the data to JamType with appropriate structure
+      const processedData = data.map(jam => {
+        return {
+          ...jam,
+          reviews: [], // Initialize with empty reviews array
+          avgRating: 0 // Initialize with zero rating
+        } as unknown as JamType;
+      });
+      
+      return processedData;
     }
   });
 
@@ -101,7 +110,7 @@ const Explore = () => {
                 </CardDescription>
               </CardHeader>
               <img
-                src={jam.jam_images[0]?.url || '/placeholder.svg'}
+                src={jam.cover_image_url || '/placeholder.svg'}
                 alt={jam.name}
                 className="w-full h-48 object-cover rounded-md"
               />
