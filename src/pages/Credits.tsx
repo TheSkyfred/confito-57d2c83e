@@ -40,6 +40,7 @@ import { toast } from '@/hooks/use-toast';
 const creditPackages = [
   {
     id: 'credits-10',
+    productId: 'prod_SHKlMY5fad4jpJ',
     amount: 10,
     price: 5.99,
     popular: false,
@@ -47,6 +48,7 @@ const creditPackages = [
   },
   {
     id: 'credits-25',
+    productId: 'prod_SHKjhWMkbrnn4w',
     amount: 25,
     price: 12.99,
     popular: true,
@@ -54,6 +56,7 @@ const creditPackages = [
   },
   {
     id: 'credits-50',
+    productId: 'prod_SHKmJPb3URoR5j',
     amount: 50,
     price: 22.99,
     popular: false,
@@ -61,6 +64,7 @@ const creditPackages = [
   },
   {
     id: 'credits-100',
+    productId: 'prod_SHKmsUaZugXmoD',
     amount: 100,
     price: 39.99,
     popular: false,
@@ -124,50 +128,32 @@ const Credits = () => {
     
     setIsProcessing(true);
     
-    // In a real app, this would be a payment gateway integration
-    // For this demo, we're just simulating a successful payment
-    setTimeout(async () => {
-      try {
-        // Add credits to user's profile
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            credits: (profile?.credits || 0) + selectedPkg.amount
-          })
-          .eq('id', user.id);
-        
-        if (updateError) throw updateError;
-        
-        // Record the transaction
-        const { error: transactionError } = await supabase
-          .from('credit_transactions')
-          .insert([{
-            user_id: user.id,
-            amount: selectedPkg.amount,
-            description: `Achat de ${selectedPkg.amount} crédits`
-          }]);
-        
-        if (transactionError) throw transactionError;
-        
-        toast({
-          title: "Achat réussi !",
-          description: `Vous avez acheté ${selectedPkg.amount} crédits`,
-        });
-        
-        // Force refetch of profile and transactions
-        window.location.reload();
-        
-      } catch (error) {
-        console.error("Error processing payment:", error);
-        toast({
-          title: "Erreur lors de l'achat",
-          description: "Une erreur est survenue lors du traitement de votre paiement",
-          variant: "destructive"
-        });
-      } finally {
-        setIsProcessing(false);
+    try {
+      // Appeler la fonction Edge pour créer une session Stripe Checkout
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: {
+          productId: selectedPkg.productId,
+          quantity: 1
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        // Rediriger vers la page de paiement Stripe
+        window.location.href = data.url;
+      } else {
+        throw new Error("Aucune URL de paiement reçue");
       }
-    }, 2000);
+    } catch (error) {
+      console.error("Erreur lors de la création de la session de paiement:", error);
+      toast({
+        title: "Erreur de paiement",
+        description: "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion internet et réessayer. Si le problème persiste, contactez notre support.",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+    }
   };
 
   if (!user) {

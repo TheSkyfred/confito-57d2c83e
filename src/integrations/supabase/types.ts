@@ -1140,6 +1140,7 @@ export type Database = {
           description: string
           id: string
           related_order_id: string | null
+          stripe_session_id: string | null
           user_id: string
         }
         Insert: {
@@ -1148,6 +1149,7 @@ export type Database = {
           description: string
           id?: string
           related_order_id?: string | null
+          stripe_session_id?: string | null
           user_id: string
         }
         Update: {
@@ -1156,6 +1158,7 @@ export type Database = {
           description?: string
           id?: string
           related_order_id?: string | null
+          stripe_session_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1523,38 +1526,6 @@ export type Database = {
           voting_end_date?: string
         }
         Relationships: []
-      }
-      jam_images: {
-        Row: {
-          created_at: string
-          id: string
-          is_primary: boolean
-          jam_id: string
-          url: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean
-          jam_id: string
-          url: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_primary?: boolean
-          jam_id?: string
-          url?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "jam_images_jam_id_fkey"
-            columns: ["jam_id"]
-            isOneToOne: false
-            referencedRelation: "jams"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       jam_reviews: {
         Row: {
