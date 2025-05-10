@@ -38,6 +38,7 @@ serve(async (req) => {
     
     console.log("Package ID received:", packageId);
     console.log("Price ID received:", priceId);
+    console.log("Product ID received:", productId);
     
     // Get the Stripe secret key from environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
@@ -143,6 +144,7 @@ serve(async (req) => {
           userId: user.id,
           creditsAmount: selectedPackage.amount.toString(),
           packageId: selectedPackage.id,
+          productId: productId
         },
       });
 

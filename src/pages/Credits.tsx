@@ -164,6 +164,7 @@ const Credits = () => {
         description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement",
         variant: "destructive"
       });
+    } finally {
       setIsProcessing(false);
     }
   };
