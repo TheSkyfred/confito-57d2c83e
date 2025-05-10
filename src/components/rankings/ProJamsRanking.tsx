@@ -19,10 +19,12 @@ interface Jam {
   jam_images: Array<{
     url: string;
   }>;
+  cover_image_url?: string;
   review_count: number;
   avg_rating: number;
   price_euros?: number;
   is_pro: boolean;
+  ingredients?: Array<{name: string, quantity: string}> | string[];
 }
 
 interface ProJamsRankingProps {
@@ -48,6 +50,68 @@ const safeToFixed = (value: number | undefined | null, digits: number = 1): stri
   return value.toFixed(digits);
 };
 
+// Function to get ingredient name based on type
+const getIngredientName = (ingredient: any): string => {
+  // Si c'est une chaîne simple
+  if (typeof ingredient === 'string' && !ingredient.includes('{')) {
+    return ingredient;
+  }
+  
+  // Si c'est un objet
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    if (ingredient.name) {
+      // Handle nested stringified objects
+      if (typeof ingredient.name === 'string' && ingredient.name.includes('{')) {
+        try {
+          const parsedName = JSON.parse(ingredient.name);
+          if (parsedName.name) {
+            if (typeof parsedName.name === 'string' && parsedName.name.includes('{')) {
+              try {
+                const deeperParsed = JSON.parse(parsedName.name);
+                if (deeperParsed.name) {
+                  return deeperParsed.name;
+                }
+              } catch (e) {
+                return parsedName.name;
+              }
+            }
+            return parsedName.name;
+          }
+        } catch (e) {
+          return ingredient.name;
+        }
+      }
+      return ingredient.name;
+    }
+  }
+  
+  // Si c'est une chaîne qui contient un objet JSON
+  if (typeof ingredient === 'string' && ingredient.includes('{')) {
+    try {
+      const parsed = JSON.parse(ingredient);
+      if (parsed.name) {
+        // Handle deeper nesting
+        if (typeof parsed.name === 'string' && parsed.name.includes('{')) {
+          try {
+            const deeperParsed = JSON.parse(parsed.name);
+            if (deeperParsed.name) {
+              return deeperParsed.name;
+            }
+          } catch (e) {
+            return parsed.name;
+          }
+        }
+        return parsed.name;
+      }
+    } catch (e) {
+      // Si le parsing échoue, retourner la chaîne originale
+    }
+  }
+  
+  // Fallback
+  return String(ingredient);
+};
+
 const ProJamsRanking: React.FC<ProJamsRankingProps> = ({ jams, isLoading }) => {
   if (isLoading) {
     return (
@@ -59,55 +123,56 @@ const ProJamsRanking: React.FC<ProJamsRankingProps> = ({ jams, isLoading }) => {
 
   return (
     <div className="space-y-6">
-      {jams?.map((jam: Jam, index: number) => (
-        <Card key={jam.id} className={index < 3 ? "border-jam-honey" : ""}>
-          <CardContent className="p-0">
-            <div className="flex items-center p-4">
-              <div className="flex items-center justify-center w-10 mr-4">
-                {getJamRankBadge(index)}
-              </div>
-              <div className="flex-shrink-0 mr-4">
-                <img 
-                  src={jam.jam_images?.[0]?.url || '/placeholder.svg'} 
-                  alt={jam.name}
-                  className="h-16 w-16 object-cover rounded-md"
-                />
-              </div>
-              <div className="flex-grow">
-                <div className="flex items-center">
-                  <h3 className="font-medium">{jam.name}</h3>
-                  <Crown className="ml-2 h-4 w-4 text-amber-500" />
+      {jams && jams.length > 0 ? (
+        jams.map((jam: Jam, index: number) => (
+          <Card key={jam.id} className={index < 3 ? "border-jam-honey" : ""}>
+            <CardContent className="p-0">
+              <div className="flex items-center p-4">
+                <div className="flex items-center justify-center w-10 mr-4">
+                  {getJamRankBadge(index)}
                 </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Avatar className="h-4 w-4 mr-1">
-                    <AvatarImage src={jam.profile?.avatar_url || undefined} />
-                    <AvatarFallback>{jam.profile?.username?.[0]?.toUpperCase() || 'J'}</AvatarFallback>
-                  </Avatar>
-                  <span>{jam.profile?.username || 'Utilisateur'}</span>
+                <div className="flex-shrink-0 mr-4">
+                  <img 
+                    src={jam.cover_image_url || jam.jam_images?.[0]?.url || '/placeholder.svg'} 
+                    alt={jam.name}
+                    className="h-16 w-16 object-cover rounded-md"
+                  />
                 </div>
+                <div className="flex-grow">
+                  <div className="flex items-center">
+                    <h3 className="font-medium">{jam.name}</h3>
+                    <Crown className="ml-2 h-4 w-4 text-amber-500" />
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Avatar className="h-4 w-4 mr-1">
+                      <AvatarImage src={jam.profile?.avatar_url || undefined} />
+                      <AvatarFallback>{jam.profile?.username?.[0]?.toUpperCase() || 'J'}</AvatarFallback>
+                    </Avatar>
+                    <span>{jam.profile?.username || 'Utilisateur'}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center mb-1">
+                    <Star className="h-4 w-4 text-jam-honey fill-jam-honey mr-1" />
+                    <span className="font-medium">{safeToFixed(jam.avg_rating)}</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({jam.review_count || 0})
+                    </span>
+                  </div>
+                  <div className="flex items-center text-sm font-medium">
+                    {jam.price_euros ? `${jam.price_euros} €` : '0 €'}
+                  </div>
+                </div>
+                <Button variant="ghost" size="icon" asChild className="ml-2">
+                  <Link to={`/jam/${jam.id}`}>
+                    <ArrowUpRight className="h-5 w-5" />
+                  </Link>
+                </Button>
               </div>
-              <div className="flex flex-col items-end">
-                <div className="flex items-center mb-1">
-                  <Star className="h-4 w-4 text-jam-honey fill-jam-honey mr-1" />
-                  <span className="font-medium">{safeToFixed(jam.avg_rating)}</span>
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({jam.review_count || 0})
-                  </span>
-                </div>
-                <div className="flex items-center text-sm font-medium">
-                  {jam.price_euros} €
-                </div>
-              </div>
-              <Button variant="ghost" size="icon" asChild className="ml-2">
-                <Link to={`/jam/${jam.id}`}>
-                  <ArrowUpRight className="h-5 w-5" />
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {(!jams || jams.length === 0) && (
+            </CardContent>
+          </Card>
+        ))
+      ) : (
         <div className="text-center py-8">
           <p className="text-muted-foreground">Aucune confiture professionnelle trouvée</p>
         </div>

@@ -12,6 +12,7 @@ const SeasonalSection = () => {
   const { data: seasonalJams, isLoading } = useQuery({
     queryKey: ['seasonalJams'],
     queryFn: async () => {
+      // Utiliser cover_image_url au lieu de jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`

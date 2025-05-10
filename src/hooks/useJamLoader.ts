@@ -71,7 +71,8 @@ export const useJamLoader = ({
         
         let query = supabase
           .from("jams")
-          .select(`*, jam_images(*)`)
+          // Enlever la référence à jam_images
+          .select(`*`)
           .eq("id", jamId);
         
         if (!isAdmin) {
@@ -152,15 +153,8 @@ export const useJamLoader = ({
           }
         }
         
-        let mainImageUrl = jamWithTypes.cover_image_url || null;
-        if (!mainImageUrl && jamWithTypes.jam_images && jamWithTypes.jam_images.length > 0) {
-          const primaryImage = jamWithTypes.jam_images.find((img: any) => img.is_primary);
-          if (primaryImage) {
-            mainImageUrl = primaryImage.url;
-          } else if (jamWithTypes.jam_images[0]) {
-            mainImageUrl = jamWithTypes.jam_images[0].url;
-          }
-        }
+        // Utiliser directement cover_image_url
+        const mainImageUrl = jamWithTypes.cover_image_url || null;
         setMainImagePreview(mainImageUrl);
         
         setInitialFormData({
@@ -183,6 +177,7 @@ export const useJamLoader = ({
           main_image_index: 0,
           is_pro: jamWithTypes.is_pro || false,
           cover_image_url: jamWithTypes.cover_image_url || null,
+          status: jamWithTypes.status || 'pending',
         });
         
         setLoading(false);

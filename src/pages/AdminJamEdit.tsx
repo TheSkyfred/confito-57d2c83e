@@ -14,6 +14,9 @@ import JamEditorAccordion from "@/components/jam-editor/JamEditorAccordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import StatusDropdown from "@/components/jam-editor/StatusDropdown";
+import DeleteJamDialog from "@/components/jam-editor/DeleteJamDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Tooltip,
   TooltipContent,
@@ -31,6 +34,10 @@ const AdminJamEdit: React.FC = () => {
     "basic-info",
     "pricing"
   ]);
+  
+  // We will sync this with formData
+  const [jamStatus, setJamStatus] = useState<string>("pending");
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
   
   const {
     loading,
@@ -58,26 +65,93 @@ const AdminJamEdit: React.FC = () => {
     isAdmin: true,
   });
   
+  // Sync initialFormData with formData when it's loaded
   useEffect(() => {
     if (initialFormData && initialFormData.name && !formData.name) {
       Object.keys(initialFormData).forEach(key => {
         updateFormData(key, initialFormData[key as keyof JamFormData]);
       });
+      
+      // Set initial status when jam data is loaded
+      if (initialFormData.status) {
+        setJamStatus(initialFormData.status);
+        updateFormData('status', initialFormData.status);
+      }
     }
   }, [initialFormData]);
   
   const handleToggleProStatus = () => {
-    if (formData.is_pro && formData.price_euros) {
-      updateFormData('price_credits', Math.round(formData.price_euros));
-    } else if (!formData.is_pro && formData.price_credits) {
-      updateFormData('price_euros', formData.price_credits);
+    const newIsProValue = !formData.is_pro;
+    
+    if (newIsProValue) {
+      // Switching to Pro mode
+      // Set price_credits to 0 to avoid null constraint violation
+      // But keep track of the old value for switching back
+      const currentPriceCredits = formData.price_credits || 10;
+      updateFormData('previous_price_credits', currentPriceCredits);
+      updateFormData('price_credits', 0);
+      
+      // Set price_euros if it's not already set
+      if (!formData.price_euros) {
+        updateFormData('price_euros', currentPriceCredits);
+      }
+    } else {
+      // Switching back to regular mode
+      // Restore previous price_credits or use current price_euros
+      const priceToRestore = formData.previous_price_credits || formData.price_euros || 10;
+      updateFormData('price_credits', priceToRestore);
     }
     
-    updateFormData('is_pro', !formData.is_pro);
+    updateFormData('is_pro', newIsProValue);
+  };
+  
+  const handleStatusChange = (status: string) => {
+    console.log("Status changed to:", status);
+    setJamStatus(status);
+    updateFormData('status', status);
   };
   
   const handleGoBack = () => {
     navigate('/admin/jams');
+  };
+
+  const handleDeleteJam = async (): Promise<void> => {
+    if (!id || !isAdmin) return;
+    
+    try {
+      setIsDeleting(true);
+      
+      // Delete the jam from the database
+      const { error } = await supabase
+        .from('jams')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Confiture supprimée",
+        description: "La confiture a été supprimée avec succès",
+      });
+      
+      // Navigate back to the jams list
+      navigate('/admin/jams');
+    } catch (error: any) {
+      console.error("Error deleting jam:", error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de supprimer la confiture : ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  // Handle cover image update
+  const handleCoverImageUpdated = (url: string) => {
+    console.log("Cover image updated:", url);
+    updateFormData('cover_image_url', url);
   };
   
   if (!isAdmin && !isModerator) {
@@ -142,7 +216,18 @@ const AdminJamEdit: React.FC = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Status Dropdown */}
+            <div className="mr-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium mb-2 text-muted-foreground">Statut</span>
+                <StatusDropdown 
+                  currentStatus={jamStatus}
+                  onStatusChange={handleStatusChange}
+                />
+              </div>
+            </div>
+            
             {isAdmin && (
               <div className={`flex items-center space-x-2 p-3 rounded-md ${formData.is_pro ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'}`}>
                 <div className="flex items-center space-x-2">
@@ -232,30 +317,41 @@ const AdminJamEdit: React.FC = () => {
               
               <Separator className="my-6" />
               
-              <div className="flex justify-end gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={handleGoBack}
-                >
-                  Annuler
-                </Button>
-                <Button 
-                  variant="default" 
-                  disabled={saving || !formData.name} 
-                  onClick={() => handleSubmit(false)}
-                  className="bg-slate-800 hover:bg-slate-900"
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Enregistrer en brouillon
-                </Button>
-                <Button 
-                  variant="default" 
-                  disabled={saving || !formData.name} 
-                  onClick={() => handleSubmit(true)}
-                >
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Publier
-                </Button>
+              <div className="flex justify-between gap-3">
+                {/* Delete button for admins only */}
+                {isAdmin && (
+                  <DeleteJamDialog
+                    jamName={formData.name}
+                    onDelete={handleDeleteJam}
+                    isDeleting={isDeleting}
+                  />
+                )}
+                
+                <div className="flex gap-3 ml-auto">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGoBack}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    disabled={saving || !formData.name} 
+                    onClick={() => handleSubmit(false)}
+                    className="bg-slate-800 hover:bg-slate-900"
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Enregistrer en brouillon
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    disabled={saving || !formData.name} 
+                    onClick={() => handleSubmit(true)}
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Publier
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

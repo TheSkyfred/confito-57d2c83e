@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, BadgeEuro } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +7,68 @@ import { CreditBadge } from '@/components/ui/credit-badge';
 export interface JamCardProps {
   jam: JamType;
 }
+
+// Function to get ingredient name based on type
+const getIngredientName = (ingredient: any): string => {
+  // Si c'est une chaîne simple
+  if (typeof ingredient === 'string' && !ingredient.includes('{')) {
+    return ingredient;
+  }
+  
+  // Si c'est un objet
+  if (typeof ingredient === 'object' && ingredient !== null) {
+    if (ingredient.name) {
+      // Handle nested stringified objects
+      if (typeof ingredient.name === 'string' && ingredient.name.includes('{')) {
+        try {
+          const parsedName = JSON.parse(ingredient.name);
+          if (parsedName.name) {
+            if (typeof parsedName.name === 'string' && parsedName.name.includes('{')) {
+              try {
+                const deeperParsed = JSON.parse(parsedName.name);
+                if (deeperParsed.name) {
+                  return deeperParsed.name;
+                }
+              } catch (e) {
+                return parsedName.name;
+              }
+            }
+            return parsedName.name;
+          }
+        } catch (e) {
+          return ingredient.name;
+        }
+      }
+      return ingredient.name;
+    }
+  }
+  
+  // Si c'est une chaîne qui contient un objet JSON
+  if (typeof ingredient === 'string' && ingredient.includes('{')) {
+    try {
+      const parsed = JSON.parse(ingredient);
+      if (parsed.name) {
+        // Handle deeper nesting
+        if (typeof parsed.name === 'string' && parsed.name.includes('{')) {
+          try {
+            const deeperParsed = JSON.parse(parsed.name);
+            if (deeperParsed.name) {
+              return deeperParsed.name;
+            }
+          } catch (e) {
+            return parsed.name;
+          }
+        }
+        return parsed.name;
+      }
+    } catch (e) {
+      // Si le parsing échoue, retourner la chaîne originale
+    }
+  }
+  
+  // Fallback
+  return String(ingredient);
+};
 
 const JamCard: React.FC<JamCardProps> = ({ jam }) => {
   if (!jam) {
@@ -19,7 +80,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
     if (value === undefined || value === null) return '0.0';
     return value.toFixed(digits);
   };
-  
+
   return (
     <div className="group relative overflow-hidden rounded-lg border border-muted bg-background hover:shadow-md transition-shadow">
       <div className="aspect-square overflow-hidden">
@@ -53,7 +114,7 @@ const JamCard: React.FC<JamCardProps> = ({ jam }) => {
         <div className="flex flex-wrap gap-1">
           {jam.ingredients?.slice(0, 2).map((ingredient, idx) => (
             <Badge key={idx} variant="outline" className="text-xs">
-              {ingredient}
+              {getIngredientName(ingredient)}
             </Badge>
           ))}
           {jam.ingredients && jam.ingredients.length > 2 && (

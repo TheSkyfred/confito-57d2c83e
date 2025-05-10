@@ -13,6 +13,7 @@ export interface PricingFormProps {
   formData: {
     price_credits: number;
     price_euros?: number;
+    is_pro?: boolean;
     [key: string]: any;
   };
   updateFormData: (key: string, value: any) => void;
@@ -31,6 +32,7 @@ const PricingForm: React.FC<PricingFormProps> = ({
     updateFormData(key, values[0]);
   };
 
+  // Use the correct price based on whether it's a pro jam
   const currentPrice = isPro 
     ? (formData.price_euros || formData.price_credits) 
     : formData.price_credits;
@@ -40,6 +42,20 @@ const PricingForm: React.FC<PricingFormProps> = ({
 
   return (
     <div className="space-y-6">
+      {isPro && (
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
+          <div className="flex items-start">
+            <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-amber-800">Mode Pro activé</h3>
+              <p className="text-sm text-amber-700">
+                Cette confiture sera vendue en euros et non en crédits. Le prix sera affiché en euros sur la plateforme.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {suggestedPrice && !isPro && (
         <div className="bg-muted rounded-md p-4 flex items-start space-x-3">
           <Lightbulb className="h-5 w-5 text-jam-honey mt-0.5" />

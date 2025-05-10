@@ -34,13 +34,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 const creditPackages = [
   {
     id: 'credits-10',
-    productId: 'prod_SHKlMY5fad4jpJ',
     amount: 10,
     price: 5.99,
     popular: false,
@@ -48,7 +47,6 @@ const creditPackages = [
   },
   {
     id: 'credits-25',
-    productId: 'prod_SHKjhWMkbrnn4w',
     amount: 25,
     price: 12.99,
     popular: true,
@@ -56,7 +54,6 @@ const creditPackages = [
   },
   {
     id: 'credits-50',
-    productId: 'prod_SHKmJPb3URoR5j',
     amount: 50,
     price: 22.99,
     popular: false,
@@ -64,7 +61,6 @@ const creditPackages = [
   },
   {
     id: 'credits-100',
-    productId: 'prod_SHKmsUaZugXmoD',
     amount: 100,
     price: 39.99,
     popular: false,
@@ -73,12 +69,13 @@ const creditPackages = [
 ];
 
 const Credits = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedPackage, setSelectedPackage] = useState(creditPackages[1].id);
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Fetch user profile
-  const { data: profile, isLoading: loadingProfile } = useQuery({
+  const { data: profile, isLoading: loadingProfile, refetch: refetchProfile } = useQuery({
     queryKey: ['userProfile', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -96,7 +93,7 @@ const Credits = () => {
   });
   
   // Fetch credit transactions
-  const { data: transactions, isLoading: loadingTransactions } = useQuery({
+  const { data: transactions, isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['creditTransactions', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -120,6 +117,7 @@ const Credits = () => {
         description: "Veuillez vous connecter pour acheter des crédits",
         variant: "destructive"
       });
+      navigate("/auth");
       return;
     }
     
@@ -129,27 +127,29 @@ const Credits = () => {
     setIsProcessing(true);
     
     try {
-      // Appeler la fonction Edge pour créer une session Stripe Checkout
+      // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          productId: selectedPkg.productId,
-          quantity: 1
-        }
+        body: { packageId: selectedPackage }
       });
       
-      if (error) throw error;
-      
-      if (data?.url) {
-        // Rediriger vers la page de paiement Stripe
-        window.location.href = data.url;
-      } else {
-        throw new Error("Aucune URL de paiement reçue");
+      if (error) {
+        console.error("Error calling create-checkout function:", error);
+        throw new Error(`Erreur lors de la création du checkout: ${error.message}`);
       }
+      
+      if (!data || !data.url) {
+        throw new Error("Aucune URL de paiement n'a été retournée");
+      }
+      
+      console.log("Redirecting to Stripe checkout:", data.url);
+      // Redirect to Stripe checkout
+      window.location.href = data.url;
+      
     } catch (error) {
-      console.error("Erreur lors de la création de la session de paiement:", error);
+      console.error("Error creating checkout session:", error);
       toast({
-        title: "Erreur de paiement",
-        description: "Impossible de contacter le serveur de paiement. Veuillez vérifier votre connexion internet et réessayer. Si le problème persiste, contactez notre support.",
+        title: "Erreur lors de l'achat",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors du traitement de votre paiement",
         variant: "destructive"
       });
       setIsProcessing(false);
