@@ -135,10 +135,14 @@ const Credits = () => {
     setIsProcessing(true);
     
     try {
+      console.log("Starting checkout process for package:", selectedPkg.id);
+      console.log("Price ID:", selectedPkg.stripePriceId);
+      console.log("Product ID:", selectedPkg.stripeProductId);
+      
       // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
-          packageId: selectedPackage,
+          packageId: selectedPkg.id,
           priceId: selectedPkg.stripePriceId,
           productId: selectedPkg.stripeProductId
         }

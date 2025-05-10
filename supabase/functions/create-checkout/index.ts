@@ -8,6 +8,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper function to log steps for better debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -15,44 +21,45 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Starting create-checkout function");
+    logStep("Starting create-checkout function");
     
     let reqBody;
     try {
       reqBody = await req.json();
+      logStep("Request body parsed", reqBody);
     } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
+      logStep("Error parsing request body", parseError);
       throw new Error("Requête invalide : le format JSON est incorrect");
     }
     
     const { packageId, priceId, productId } = reqBody;
     if (!packageId) {
-      console.error("Missing packageId in request");
+      logStep("Missing packageId in request");
       throw new Error("PackageId est requis pour créer une session de paiement");
     }
 
     if (!priceId) {
-      console.error("Missing priceId in request");
+      logStep("Missing priceId in request");
       throw new Error("PriceId est requis pour créer une session de paiement");
     }
     
-    console.log("Package ID received:", packageId);
-    console.log("Price ID received:", priceId);
-    console.log("Product ID received:", productId);
+    logStep("Package ID received", { packageId });
+    logStep("Price ID received", { priceId });
+    logStep("Product ID received", { productId });
     
     // Get the Stripe secret key from environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
-      console.error("STRIPE_SECRET_KEY not configured");
+      logStep("STRIPE_SECRET_KEY not configured");
       throw new Error("Configuration Stripe manquante côté serveur");
     }
     
-    console.log("Stripe API key available");
+    logStep("Stripe API key available");
 
     // Authenticate the user from the request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      console.error("Missing Authorization header");
+      logStep("Missing Authorization header");
       throw new Error("Vous devez être connecté pour effectuer cette action");
     }
 
@@ -61,25 +68,27 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     
     if (!supabaseUrl || !supabaseAnonKey) {
-      console.error("Missing Supabase configuration");
+      logStep("Missing Supabase configuration");
       throw new Error("Configuration Supabase manquante côté serveur");
     }
     
-    console.log("Supabase configuration available");
+    logStep("Supabase configuration available");
     
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     // Get authenticated user
     const token = authHeader.replace("Bearer ", "");
+    logStep("Authenticating user with token");
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
     if (userError || !userData.user) {
-      console.error("User authentication error:", userError);
+      logStep("User authentication error", userError);
       throw new Error("Session utilisateur invalide ou utilisateur non trouvé");
     }
 
     const user = userData.user;
-    console.log("User authenticated:", user.email);
+    logStep("User authenticated", { email: user.email });
 
     // Get the credits package based on the packageId
     const creditPackages = [
@@ -111,21 +120,28 @@ serve(async (req) => {
 
     const selectedPackage = creditPackages.find(pkg => pkg.id === packageId);
     if (!selectedPackage) {
-      console.error("Invalid package selected:", packageId);
+      logStep("Invalid package selected", { packageId });
       throw new Error("Pack de crédits invalide sélectionné");
     }
 
-    console.log("Selected package:", selectedPackage);
+    logStep("Selected package", selectedPackage);
 
     // Initialize Stripe
     try {
+      logStep("Initializing Stripe");
       const stripe = new Stripe(stripeKey, {
         apiVersion: "2023-10-16",
       });
 
       // Create Stripe checkout session
-      console.log("Creating Stripe checkout session");
+      logStep("Creating Stripe checkout session");
       const origin = req.headers.get("origin") || "http://localhost:3000";
+      
+      // Validate priceId before creating session
+      if (typeof priceId !== 'string' || !priceId.startsWith('price_')) {
+        logStep("Invalid priceId format", { priceId });
+        throw new Error("Format d'identifiant de prix invalide");
+      }
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -148,7 +164,7 @@ serve(async (req) => {
         },
       });
 
-      console.log("Checkout session created:", session.id);
+      logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
       // Return the session ID and URL to redirect to
       return new Response(
@@ -159,15 +175,16 @@ serve(async (req) => {
         }
       );
     } catch (stripeError) {
-      console.error("Stripe error:", stripeError);
+      logStep("Stripe error", stripeError);
       throw new Error(`Erreur Stripe: ${stripeError.message}`);
     }
     
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Une erreur inconnue est survenue";
     console.error("Error creating checkout session:", error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Une erreur inconnue est survenue" 
+        error: errorMessage 
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
