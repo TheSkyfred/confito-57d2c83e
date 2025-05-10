@@ -25,13 +25,19 @@ serve(async (req) => {
       throw new Error("Requête invalide : le format JSON est incorrect");
     }
     
-    const { packageId } = reqBody;
+    const { packageId, priceId, productId } = reqBody;
     if (!packageId) {
       console.error("Missing packageId in request");
       throw new Error("PackageId est requis pour créer une session de paiement");
     }
+
+    if (!priceId) {
+      console.error("Missing priceId in request");
+      throw new Error("PriceId est requis pour créer une session de paiement");
+    }
     
     console.log("Package ID received:", packageId);
+    console.log("Price ID received:", priceId);
     
     // Get the Stripe secret key from environment variables
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
@@ -124,14 +130,7 @@ serve(async (req) => {
         payment_method_types: ["card"],
         line_items: [
           {
-            price_data: {
-              currency: "eur",
-              product_data: {
-                name: `${selectedPackage.amount} crédits Confito`,
-                description: selectedPackage.description,
-              },
-              unit_amount: selectedPackage.price,
-            },
+            price: priceId,
             quantity: 1,
           },
         ],

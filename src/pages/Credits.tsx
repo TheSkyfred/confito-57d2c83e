@@ -43,28 +43,36 @@ const creditPackages = [
     amount: 10,
     price: 5.99,
     popular: false,
-    description: 'Pour goûter quelques confitures'
+    description: 'Pour goûter quelques confitures',
+    stripeProductId: 'prod_SHKlMY5fad4jpJ',
+    stripePriceId: 'price_1RMm60QKGqePiKGPrw7IHreC'
   },
   {
     id: 'credits-25',
     amount: 25,
     price: 12.99,
     popular: true,
-    description: 'Notre offre la plus populaire'
+    description: 'Notre offre la plus populaire',
+    stripeProductId: 'prod_SHKjhWMkbrnn4w',
+    stripePriceId: 'price_1RMm60QKGqePiKGPrw7IHreC'
   },
   {
     id: 'credits-50',
     amount: 50,
     price: 22.99,
     popular: false,
-    description: 'Pour les amateurs de confitures'
+    description: 'Pour les amateurs de confitures',
+    stripeProductId: 'prod_SHKmJPb3URoR5j',
+    stripePriceId: 'price_1RMm6oQKGqePiKGPEO9BC9nr'
   },
   {
     id: 'credits-100',
     amount: 100,
     price: 39.99,
     popular: false,
-    description: 'Pour les passionnés'
+    description: 'Pour les passionnés',
+    stripeProductId: 'prod_SHKmsUaZugXmoD',
+    stripePriceId: 'price_1RMm7NQKGqePiKGPNFj02Pbx'
   }
 ];
 
@@ -129,7 +137,11 @@ const Credits = () => {
     try {
       // Call the Stripe checkout function with error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { packageId: selectedPackage }
+        body: { 
+          packageId: selectedPackage,
+          priceId: selectedPkg.stripePriceId,
+          productId: selectedPkg.stripeProductId
+        }
       });
       
       if (error) {
