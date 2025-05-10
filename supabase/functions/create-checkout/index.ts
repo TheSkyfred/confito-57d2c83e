@@ -33,6 +33,7 @@ serve(async (req) => {
     }
     
     const { packageId, priceId, productId } = reqBody;
+    
     if (!packageId) {
       logStep("Missing packageId in request");
       throw new Error("PackageId est requis pour créer une session de paiement");
@@ -128,7 +129,7 @@ serve(async (req) => {
 
     // Initialize Stripe
     try {
-      logStep("Initializing Stripe");
+      logStep("Initializing Stripe with API key");
       const stripe = new Stripe(stripeKey, {
         apiVersion: "2023-10-16",
       });
@@ -142,6 +143,13 @@ serve(async (req) => {
         logStep("Invalid priceId format", { priceId });
         throw new Error("Format d'identifiant de prix invalide");
       }
+      
+      logStep("Creating session with", { 
+        priceId, 
+        user_id: user.id,
+        email: user.email,
+        creditsAmount: selectedPackage.amount
+      });
       
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
@@ -164,7 +172,10 @@ serve(async (req) => {
         },
       });
 
-      logStep("Checkout session created", { sessionId: session.id, url: session.url });
+      logStep("Checkout session created successfully", { 
+        sessionId: session.id, 
+        url: session.url 
+      });
 
       // Return the session ID and URL to redirect to
       return new Response(

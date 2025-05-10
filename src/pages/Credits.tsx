@@ -138,8 +138,9 @@ const Credits = () => {
       console.log("Starting checkout process for package:", selectedPkg.id);
       console.log("Price ID:", selectedPkg.stripePriceId);
       console.log("Product ID:", selectedPkg.stripeProductId);
+      console.log("Current session:", { session: await supabase.auth.getSession() });
       
-      // Call the Stripe checkout function with error handling
+      // Call the Stripe checkout function with improved error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           packageId: selectedPkg.id,
@@ -148,12 +149,18 @@ const Credits = () => {
         }
       });
       
+      console.log("Response from create-checkout:", data, error);
+      
       if (error) {
         console.error("Error calling create-checkout function:", error);
         throw new Error(`Erreur lors de la création du checkout: ${error.message}`);
       }
       
-      if (!data || !data.url) {
+      if (!data) {
+        throw new Error("Aucune donnée n'a été retournée par la fonction de paiement");
+      }
+      
+      if (!data.url) {
         throw new Error("Aucune URL de paiement n'a été retournée");
       }
       
@@ -169,6 +176,7 @@ const Credits = () => {
         variant: "destructive"
       });
     } finally {
+      // Make sure to reset the processing state, even if there was an error
       setIsProcessing(false);
     }
   };
