@@ -17,6 +17,7 @@ const logStep = (step: string, details?: any) => {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    logStep("Received OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -79,7 +80,7 @@ serve(async (req) => {
 
     // Get authenticated user
     const token = authHeader.replace("Bearer ", "");
-    logStep("Authenticating user with token");
+    logStep("Authenticating user with token", { tokenLength: token.length });
     
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     
@@ -178,10 +179,19 @@ serve(async (req) => {
       });
 
       // Return the session ID and URL to redirect to
+      const responseData = {
+        sessionId: session.id,
+        url: session.url
+      };
+      
+      logStep("Returning response", responseData);
       return new Response(
-        JSON.stringify({ sessionId: session.id, url: session.url }),
+        JSON.stringify(responseData),
         {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "application/json" 
+          },
           status: 200,
         }
       );

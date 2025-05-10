@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -165,7 +164,8 @@ const Credits = () => {
       }
       
       console.log("Redirecting to Stripe checkout:", data.url);
-      // Redirect to Stripe checkout
+      
+      // Direct browser redirect to Stripe checkout
       window.location.href = data.url;
       
     } catch (error) {
