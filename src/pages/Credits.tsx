@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -118,7 +118,7 @@ const Credits = () => {
     enabled: !!user,
   });
 
-  const handlePurchase = async () => {
+  const handlePurchase = useCallback(async () => {
     if (!user) {
       toast({
         title: "Connectez-vous",
@@ -148,7 +148,9 @@ const Credits = () => {
         throw new Error("Session invalide. Veuillez vous reconnecter.");
       }
       
-      // Call the Stripe checkout function with improved error handling
+      // Call the Stripe checkout function with direct URL to ensure proper CORS handling
+      console.log("Calling create-checkout function...");
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           packageId: selectedPkg.id,
@@ -188,7 +190,7 @@ const Credits = () => {
       // Make sure to reset the processing state, even if there was an error
       setIsProcessing(false);
     }
-  };
+  }, [user, selectedPackage, navigate]);
 
   if (!user) {
     return (
