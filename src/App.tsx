@@ -57,6 +57,7 @@ import ConseilEdit from './pages/ConseilEdit';
 import ConseilCreate from './pages/ConseilCreate';
 import AdminProAccessories from './pages/AdminProAccessories';
 import News from './pages/News';
+import Contact from './pages/Contact';
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,7 @@ function App() {
                   <Route path="/battles/jam" element={<JamBattles />} />
                   <Route path="/battles/:id" element={<BattleDetails />} />
                   <Route path="/news" element={<News />} />
+                  <Route path="/contact" element={<Contact />} />
                   <Route path="/rankings" element={<Rankings />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/jams" element={<AdminJams />} />

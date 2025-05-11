@@ -4,10 +4,24 @@ project_id = "vbjitiitrxbiyznrfvyx"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage", "graphql_public"]
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
 [db]
 port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 15
+max_client_conn = 100
+
+[realtime]
+enabled = true
 
 [studio]
 enabled = true
@@ -23,15 +37,16 @@ enabled = true
 
 [auth]
 enabled = true
-uri = "http://localhost:54321"
+site_url = "http://localhost:3000"
 
-[realtime]
+[auth.email]
 enabled = true
+double_confirm_changes = true
+enable_confirmations = false
 
-[functions]
+[analytics]
+enabled = false
+port = 54327
 
-[functions.create-checkout]
-verify_jwt = true
-
-[functions.verify-payment]
-verify_jwt = true
+[experimental.edge_runtime]
+enabled = true

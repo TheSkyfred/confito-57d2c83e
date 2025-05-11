@@ -1133,6 +1133,51 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_messages: {
+        Row: {
+          company: string | null
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at: string
+          email: string
+          id: string
+          media: string | null
+          message: string
+          name: string
+          status: Database["public"]["Enums"]["contact_status"]
+          subject: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          company?: string | null
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at?: string
+          email: string
+          id?: string
+          media?: string | null
+          message: string
+          name: string
+          status?: Database["public"]["Enums"]["contact_status"]
+          subject: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          company?: string | null
+          contact_type?: Database["public"]["Enums"]["contact_type"]
+          created_at?: string
+          email?: string
+          id?: string
+          media?: string | null
+          message?: string
+          name?: string
+          status?: Database["public"]["Enums"]["contact_status"]
+          subject?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -2398,6 +2443,8 @@ export type Database = {
         | "envoi"
         | "vote"
         | "termine"
+      contact_status: "received" | "read" | "replied"
+      contact_type: "user" | "press" | "partner"
       order_status:
         | "pending"
         | "accepted"
@@ -2552,6 +2599,8 @@ export const Constants = {
         "vote",
         "termine",
       ],
+      contact_status: ["received", "read", "replied"],
+      contact_type: ["user", "press", "partner"],
       order_status: [
         "pending",
         "accepted",
