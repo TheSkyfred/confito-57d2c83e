@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // Helper function to log steps for better debugging
@@ -18,11 +19,19 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     logStep("Received OPTIONS request");
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
   try {
     logStep("Starting create-checkout function");
+    logStep("Request method:", { method: req.method });
+    
+    // Log request headers for debugging
+    const headersObj: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+    logStep("Request headers:", headersObj);
     
     let reqBody;
     try {

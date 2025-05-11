@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -137,7 +138,15 @@ const Credits = () => {
       console.log("Starting checkout process for package:", selectedPkg.id);
       console.log("Price ID:", selectedPkg.stripePriceId);
       console.log("Product ID:", selectedPkg.stripeProductId);
-      console.log("Current session:", { session: await supabase.auth.getSession() });
+      console.log("Current user ID:", user.id);
+      
+      // Get current session for authorization
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Current session available:", !!sessionData.session);
+
+      if (!sessionData.session) {
+        throw new Error("Session invalide. Veuillez vous reconnecter.");
+      }
       
       // Call the Stripe checkout function with improved error handling
       const { data, error } = await supabase.functions.invoke('create-checkout', {
@@ -152,7 +161,7 @@ const Credits = () => {
       
       if (error) {
         console.error("Error calling create-checkout function:", error);
-        throw new Error(`Erreur lors de la création du checkout: ${error.message}`);
+        throw new Error(`Erreur lors de la création du checkout: ${error.message || JSON.stringify(error)}`);
       }
       
       if (!data) {
