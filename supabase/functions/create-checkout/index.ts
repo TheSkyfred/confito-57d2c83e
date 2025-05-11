@@ -22,6 +22,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders, status: 204 });
   }
 
+  logStep(`Received ${req.method} request`);
+  
   try {
     logStep("Starting create-checkout function");
     logStep("Request method:", { method: req.method });
@@ -146,13 +148,14 @@ serve(async (req) => {
 
       // Create Stripe checkout session
       logStep("Creating Stripe checkout session");
-      const origin = req.headers.get("origin") || "http://localhost:3000";
+      const origin = req.headers.get("origin") || "https://f13ddae9-07ea-4fe0-9104-5a4587435c41.lovableproject.com";
       
       logStep("Creating session with", { 
         priceId, 
         user_id: user.id,
         email: user.email,
-        creditsAmount: selectedPackage.amount
+        creditsAmount: selectedPackage.amount,
+        origin
       });
       
       const session = await stripe.checkout.sessions.create({

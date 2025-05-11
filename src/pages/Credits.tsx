@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -147,23 +148,36 @@ const Credits = () => {
         throw new Error("Session invalide. Veuillez vous reconnecter.");
       }
       
-      // Call the Stripe checkout function
-      console.log("Calling create-checkout function...");
+      // Call the Stripe checkout function using a direct fetch to the Edge Function URL
+      // This bypasses any potential issues with the invoke method
+      console.log("Calling create-checkout function using direct fetch...");
       
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { 
+      const supabaseUrl = "https://vbjitiitrxbiyznrfvyx.supabase.co";
+      const functionUrl = `${supabaseUrl}/functions/v1/create-checkout`;
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionData.session.access_token}`,
+        },
+        body: JSON.stringify({ 
           packageId: selectedPkg.id,
           priceId: selectedPkg.stripePriceId,
           productId: selectedPkg.stripeProductId
-        }
+        })
       });
       
-      console.log("Response from create-checkout:", data, error);
+      console.log("Response status:", response.status);
       
-      if (error) {
-        console.error("Error calling create-checkout function:", error);
-        throw new Error(`Erreur lors de la création du checkout: ${error.message || JSON.stringify(error)}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Erreur du serveur: ${response.status} ${errorText || response.statusText}`);
       }
+      
+      const data = await response.json();
+      console.log("Response data:", data);
       
       if (!data) {
         throw new Error("Aucune donnée n'a été retournée par la fonction de paiement");
