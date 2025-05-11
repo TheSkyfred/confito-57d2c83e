@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -148,7 +147,7 @@ const Credits = () => {
         throw new Error("Session invalide. Veuillez vous reconnecter.");
       }
       
-      // Call the Stripe checkout function with direct URL to ensure proper CORS handling
+      // Call the Stripe checkout function
       console.log("Calling create-checkout function...");
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {

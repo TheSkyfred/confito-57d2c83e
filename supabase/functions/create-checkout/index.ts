@@ -76,16 +76,16 @@ serve(async (req) => {
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       logStep("Missing Supabase configuration");
       throw new Error("Configuration Supabase manquante côté serveur");
     }
     
     logStep("Supabase configuration available");
     
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get authenticated user
     const token = authHeader.replace("Bearer ", "");
@@ -147,12 +147,6 @@ serve(async (req) => {
       // Create Stripe checkout session
       logStep("Creating Stripe checkout session");
       const origin = req.headers.get("origin") || "http://localhost:3000";
-      
-      // Validate priceId before creating session
-      if (typeof priceId !== 'string' || !priceId.startsWith('price_')) {
-        logStep("Invalid priceId format", { priceId });
-        throw new Error("Format d'identifiant de prix invalide");
-      }
       
       logStep("Creating session with", { 
         priceId, 
