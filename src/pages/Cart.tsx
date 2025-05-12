@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/stores/useCartStore';
@@ -84,20 +85,28 @@ const Cart = () => {
           <div key={item.jam.id} className="flex items-center gap-4 bg-card p-4 rounded-lg border shadow-sm">
             <div className="flex-shrink-0 w-16 h-16 overflow-hidden rounded-md">
               <img 
-                src={item.jam.jam_images?.[0]?.url || '/placeholder.svg'} 
+                src={item.jam.cover_image_url || '/placeholder.svg'} 
                 alt={item.jam.name} 
                 className="w-full h-full object-cover"
               />
             </div>
             
             <div className="flex-grow">
-              <h3 className="font-medium">{item.jam.name}</h3>
+              <h3 className="font-medium">
+                <Link to={`/jam/${item.jam.id}`} className="hover:underline">
+                  {item.jam.name}
+                </Link>
+              </h3>
               <div className="flex items-center mt-1">
-                <ProfileDisplay 
-                  profile={item.jam.profiles} 
-                  size="sm" 
-                  showName={true}
-                />
+                {item.jam.profiles && (
+                  <Link to={`/user/${item.jam.creator_id}`} className="hover:underline">
+                    <ProfileDisplay 
+                      profile={item.jam.profiles} 
+                      size="sm" 
+                      showName={true}
+                    />
+                  </Link>
+                )}
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Badge variant="outline" className="text-jam-raspberry">
