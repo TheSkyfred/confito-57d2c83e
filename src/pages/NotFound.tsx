@@ -1,7 +1,8 @@
+
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Coffee } from "lucide-react";
+import { Coffee, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -15,6 +16,12 @@ const NotFound = () => {
       location.pathname
     );
   }, [location.pathname]);
+
+  // Check if the path includes 'user/' and suggest the correct 'profile/' path
+  const isUserProfileMisroute = location.pathname.includes('/user/');
+  const suggestedPath = isUserProfileMisroute 
+    ? location.pathname.replace('/user/', '/profile/') 
+    : null;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -32,6 +39,21 @@ const NotFound = () => {
             La confiture que vous recherchez semble avoir disparu de nos étagères. 
             Peut-être a-t-elle déjà été dégustée ?
           </p>
+          
+          {isUserProfileMisroute && suggestedPath && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <p className="text-yellow-800 font-medium">URL incorrecte détectée</p>
+              </div>
+              <p className="text-sm text-yellow-700 mb-3">
+                Il semble que vous essayiez d'accéder à un profil utilisateur avec un chemin incorrect.
+              </p>
+              <Button asChild variant="outline" className="border-yellow-300 hover:bg-yellow-100">
+                <Link to={suggestedPath}>Accéder au profil correct</Link>
+              </Button>
+            </div>
+          )}
           
           <div className="space-y-4">
             <Button asChild className="bg-jam-raspberry hover:bg-jam-raspberry/90 w-full">

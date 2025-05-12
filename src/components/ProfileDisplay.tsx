@@ -7,7 +7,8 @@ import { getProfileInitials } from '@/utils/supabaseHelpers';
 import { 
   getProfileUsername,
   getProfileAvatarUrl,
-  getProfileFullName
+  getProfileFullName,
+  getProfileId
 } from '@/utils/profileTypeGuards';
 import { useCartStore } from '@/stores/useCartStore';
 
@@ -27,6 +28,7 @@ export const ProfileDisplay: React.FC<ProfileDisplayProps> = ({
   const username = getProfileUsername(profile);
   const avatarUrl = getProfileAvatarUrl(profile);
   const displayName = getProfileFullName(profile);
+  const userId = getProfileId(profile);
   const initial = getProfileInitials(username);
   const totalItems = useCartStore(state => state.getTotalItems());
   
