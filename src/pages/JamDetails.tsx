@@ -23,7 +23,9 @@ import {
   ThumbsDown,
   MessageSquare,
   ImagePlus,
-  Trash2
+  Trash2,
+  Plus,
+  Minus
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +49,7 @@ import { fr } from 'date-fns/locale';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useCartStore } from '@/stores/useCartStore';
 
 type ReviewWithReviewer = ReviewType & {
   reviewer: ProfileType;
@@ -121,6 +124,7 @@ const JamDetails = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { canManage } = useUserRole();
+  const { addItem } = useCartStore();
   
   const [selectedTab, setSelectedTab] = useState("overview");
   const [isRegistering, setIsRegistering] = useState(false);
@@ -129,6 +133,7 @@ const JamDetails = () => {
     motivation: "",
     referenceJamId: ""
   });
+  const [quantity, setQuantity] = useState(1);
   
   const { data: jam, isLoading, error } = useQuery({
     queryKey: ['jam', id],
@@ -237,6 +242,44 @@ const JamDetails = () => {
     return totalRating / reviews.length;
   };
 
+  const handleAddToCart = () => {
+    if (!jam) return;
+    
+    addItem(jam, quantity)
+      .then(() => {
+        toast({
+          title: "Ajouté au panier",
+          description: `${quantity} ${quantity > 1 ? 'pots' : 'pot'} de ${jam.name} ${quantity > 1 ? 'ont été ajoutés' : 'a été ajouté'} au panier.`,
+        });
+        setQuantity(1); // Reset quantity after adding to cart
+      })
+      .catch((error) => {
+        toast({
+          title: "Erreur",
+          description: error.message || "Impossible d'ajouter cet article au panier.",
+          variant: "destructive",
+        });
+      });
+  };
+  
+  const handleIncreaseQuantity = () => {
+    if (jam && quantity < jam.available_quantity) {
+      setQuantity(quantity + 1);
+    } else {
+      toast({
+        title: "Quantité maximale atteinte",
+        description: "Vous avez atteint la quantité maximale disponible.",
+        variant: "default",
+      });
+    }
+  };
+  
+  const handleDecreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container py-8">
@@ -276,10 +319,6 @@ const JamDetails = () => {
             >
               {isFavorite ? <Heart className="h-5 w-5 fill-red-500 text-red-500" /> : <Heart className="h-5 w-5" />}
             </Button>
-            <Button variant="default">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Acheter
-            </Button>
           </div>
         </div>
 
@@ -306,7 +345,9 @@ const JamDetails = () => {
                   <AvatarImage src={jam.profiles?.avatar_url || undefined} />
                   <AvatarFallback>{jam.profiles?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <span>Par {jam.profiles?.username}</span>
+                <Link to={`/user/${jam.creator_id}`} className="hover:underline">
+                  <span>Par {jam.profiles?.username}</span>
+                </Link>
               </div>
               <Separator className="my-4" />
               <div className="space-y-2">
@@ -317,6 +358,15 @@ const JamDetails = () => {
                   ))}
                 </ul>
               </div>
+              <Separator className="my-4" />
+              <div className="flex items-center mb-2">
+                <Badge variant="outline" className="mr-2">Disponibilité</Badge>
+                <span className={`${jam.available_quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {jam.available_quantity > 0 
+                    ? `${jam.available_quantity} pot${jam.available_quantity > 1 ? 's' : ''} disponible${jam.available_quantity > 1 ? 's' : ''}`
+                    : 'Épuisé'}
+                </span>
+              </div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between items-center">
@@ -324,11 +374,41 @@ const JamDetails = () => {
               <span className="text-2xl font-bold">{jam.price_credits}</span>
               <span className="ml-1 text-muted-foreground">crédits</span>
             </div>
-            <Button asChild>
-              <Link to={`/seller/${jam.creator_id}`}>
-                Voir la boutique
-              </Link>
-            </Button>
+            
+            {jam.available_quantity > 0 ? (
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center border rounded-md">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handleDecreaseQuantity}
+                    disabled={quantity <= 1}
+                    className="h-8 w-8"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-8 text-center">{quantity}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handleIncreaseQuantity}
+                    disabled={quantity >= jam.available_quantity}
+                    className="h-8 w-8"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button onClick={handleAddToCart}>
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Ajouter au panier
+                </Button>
+              </div>
+            ) : (
+              <Button disabled>
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Épuisé
+              </Button>
+            )}
           </CardFooter>
         </Card>
 
