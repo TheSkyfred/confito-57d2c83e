@@ -8,7 +8,6 @@ export interface Jam {
   created_at: string;
   is_active: boolean;
   is_pro?: boolean;
-  jam_images?: { url: string }[] | any;
   cover_image_url?: string | null;
   // Add any other properties needed
   ingredients: Array<{name: string, quantity: string}> | string[];

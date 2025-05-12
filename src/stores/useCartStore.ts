@@ -383,6 +383,7 @@ export const useCartStore = create<CartStore>()(
           }
           
           // Récupérer les articles du panier avec les détails des confitures
+          // Modification de la requête pour ne pas utiliser jam_images
           const { data: cartItemsData, error: itemsError } = await supabase
             .from('cart_items')
             .select(`
@@ -390,9 +391,8 @@ export const useCartStore = create<CartStore>()(
               jams!inner (
                 id, name, description, price_credits, available_quantity, creator_id,
                 weight_grams, allergens, ingredients, sugar_content, recipe, is_active,
-                status, rejection_reason,
+                status, rejection_reason, cover_image_url,
                 created_at, updated_at,
-                jam_images (id, url, is_primary, jam_id, created_at),
                 profiles!inner (
                   id, username, full_name, avatar_url, bio, address, phone, website,
                   credits, role, created_at, updated_at, is_active
@@ -411,12 +411,12 @@ export const useCartStore = create<CartStore>()(
             const formattedItems: CartItem[] = cartItemsData.map(item => ({
               jam: {
                 ...item.jams,
+                cover_image_url: item.jams.cover_image_url,
                 profiles: item.jams.profiles,
-                jam_images: item.jams.jam_images || [],
                 status: (item.jams.status || 'pending') as 'pending' | 'approved' | 'rejected'
-              },
+              } as JamType,
               quantity: item.quantity
-            })) as CartItem[];
+            }));
             
             set({ items: formattedItems });
           }
