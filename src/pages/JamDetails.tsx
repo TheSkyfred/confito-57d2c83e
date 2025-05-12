@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -173,13 +174,16 @@ const JamDetails = () => {
     enabled: !!user
   });
 
-  const isFavorite = user && jam && userFavorites?.includes(jam.id);
+  const isFavorite = userFavorites?.includes(jam?.id || '');
 
   const toggleFavoriteMutation = useMutation({
     mutationFn: async () => {
-      if (!user || !jam) return;
+      if (!user || !jam) {
+        throw new Error('Vous devez être connecté pour ajouter des favoris');
+      }
 
       if (isFavorite) {
+        // Remove from favorites
         const { error } = await supabase
           .from('favorites')
           .delete()
@@ -188,6 +192,7 @@ const JamDetails = () => {
 
         if (error) throw error;
       } else {
+        // Add to favorites
         const { error } = await supabase
           .from('favorites')
           .insert([{ user_id: user.id, jam_id: jam.id }]);
@@ -204,7 +209,8 @@ const JamDetails = () => {
           : "Cette confiture a été ajoutée à vos favoris.",
       });
     },
-    onError: (error: any) => {
+    onError: (error) => {
+      console.error('Error toggling favorite:', error);
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de l'ajout/suppression des favoris.",
@@ -214,6 +220,14 @@ const JamDetails = () => {
   });
 
   const handleToggleFavorite = () => {
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour ajouter des favoris.",
+        variant: "default",
+      });
+      return;
+    }
     toggleFavoriteMutation.mutate();
   };
 
@@ -258,7 +272,7 @@ const JamDetails = () => {
               variant="outline" 
               size="icon" 
               onClick={handleToggleFavorite} 
-              disabled={toggleFavoriteMutation.isPending}
+              disabled={toggleFavoriteMutation.isPending || !user}
             >
               {isFavorite ? <Heart className="h-5 w-5 fill-red-500 text-red-500" /> : <Heart className="h-5 w-5" />}
             </Button>
