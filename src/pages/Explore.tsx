@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
@@ -20,14 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
@@ -36,11 +28,11 @@ import JamCard from '@/components/JamCard';
 const Explore = () => {
   const { user } = useAuth();
   const [filters, setFilters] = useState('');
+  const queryClient = useQueryClient();
   
   const { data: jams, isLoading, error } = useQuery({
     queryKey: ['jams', filters],
     queryFn: async () => {
-      // Modification de la requête pour ne pas utiliser jam_images
       const { data, error } = await supabase
         .from('jams')
         .select(`
@@ -71,6 +63,86 @@ const Explore = () => {
       return mappedJams as Jam[];
     }
   });
+
+  // Fetch user's favorites
+  const { data: userFavorites } = useQuery({
+    queryKey: ['userFavorites'],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('jam_id')
+        .eq('user_id', user.id);
+      
+      if (error) {
+        console.error('Error fetching favorites:', error);
+        throw error;
+      }
+      
+      return data.map(fav => fav.jam_id);
+    },
+    enabled: !!user
+  });
+
+  // Toggle favorite mutation
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async ({ jamId, isFavorite }: { jamId: string, isFavorite: boolean }) => {
+      if (!user) {
+        throw new Error('Vous devez être connecté pour ajouter des favoris');
+      }
+
+      if (isFavorite) {
+        // Remove from favorites
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('jam_id', jamId);
+
+        if (error) throw error;
+      } else {
+        // Add to favorites
+        const { error } = await supabase
+          .from('favorites')
+          .insert([{ user_id: user.id, jam_id: jamId }]);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userFavorites'] });
+    },
+    onError: (error) => {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Erreur',
+        description: error instanceof Error ? error.message : 'Une erreur est survenue',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  // Handle toggling a favorite
+  const handleToggleFavorite = (jamId: string, isFavorite: boolean) => {
+    if (!user) {
+      toast({
+        title: 'Connexion requise',
+        description: 'Vous devez être connecté pour ajouter des favoris',
+        variant: 'default',
+      });
+      return;
+    }
+    
+    toggleFavoriteMutation.mutate({ jamId, isFavorite });
+    
+    toast({
+      title: isFavorite ? 'Retiré des favoris' : 'Ajouté aux favoris',
+      description: isFavorite
+        ? 'Cette confiture a été retirée de vos favoris.'
+        : 'Cette confiture a été ajoutée à vos favoris.',
+    });
+  };
 
   // Calculate average rating from reviews
   const calculateAverageRating = (reviews: any[] | null | undefined) => {
@@ -177,8 +249,20 @@ const Explore = () => {
                   <span className="ml-1 text-muted-foreground">crédits</span>
                 </div>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="icon">
-                    <Heart className="h-5 w-5" />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => handleToggleFavorite(
+                      jam.id, 
+                      userFavorites?.includes(jam.id) || false
+                    )}
+                    disabled={toggleFavoriteMutation.isPending}
+                  >
+                    {userFavorites?.includes(jam.id) ? (
+                      <Heart className="h-5 w-5 fill-red-500 text-red-500" />
+                    ) : (
+                      <Heart className="h-5 w-5" />
+                    )}
                   </Button>
                   <Button asChild>
                     <Link to={`/jam/${jam.id}`}>
