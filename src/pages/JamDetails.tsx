@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -50,10 +49,6 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useCartStore } from '@/stores/useCartStore';
-
-type ReviewWithReviewer = ReviewType & {
-  reviewer: ProfileType;
-};
 
 // Function to get ingredient name based on type
 const getIngredientName = (ingredient: any): string => {
@@ -156,9 +151,11 @@ const JamDetails = () => {
       
       const avgRating = calculateAverageRating(data.reviews);
       
+      // Add empty jam_images array if not present to conform to JamType
       return {
         ...data,
-        avgRating
+        avgRating,
+        jam_images: data.jam_images || []
       };
     }
   });
@@ -245,7 +242,13 @@ const JamDetails = () => {
   const handleAddToCart = () => {
     if (!jam) return;
     
-    addItem(jam, quantity)
+    // Ensure jam has all required properties including jam_images
+    const jamToAdd: JamType = {
+      ...jam,
+      jam_images: jam.jam_images || []  // Ensure jam_images exists
+    };
+    
+    addItem(jamToAdd, quantity)
       .then(() => {
         toast({
           title: "Ajouté au panier",
