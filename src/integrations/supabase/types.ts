@@ -1708,6 +1708,83 @@ export type Database = {
           },
         ]
       }
+      news: {
+        Row: {
+          content: string
+          cover_image_url: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_featured: boolean | null
+          published_at: string | null
+          status: string | null
+          summary: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean | null
+          published_at?: string | null
+          status?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_featured?: boolean | null
+          published_at?: string | null
+          status?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      news_images: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          image_url: string
+          news_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image_url: string
+          news_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          news_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_images_news_id_fkey"
+            columns: ["news_id"]
+            isOneToOne: false
+            referencedRelation: "news"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           content: string

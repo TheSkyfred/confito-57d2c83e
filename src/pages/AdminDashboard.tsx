@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -27,7 +28,8 @@ import {
   MessageCircle,
   FileText,
   Leaf,
-  ShoppingBag
+  ShoppingBag,
+  Newspaper
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -81,6 +83,13 @@ const AdminDashboard = () => {
       icon: <MessageCircle className="h-5 w-5 mr-2" />,
       description: "Gérer les articles de conseils",
       link: "/admin/conseils",
+    },
+    {
+      title: "Actualités",
+      icon: <Newspaper className="h-5 w-5 mr-2" />,
+      description: "Gérer les actualités du site",
+      link: "/admin/news",
+      new: true,
     },
     {
       title: "Publicités",

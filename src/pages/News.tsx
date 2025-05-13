@@ -23,7 +23,23 @@ import { BattleResultType, NewBattleType, ProfileType } from '@/types/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import NewsItem from '@/components/news/NewsItem';
+import NewsCard from '@/components/news/NewsCard';
 import BattleResultNewsItem from '@/components/news/BattleResultNewsItem';
+
+// Interface pour les actualités depuis la base de données
+interface NewsItemType {
+  id: string;
+  title: string;
+  summary?: string;
+  content: string;
+  cover_image_url?: string;
+  is_featured: boolean;
+  published_at: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  status: 'draft' | 'published' | 'archived';
+}
 
 const News = () => {
   const { toast } = useToast();
@@ -32,6 +48,7 @@ const News = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [news, setNews] = useState<any[]>([]);
+  const [newsItems, setNewsItems] = useState<NewsItemType[]>([]);
   const [battleResults, setBattleResults] = useState<(BattleResultType & { 
     battle?: NewBattleType;
     winner?: ProfileType;
@@ -43,6 +60,16 @@ const News = () => {
     const fetchNewsData = async () => {
       setLoading(true);
       try {
+        // Récupérer les actualités de la base de données
+        const { data: newsData, error: newsError } = await supabase
+          .from('news')
+          .select('*')
+          .eq('status', 'published')
+          .order('published_at', { ascending: false });
+
+        if (newsError) throw newsError;
+        setNewsItems(newsData || []);
+
         // Fetch battle results with related data
         const { data: resultsData, error: resultsError } = await supabase
           .from('battle_results')
@@ -83,6 +110,11 @@ const News = () => {
         // Combine all news items into a single array
         // Add a 'type' field to differentiate between different types of news
         const combinedNews = [
+          ...(newsData || []).map(item => ({
+            ...item,
+            type: 'news',
+            date: item.published_at
+          })),
           ...(typedResults || []).map(result => ({ 
             ...result, 
             type: 'battle_result', 
@@ -116,8 +148,13 @@ const News = () => {
 
   const filteredNews = news.filter(item => {
     // Return true if we match the active tab filter
-    if (activeTab !== 'all' && item.type !== activeTab) {
-      return false;
+    if (activeTab !== 'all') {
+      if (activeTab === 'articles' && item.type !== 'news' && item.type !== 'advice') {
+        return false;
+      }
+      if (activeTab === 'battles' && item.type !== 'battle_result') {
+        return false;
+      }
     }
 
     // Apply search query if any
@@ -126,6 +163,9 @@ const News = () => {
         return item.battle.theme.toLowerCase().includes(searchQuery.toLowerCase());
       } else if (item.type === 'advice') {
         return item.title.toLowerCase().includes(searchQuery.toLowerCase());
+      } else if (item.type === 'news') {
+        return item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+               (item.summary && item.summary.toLowerCase().includes(searchQuery.toLowerCase()));
       }
       return false;
     }
@@ -135,6 +175,16 @@ const News = () => {
 
   const renderNewsItem = (item: any) => {
     switch (item.type) {
+      case 'news':
+        return <NewsCard 
+          key={item.id}
+          id={item.id}
+          title={item.title}
+          summary={item.summary}
+          coverImageUrl={item.cover_image_url}
+          publishedAt={item.published_at}
+          isFeatured={item.is_featured}
+        />;
       case 'battle_result':
         return <BattleResultNewsItem key={item.id} result={item} />;
       case 'advice':
@@ -152,6 +202,9 @@ const News = () => {
     }
   };
 
+  // Filtrer les actualités mises en avant
+  const featuredNews = newsItems.filter(item => item.is_featured).slice(0, 3);
+
   return (
     <div className="container py-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
@@ -161,7 +214,34 @@ const News = () => {
             Restez à jour avec les derniers résultats des battles et autres nouvelles de la communauté.
           </p>
         </div>
+        {isAdmin && (
+          <Button asChild>
+            <Link to="/admin/news">
+              Gérer les actualités
+            </Link>
+          </Button>
+        )}
       </div>
+
+      {/* Section des actualités mises en avant */}
+      {featuredNews.length > 0 && (
+        <div className="mb-12">
+          <h2 className="text-2xl font-serif font-bold mb-6">À la une</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredNews.map(item => (
+              <NewsCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                summary={item.summary}
+                coverImageUrl={item.cover_image_url}
+                publishedAt={item.published_at}
+                isFeatured={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
         <div className="md:col-span-2 lg:col-span-3 space-y-6">
@@ -178,8 +258,8 @@ const News = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
               <TabsList>
                 <TabsTrigger value="all">Tous</TabsTrigger>
-                <TabsTrigger value="battle_result">Résultats</TabsTrigger>
-                <TabsTrigger value="advice">Articles</TabsTrigger>
+                <TabsTrigger value="articles">Articles</TabsTrigger>
+                <TabsTrigger value="battles">Résultats</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -189,7 +269,7 @@ const News = () => {
               <p className="text-muted-foreground">Chargement des actualités...</p>
             </div>
           ) : filteredNews.length > 0 ? (
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredNews.map(renderNewsItem)}
             </div>
           ) : (
@@ -280,13 +360,13 @@ const News = () => {
               <CardContent>
                 <div className="space-y-2">
                   <Button className="w-full" asChild>
-                    <Link to="/admin/battles">
-                      Gérer les battles
+                    <Link to="/admin/news">
+                      Gérer les actualités
                     </Link>
                   </Button>
                   <Button variant="outline" className="w-full" asChild>
-                    <Link to="/admin/conseils">
-                      Gérer les articles
+                    <Link to="/admin/battles">
+                      Gérer les battles
                     </Link>
                   </Button>
                 </div>

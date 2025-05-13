@@ -58,6 +58,9 @@ import ConseilCreate from './pages/ConseilCreate';
 import AdminProAccessories from './pages/AdminProAccessories';
 import News from './pages/News';
 import Contact from './pages/Contact';
+import AdminNews from './pages/AdminNews';
+import AdminNewsEdit from './pages/AdminNewsEdit';
+import NewsDetail from './pages/NewsDetail';
 
 const queryClient = new QueryClient();
 
@@ -90,6 +93,7 @@ function App() {
                   <Route path="/battles/jam" element={<JamBattles />} />
                   <Route path="/battles/:id" element={<BattleDetails />} />
                   <Route path="/news" element={<News />} />
+                  <Route path="/news/:id" element={<NewsDetail />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/rankings" element={<Rankings />} />
                   <Route path="/admin" element={<AdminDashboard />} />
@@ -105,7 +109,11 @@ function App() {
                   <Route path="/admin/ads/edit/:id" element={<AdminAds action="edit" />} />
                   <Route path="/admin/ads/view/:id" element={<AdminAds action="view" />} />
                   <Route path="/admin/campaigns/:id" element={<AdminCampaigns />} />
-                  {/* Redirection de l'ancienne route vers la nouvelle */}
+                  {/* Nouvelles routes pour la gestion des actualités */}
+                  <Route path="/admin/news" element={<AdminNews />} />
+                  <Route path="/admin/news/create" element={<AdminNewsEdit />} />
+                  <Route path="/admin/news/edit/:id" element={<AdminNewsEdit />} />
+                  {/* Autres routes existantes */}
                   <Route path="/admin/fruits" element={<Navigate to="/admin/seasonal-fruits" replace />} />
                   <Route path="/admin/seasonal-fruits" element={<AdminSeasonalFruits />} />
                   <Route path="/admin/seasonal-fruits/edit/:id" element={<AdminSeasonalFruitEdit />} />
