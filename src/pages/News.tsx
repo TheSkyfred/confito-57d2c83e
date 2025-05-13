@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -41,6 +40,14 @@ interface NewsItemType {
   status: 'draft' | 'published' | 'archived';
 }
 
+// Fonction utilitaire pour valider le statut
+const validateNewsStatus = (status: string): 'draft' | 'published' | 'archived' => {
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return status;
+  }
+  return 'draft'; // Valeur par défaut si le statut n'est pas valide
+};
+
 const News = () => {
   const { toast } = useToast();
   const { isAdmin } = useUserRole();
@@ -68,7 +75,14 @@ const News = () => {
           .order('published_at', { ascending: false });
 
         if (newsError) throw newsError;
-        setNewsItems(newsData || []);
+        
+        // Conversion et validation des données reçues
+        const validatedNewsData: NewsItemType[] = (newsData || []).map(item => ({
+          ...item,
+          status: validateNewsStatus(item.status)
+        }));
+
+        setNewsItems(validatedNewsData);
 
         // Fetch battle results with related data
         const { data: resultsData, error: resultsError } = await supabase
@@ -110,7 +124,7 @@ const News = () => {
         // Combine all news items into a single array
         // Add a 'type' field to differentiate between different types of news
         const combinedNews = [
-          ...(newsData || []).map(item => ({
+          ...(validatedNewsData || []).map(item => ({
             ...item,
             type: 'news',
             date: item.published_at

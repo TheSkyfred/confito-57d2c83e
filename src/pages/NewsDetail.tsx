@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +40,14 @@ interface NewsImage {
   created_at: string;
 }
 
+// Fonction utilitaire pour valider le statut
+const validateNewsStatus = (status: string): 'draft' | 'published' | 'archived' => {
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return status;
+  }
+  return 'draft'; // Valeur par défaut si le statut n'est pas valide
+};
+
 const NewsDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -67,8 +74,14 @@ const NewsDetail = () => {
           throw error;
         }
 
+        // Validation du statut
+        const validatedData: NewsItem = {
+          ...data,
+          status: validateNewsStatus(data.status)
+        };
+
         // Si l'actualité n'est pas publiée et que l'utilisateur n'est pas admin/modérateur, rediriger
-        if (data.status !== 'published' && !isAdmin && !isModerator) {
+        if (validatedData.status !== 'published' && !isAdmin && !isModerator) {
           navigate('/news');
           toast({
             title: "Accès refusé",
@@ -78,7 +91,7 @@ const NewsDetail = () => {
           return;
         }
 
-        setNewsItem(data);
+        setNewsItem(validatedData);
 
         // Récupérer les images associées
         const { data: imagesData, error: imagesError } = await supabase

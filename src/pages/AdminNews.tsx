@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +76,14 @@ type NewsItem = {
   status: 'draft' | 'published' | 'archived';
 };
 
+// Fonction utilitaire pour valider le statut
+const validateNewsStatus = (status: string): 'draft' | 'published' | 'archived' => {
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return status;
+  }
+  return 'draft'; // Valeur par défaut si le statut n'est pas valide
+};
+
 const AdminNews = () => {
   const navigate = useNavigate();
   const { isAdmin, isModerator, isLoading } = useUserRole();
@@ -114,7 +121,13 @@ const AdminNews = () => {
           throw error;
         }
 
-        setNewsItems(data || []);
+        // Conversion et validation des données reçues
+        const validatedData: NewsItem[] = (data || []).map(item => ({
+          ...item,
+          status: validateNewsStatus(item.status)
+        }));
+
+        setNewsItems(validatedData);
       } catch (error: any) {
         console.error('Erreur lors du chargement des actualités:', error);
         toast({
