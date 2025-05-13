@@ -38,6 +38,14 @@ import {
 } from 'lucide-react';
 import NewsImageUploader from '@/components/admin/NewsImageUploader';
 
+// Fonction utilitaire pour valider le statut
+const validateNewsStatus = (status: string): 'draft' | 'published' | 'archived' => {
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return status;
+  }
+  return 'draft'; // Valeur par défaut si le statut n'est pas valide
+};
+
 const AdminNewsEdit = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
@@ -92,7 +100,7 @@ const AdminNewsEdit = () => {
             content: data.content || '',
             cover_image_url: data.cover_image_url || '',
             is_featured: data.is_featured || false,
-            status: data.status as 'draft' | 'published' | 'archived',
+            status: validateNewsStatus(data.status),
           });
         }
 
@@ -134,7 +142,7 @@ const AdminNewsEdit = () => {
   };
 
   const handleStatusChange = (value: string) => {
-    setFormData(prev => ({ ...prev, status: value as 'draft' | 'published' | 'archived' }));
+    setFormData(prev => ({ ...prev, status: validateNewsStatus(value) }));
   };
 
   const handleCoverImageUpload = (url: string) => {
@@ -207,6 +215,11 @@ const AdminNewsEdit = () => {
     setSubmitting(true);
 
     try {
+      // S'assurer que l'utilisateur est connecté
+      if (!user || !user.id) {
+        throw new Error("Vous devez être connecté pour effectuer cette action");
+      }
+
       const newsData = {
         ...formData,
         updated_at: new Date().toISOString(),
@@ -231,7 +244,7 @@ const AdminNewsEdit = () => {
           .from('news')
           .insert({
             ...newsData,
-            created_by: user?.id,
+            created_by: user.id,
           })
           .select();
 
@@ -479,7 +492,7 @@ const AdminNewsEdit = () => {
                   </div>
                 )}
                 <NewsImageUploader
-                  newsId={id || ''}
+                  newsId={id || 'temp'}
                   onImageUploaded={handleCoverImageUpload}
                   label={formData.cover_image_url ? "Changer l'image de couverture" : "Ajouter une image de couverture"}
                 />

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, Loader2, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface NewsImageUploaderProps {
   newsId: string;
@@ -23,6 +24,7 @@ const NewsImageUploader: React.FC<NewsImageUploaderProps> = ({
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) {
@@ -40,7 +42,7 @@ const NewsImageUploader: React.FC<NewsImageUploaderProps> = ({
       // Télécharger le fichier dans le bucket
       const { error: uploadError } = await supabase.storage
         .from('news_images')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
         throw uploadError;

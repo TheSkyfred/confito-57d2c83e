@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -130,6 +131,16 @@ export const parseConstraints = (constraints: any): Record<string, any> => {
   }
   
   return constraints as Record<string, any>;
+};
+
+/**
+ * Helper function to validate news status
+ */
+export const validateNewsStatus = (status: string): 'draft' | 'published' | 'archived' => {
+  if (status === 'draft' || status === 'published' || status === 'archived') {
+    return status;
+  }
+  return 'draft'; // Valeur par défaut si le statut n'est pas valide
 };
 
 /**
