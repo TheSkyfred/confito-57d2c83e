@@ -350,7 +350,7 @@ const JamDetails = () => {
                   <AvatarImage src={jam.profiles?.avatar_url || undefined} />
                   <AvatarFallback>{jam.profiles?.username?.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <Link to={`/user/${jam.creator_id}`} className="hover:underline">
+                <Link to={`/profile/${jam.creator_id}`} className="hover:underline">
                   <span>Par {jam.profiles?.username}</span>
                 </Link>
               </div>

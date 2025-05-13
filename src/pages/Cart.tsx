@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore } from '@/stores/useCartStore';
@@ -98,7 +99,7 @@ const Cart = () => {
               </h3>
               <div className="flex items-center mt-1">
                 {item.jam.profiles && (
-                  <Link to={`/user/${item.jam.creator_id}`} className="hover:underline">
+                  <Link to={`/profile/${item.jam.creator_id}`} className="hover:underline">
                     <ProfileDisplay 
                       profile={item.jam.profiles} 
                       size="sm" 
